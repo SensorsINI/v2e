@@ -8,7 +8,6 @@
 """
 
 import torch
-import tqdm
 import os
 
 import torchvision.transforms as transforms
@@ -18,6 +17,7 @@ import dataloader
 import model
 
 from PIL import Image
+from tqdm import tqdm
 
 
 class SuperSloMo(object):
@@ -33,14 +33,16 @@ class SuperSloMo(object):
 
     """
 
-    def __init__(self,
-                 checkpoint,
-                 slow_factor,
-                 output_path,
-                 batch_size=1):
+    def __init__(
+        self,
+        checkpoint,
+        slow_factor,
+        output_path,
+        batch_size=1
+    ):
         """init"""
 
-        if torch.cude.is_available():
+        if torch.cuda.is_available():
             self.device = "cuda:0"
         else:
             self.device = "cpu"
@@ -128,6 +130,7 @@ class SuperSloMo(object):
 
     def run(self, images):
         """Run interpolation.
+            Interpolated frames will be saved in folder self.output_path.
             @Params:
                 images: np.ndarray, [N, W, H]
         """
@@ -180,7 +183,9 @@ class SuperSloMo(object):
 
                     wCoeff = [1 - t, t]
 
-                    Ft_p = (wCoeff[0] * V_t_0 * g_I0_F_t_0_f + wCoeff[1] * V_t_1 * g_I1_F_t_1_f) / (wCoeff[0] * V_t_0 + wCoeff[1] * V_t_1)
+                    Ft_p = (wCoeff[0] * V_t_0 * g_I0_F_t_0_f +
+                            wCoeff[1] * V_t_1 * g_I1_F_t_1_f) / \
+                        (wCoeff[0] * V_t_0 + wCoeff[1] * V_t_1)
 
                     # Save intermediate frame
                     for batchIndex in range(self.batch_size):
@@ -191,7 +196,6 @@ class SuperSloMo(object):
                             self.output_path,
                             str(frameCounter + self.sf * batchIndex) + ".png")
                         img_resize.save(save_path)
-                        # (self.to_image(Ft_p[batchIndex].cpu().detach())).resize(ori_dim, Image.BILINEAR).save(os.path.join(self.output_path, str(frameCounter + self.sf * batchIndex) + ".png"))
                     frameCounter += 1
 
                 # Set counter accounting for batching of frames
