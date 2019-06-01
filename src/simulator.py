@@ -197,7 +197,7 @@ class EventFrameRenderer(object):
             np.ndarray
         """
         img = cv2.imread(path)
-        img = img.astype(np.float) / 255.
+        img = img.astype(np.float, cv2.IMREAD_GRAYSCALE) / 255.
         return img
 
     def _get_events(self):
@@ -210,6 +210,7 @@ class EventFrameRenderer(object):
                 num_frames,
                 dtype=np.float)
         base_frame = self.__read_image(images[0])
+        print(base_frame.shape)
         height = base_frame.shape[0]
         width = base_frame.shape[1]
         emulator = EventEmulator(base_frame,

@@ -30,8 +30,6 @@ class SuperSloMo(object):
         ------
 
         @methods:
-            
-
     """
 
     def __init__(

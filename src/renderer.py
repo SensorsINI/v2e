@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import os
 import glob
+import pdb
 
 from simulator import EventEmulator
 
@@ -13,9 +14,10 @@ class Base(object):
     @contact: hezhehz@live.cn
     """
 
-    def __init__(self):
+    def __init__(self, frame_ts):
         """
         """
+        self.frame_ts = frame_ts
 
     def _get_events(self):
         """
@@ -38,13 +40,7 @@ class Base(object):
         """
 
         event_arr = self._get_events()
-        ts = event_arr[:, 0] - event_arr[0, 0]
-        duration = ts[-1] - ts[0]
-        output_ts = np.linspace(
-                0,
-                duration,
-                int(duration * self.output_fps),
-                dtype=np.float)
+        ts = event_arr["ts"].squeeze()
         clip_value = 2
         histrange = [(0, v) for v in (height, width)]
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -54,33 +50,34 @@ class Base(object):
                   30.0,
                   (width, height))
 
-        for ts_idx in range(output_ts.shape[0] - 1):
+        for ts_idx in range(self.frame_ts.shape[0] - 1):
             # assume time_list is sorted.
+
             start = np.searchsorted(ts,
-                                    output_ts[ts_idx],
+                                    self.frame_ts[ts_idx],
                                     side='right')
             end = np.searchsorted(ts,
-                                  output_ts[ts_idx + 1],
+                                  self.frame_ts[ts_idx + 1],
                                   side='right')
             # select events, assume that pos_list is sorted
-            if ts_idx < len(output_ts) - 1:
-                events = event_arr[start: end, :]
+            if ts_idx < len(self.frame_ts) - 1:
+                events = event_arr[start: end]
             else:
-                events = event_arr[start:, :]
+                events = event_arr[start:]
 
-            pol_on = (events[:, 3] == 1)
+            pol_on = (events["polarity"] == 1)
             pol_off = np.logical_not(pol_on)
             img_on, _, _ = np.histogram2d(
-                    events[pol_on, 2], events[pol_on, 1],
+                    events["x"][pol_on], events["y"][pol_on],
                     bins=(height, width), range=histrange)
             img_off, _, _ = np.histogram2d(
-                    events[pol_off, 2], events[pol_off, 1],
+                    events["x"][pol_off], events["y"][pol_off],
                     bins=(height, width), range=histrange)
             if clip_value is not None:
                 integrated_img = np.clip(
-                    (img_on-img_off), -clip_value, clip_value)
+                    (img_on - img_off), -clip_value, clip_value)
             else:
-                integrated_img = (img_on-img_off)
+                integrated_img = (img_on - img_off)
             img = (integrated_img + clip_value) / float(clip_value * 2)
             out.write(
                 cv2.cvtColor(
@@ -103,21 +100,27 @@ class RenderFromImages(Base):
     def __init__(
         self,
         images_path,
-        timestamps,
-        threshold
+        ts,
+        threshold,
+        output_path,
     ):
         """
         init
         @params:
             images_path: str
-                path of all images
+                path of all images.
+            ts: np.array
+                ts of interpolated frames.
+            threshold: float,
+                threshold of triggering an event.
+            frame_ts: np.array.
+                fps of interpolated video.
         """
-        super().__init__()
+        super().__init__(ts)
         self.all_images = self.__all_images(images_path)
-        self.ts = timestamps
+        self.ts = ts
+        self.output_path = output_path
         base_frame = self.__read_image(self.all_images[0])
-        self.height = base_frame.shape[0]
-        self.width = base_frame.shape[1]
         self.emulator = EventEmulator(
             base_frame,
             threshold=np.log(threshold))
@@ -151,7 +154,7 @@ class RenderFromImages(Base):
         @Return:
             np.ndarray
         """
-        img = cv2.imread(path)
+        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
         img = img.astype(np.float) / 255.
         return img
 
