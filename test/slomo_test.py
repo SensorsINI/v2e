@@ -5,12 +5,16 @@
 """
 import numpy as np
 import sys
+import pdb
 
 if __name__ == "__main__":
 
+    sys.path.append("../")
     sys.path.append("../src/")
+    sys.path.append("../utils/")
 
     from slomo import SuperSloMo
+    from reader import Reader
 
     images = np.load("../data/frames.npy")
     checkpoint = "../data/SuperSloMo38.ckpt"
@@ -21,4 +25,11 @@ if __name__ == "__main__":
         slow_factor,
         output_path
     )
-    super_slomo.run(images)
+    # super_slomo.interpolate(images)
+
+    fname = "../data/rec1487354811.hdf5"
+
+    m = Reader(fname, start=5, stop=10)
+    frames, events = m.read()
+    new_ts = super_slomo.timestamps(frames["ts"])
+    pdb.set_trace()

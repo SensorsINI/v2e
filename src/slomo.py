@@ -9,6 +9,7 @@
 
 import torch
 import os
+import numpy as np
 
 import torchvision.transforms as transforms
 import torch.nn.functional as F
@@ -128,7 +129,7 @@ class SuperSloMo(object):
 
         return flow_estimator, warpper, interpolator
 
-    def run(self, images):
+    def interpolate(self, images):
         """Run interpolation.
             Interpolated frames will be saved in folder self.output_path.
             @Params:
@@ -200,3 +201,26 @@ class SuperSloMo(object):
 
                 # Set counter accounting for batching of frames
                 frameCounter += self.sf * (self.batch_size - 1)
+
+    def timestamps(self, ts):
+        """
+        Interpolate the timestamps.
+        @params:
+            ts: np.array, np.float64,
+                timestamps.
+        @return:
+            np.array, np.float64,
+                interpolated timestamps.
+        """
+        new_ts = []
+        for i in range(ts.shape[0] - 1):
+            start, end = ts[i], ts[i + 1]
+            interpolated_ts = np.linspace(
+                start,
+                end,
+                self.sf,
+                endpoint=False) + 0.5 * (end - start) / self.sf
+            new_ts.append(interpolated_ts)
+        new_ts = np.hstack(new_ts)
+
+        return new_ts
