@@ -141,7 +141,11 @@ class up(nn.Module):
         """
 
         # Bilinear interpolation with scaling 2.
-        x = F.interpolate(x, scale_factor=2, mode='bilinear')
+        # NOTE align_corners=False is missing in the original code.
+        x = F.interpolate(x,
+                          scale_factor=2,
+                          mode='bilinear',
+                          align_corners=False)
         # Convolution + Leaky ReLU
         x = F.leaky_relu(self.conv1(x), negative_slope=0.1)
         # Convolution + Leaky ReLU on (`x`, `skpCn`)

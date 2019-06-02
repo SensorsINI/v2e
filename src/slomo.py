@@ -174,7 +174,7 @@ class SuperSloMo(object):
 
                     F_t_0_f = intrpOut[:, :2, :, :] + F_t_0
                     F_t_1_f = intrpOut[:, 2:4, :, :] + F_t_1
-                    V_t_0 = F.sigmoid(intrpOut[:, 4:5, :, :])
+                    V_t_0 = torch.sigmoid(intrpOut[:, 4:5, :, :])
                     V_t_1 = 1 - V_t_0
 
                     g_I0_F_t_0_f = warpper(I0, F_t_0_f)
@@ -200,7 +200,7 @@ class SuperSloMo(object):
                 # Set counter accounting for batching of frames
                 frameCounter += self.sf * (self.batch_size - 1)
 
-    def timestamps(self, ts):
+    def get_ts(self, ts):
         """
         Interpolate the timestamps.
         @params:

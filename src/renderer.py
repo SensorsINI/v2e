@@ -14,10 +14,21 @@ class Base(object):
     @contact: hezhehz@live.cn
     """
 
-    def __init__(self, frame_ts):
+    def __init__(
+        self,
+        frame_ts,
+        output_path
+    ):
         """
+        Init.
+        @params:
+            frame_ts: np.array,
+                timestamps of interpolated frames.
+            output_path: str,
+                path of output video. Example: ../../XX.avi.
         """
         self.frame_ts = frame_ts
+        self.output_path = output_path
 
     def _get_events(self):
         """
@@ -45,7 +56,7 @@ class Base(object):
         histrange = [(0, v) for v in (height, width)]
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         out = cv2.VideoWriter(
-                  os.path.join(self.output_path, 'output.avi'),
+                  self.output_path,
                   fourcc,
                   30.0,
                   (width, height))
@@ -100,7 +111,7 @@ class RenderFromImages(Base):
     def __init__(
         self,
         images_path,
-        ts,
+        frame_ts,
         threshold,
         output_path,
     ):
@@ -109,17 +120,16 @@ class RenderFromImages(Base):
         @params:
             images_path: str
                 path of all images.
-            ts: np.array
+            frame_ts: np.array
                 ts of interpolated frames.
             threshold: float,
                 threshold of triggering an event.
-            frame_ts: np.array.
-                fps of interpolated video.
+            output_path: str,
+                path to store output video.
         """
-        super().__init__(ts)
+        super().__init__(frame_ts, output_path)
         self.all_images = self.__all_images(images_path)
-        self.ts = ts
-        self.output_path = output_path
+        self.frame_ts = frame_ts
         base_frame = self.__read_image(self.all_images[0])
         self.emulator = EventEmulator(
             base_frame,
@@ -163,7 +173,7 @@ class RenderFromImages(Base):
 
         event_list = list()
 
-        for i, ts in enumerate(self.ts):
+        for i, ts in enumerate(self.frame_ts):
             new_frame = self.__read_image(self.all_images[i])
             tmp_events = self.emulator.compute_events(new_frame, ts)
 
@@ -177,3 +187,39 @@ class RenderFromImages(Base):
         print("Amount of events: {}".format(event_arr.shape[0]))
 
         return event_arr
+
+
+class RenderFromEvents(Base):
+    """
+    @author: Zhe He
+    @contact: hezhehz@live.cn
+    @latest update: 2019-June-2
+    """
+
+    def __init__(
+        self,
+        frame_ts,
+        events,
+        output_path,
+    ):
+        """
+        Init.
+        @params:
+            frame_ts: np.array,
+                timestamps of interpolated frames.
+            events: numpy structured array.
+                keys: {"ts", "events"}
+            output_path: str,
+                path to store output video.
+        """
+        super().__init__(frame_ts, output_path)
+        self.events = events
+
+    def _get_events(self):
+        """
+        Return events.
+        @return:
+            self.events: numpy structured array.
+                keys: {"ts", "events"}
+        """
+        return self.events

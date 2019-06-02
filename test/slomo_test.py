@@ -31,5 +31,5 @@ if __name__ == "__main__":
 
     m = Reader(fname, start=5, stop=10)
     frames, events = m.read()
-    new_ts = super_slomo.timestamps(frames["ts"])
+    new_ts = super_slomo.get_ts(frames["ts"])
     pdb.set_trace()
