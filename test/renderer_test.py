@@ -13,6 +13,18 @@ parser.add_argument(
     help="threshold to trigger event"
 )
 parser.add_argument(
+    "--start",
+    type=float,
+    default=0.0,
+    help="start point of video stream"
+)
+parser.add_argument(
+    "--stop",
+    type=float,
+    default=5.0,
+    help="stop point of video stream"
+)
+parser.add_argument(
     "--fname",
     type=str,
     required=True,
@@ -36,7 +48,7 @@ if __name__ == "__main__":
     from src.slomo import SuperSloMo
     from src.reader import Reader
 
-    m = Reader(args.fname, start=10, stop=10.1)
+    m = Reader(args.fname, start=args.start, stop=args.stop)
     frames, events = m.read()
 
     with TemporaryDirectory() as dirname:
@@ -68,6 +80,8 @@ if __name__ == "__main__":
         )
 
         frames_events = r_events.render(height, width)
-    l1_error = np.mean(np.abs(frames_images - frames_events), axis=0)
+    l1_error = np.mean(
+            np.abs(frames_images - frames_events)
+        )
     print("Threshold: {} \t MEAN L1 ERROR: {}".format(args.threshold,
                                                       l1_error))
