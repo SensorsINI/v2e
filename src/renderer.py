@@ -60,6 +60,8 @@ class Base(object):
                   fourcc,
                   30.0,
                   (width, height))
+        
+        images = list()
 
         for ts_idx in range(self.frame_ts.shape[0] - 1):
             # assume time_list is sorted.
@@ -89,6 +91,7 @@ class Base(object):
                     (img_on - img_off), -clip_value, clip_value)
             else:
                 integrated_img = (img_on - img_off)
+            images.append(integrated_img)
             img = (integrated_img + clip_value) / float(clip_value * 2)
             out.write(
                 cv2.cvtColor(
@@ -98,6 +101,9 @@ class Base(object):
             if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
                 break
         out.release()
+        images = np.stack(images)
+
+        return images
 
 
 class RenderFromImages(Base):

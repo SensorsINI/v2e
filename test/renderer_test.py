@@ -1,5 +1,19 @@
 import sys
 import numpy as np
+import argparse
+
+from tempfile import TemporaryDirectory
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--threshold",
+    type=float,
+    default=0.01,
+    help="threshold to trigger event"
+)
+
+args = parser.parse_args()
 
 
 if __name__ == "__main__":
@@ -10,32 +24,40 @@ if __name__ == "__main__":
     from src.slomo import SuperSloMo
     from src.reader import Reader
 
-    fname = "../data/rec1487354811.hdf5"
+    fname = "../data/rec1500394622.hdf5"
 
-    m = Reader(fname, start=5, stop=5.5)
+    m = Reader(fname, start=10, stop=10.1)
     frames, events = m.read()
 
-    s = SuperSloMo(
-        "../data/SuperSloMo38.ckpt",
-        10,
-        "../data/tmpSloMo/"
-    )
+    with TemporaryDirectory() as dirname:
 
-    s.interpolate(frames["frame"])
-    frame_ts = s.get_ts(frames["ts"])
-    height, width = frames["frame"].shape[1:]
+        print("tmp_dir: ", dirname)
 
-    r = RenderFromImages(
-        "../data/tmpSloMo/",
-        frame_ts,
-        0.02,
-        "../data/from_image.avi")
-    r.render(height, width)
+        s = SuperSloMo(
+            "../data/SuperSloMo38.ckpt",
+            10,
+            dirname
+        )
 
-    r_events = RenderFromEvents(
-        frame_ts,
-        events,
-        "../data/from_events.avi"
-    )
+        s.interpolate(frames["frame"])
+        frame_ts = s.get_ts(frames["ts"])
+        height, width = frames["frame"].shape[1:]
 
-    r_events.render(height, width)
+        r = RenderFromImages(
+            dirname,
+            frame_ts,
+            args.threshold,
+            "../data/from_image.avi")
+
+        frames_images = r.render(height, width)
+
+        r_events = RenderFromEvents(
+            frame_ts,
+            events,
+            "../data/from_events.avi"
+        )
+
+        frames_events = r_events.render(height, width)
+    l1_error = np.mean(np.abs(frames_images - frames_events), axis=0)
+    print("Threshold: {} \t MEAN L1 ERROR: {}".format(args.threshold,
+                                                      l1_error))

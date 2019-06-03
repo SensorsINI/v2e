@@ -374,9 +374,3 @@ def getWarpCoeff(indices, device):
     C0 = 1 - t[ind]
     C1 = t[ind]
     return torch.Tensor(C0)[None, None, None, :].permute(3, 0, 1, 2).to(device), torch.Tensor(C1)[None, None, None, :].permute(3, 0, 1, 2).to(device)
-
-
-def main():
-    """test function"""
-
-    flow = UNet(6, 4)
