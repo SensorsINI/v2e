@@ -12,6 +12,12 @@ parser.add_argument(
     default=0.01,
     help="threshold to trigger event"
 )
+parser.add_argument(
+    "--fname",
+    type=str,
+    required=True,
+    help="path of .h5 file"
+)
 
 args = parser.parse_args()
 
@@ -24,9 +30,7 @@ if __name__ == "__main__":
     from src.slomo import SuperSloMo
     from src.reader import Reader
 
-    fname = "../data/rec1500394622.hdf5"
-
-    m = Reader(fname, start=10, stop=10.1)
+    m = Reader(args.fname, start=10, stop=10.1)
     frames, events = m.read()
 
     with TemporaryDirectory() as dirname:
