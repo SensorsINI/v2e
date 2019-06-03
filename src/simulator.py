@@ -73,47 +73,47 @@ class EventEmulator(object):
 
         # sort out the positive event and negative event
         if num_pos_events > 0:
-            # pos_events = np.hstack(
-            #     (np.ones((num_pos_events, 1), dtype=np.float32) * ts,
-            #      pos_event_xy[1][..., np.newaxis],
-            #      pos_event_xy[0][..., np.newaxis],
-            #      np.ones((num_pos_events, 1), dtype=np.float32)))
-            pos_events = np.core.records.fromarrays(
-                [np.ones((num_pos_events, 1)) * ts,
+            pos_events = np.hstack(
+                (np.ones((num_pos_events, 1), dtype=np.float32) * ts,
                  pos_event_xy[1][..., np.newaxis],
                  pos_event_xy[0][..., np.newaxis],
-                 np.ones((num_pos_events, 1))],
-                dtype=np.dtype(
-                    [
-                        ("ts", np.float64),
-                        ("y", np.uint32),
-                        ("x", np.uint32),
-                        ("polarity", np.int8)
-                    ]
-                )
-            )
+                 np.ones((num_pos_events, 1), dtype=np.float32)))
+            # pos_events = np.core.records.fromarrays(
+            #     [np.ones((num_pos_events, 1)) * ts,
+            #      pos_event_xy[1][..., np.newaxis],
+            #      pos_event_xy[0][..., np.newaxis],
+            #      np.ones((num_pos_events, 1))],
+            #     dtype=np.dtype(
+            #         [
+            #             ("ts", np.float64),
+            #             ("y", np.uint32),
+            #             ("x", np.uint32),
+            #             ("polarity", np.int8)
+            #         ]
+            #     )
+            # )
         else:
             pos_events = None
         if num_neg_events > 0:
-            # neg_events = np.hstack(
-            #     (np.ones((num_neg_events, 1), dtype=np.float32) * ts,
-            #      neg_event_xy[1][..., np.newaxis],
-            #      neg_event_xy[0][..., np.newaxis],
-            #      np.ones((num_neg_events, 1), dtype=np.float32)*-1))
-            neg_events = np.core.records.fromarrays(
-                [np.ones((num_neg_events, 1)) * ts,
+            neg_events = np.hstack(
+                (np.ones((num_neg_events, 1), dtype=np.float32) * ts,
                  neg_event_xy[1][..., np.newaxis],
                  neg_event_xy[0][..., np.newaxis],
-                 np.ones((num_neg_events, 1)) * -1],
-                dtype=np.dtype(
-                    [
-                        ("ts", np.float64),
-                        ("y", np.uint32),
-                        ("x", np.uint32),
-                        ("polarity", np.int8)
-                    ]
-                )
-            )
+                 np.ones((num_neg_events, 1), dtype=np.float32)*-1))
+            # neg_events = np.core.records.fromarrays(
+            #     [np.ones((num_neg_events, 1)) * ts,
+            #      neg_event_xy[1][..., np.newaxis],
+            #      neg_event_xy[0][..., np.newaxis],
+            #      np.ones((num_neg_events, 1)) * -1],
+            #     dtype=np.dtype(
+            #         [
+            #             ("ts", np.float64),
+            #             ("y", np.uint32),
+            #             ("x", np.uint32),
+            #             ("polarity", np.int8)
+            #         ]
+            #     )
+            # )
         else:
             neg_events = None
 

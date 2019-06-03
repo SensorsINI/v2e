@@ -94,20 +94,24 @@ class Reader(object):
                 continue
             if d['etype'] == 'polarity_event':
                 unpack_data(d)
-                data = np.core.records.fromarrays(
-                    d["data"].transpose(),
-                    dtype=np.dtype([("ts", np.float64),
-                                    ("y", np.uint32),
-                                    ("x", np.uint32),
-                                    ("polarity", np.int8)])
-                )
-                data["ts"] = data["ts"] * 1e-6 + t_offset
-                data["polarity"] = data["polarity"] * 2 - 1
+                data = d["data"]
+                # data = np.core.records.fromarrays(
+                #     d["data"].transpose(),
+                #     dtype=np.dtype([("ts", np.float64),
+                #                     ("y", np.uint32),
+                #                     ("x", np.uint32),
+                #                     ("polarity", np.int8)])
+                # )
+                # data["ts"] = data["ts"] * 1e-6 + t_offset
+                # data["polarity"] = data["polarity"] * 2 - 1
+                # events.append(data)
+                # current = data["ts"][-1]
+                data[:, 0] = data[:, 0] * 1e-6 + t_offset
+                data[:, 3] = data[:, 3] * 2 - 1
                 events.append(data)
-                current = data["ts"][-1]
         frames = np.hstack(frames)
-        events = np.hstack(events)
+        events = np.vstack(events)
         frames["ts"] -= frames["ts"][0]
-        events["ts"] -= events["ts"][0]
+        events[:, 0] -= events[0][0]
 
         return frames, events

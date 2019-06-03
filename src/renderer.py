@@ -51,7 +51,6 @@ class Base(object):
         """
 
         event_arr = self._get_events()
-        ts = event_arr["ts"].squeeze()
         clip_value = 2
         histrange = [(0, v) for v in (height, width)]
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -61,13 +60,15 @@ class Base(object):
                   30.0,
                   (width, height))
 
+        rendered_frames = list()
+
         for ts_idx in range(self.frame_ts.shape[0] - 1):
             # assume time_list is sorted.
 
-            start = np.searchsorted(ts,
+            start = np.searchsorted(event_arr[:, 0],
                                     self.frame_ts[ts_idx],
                                     side='right')
-            end = np.searchsorted(ts,
+            end = np.searchsorted(event_arr[:, 0],
                                   self.frame_ts[ts_idx + 1],
                                   side='right')
             # select events, assume that pos_list is sorted
@@ -76,19 +77,20 @@ class Base(object):
             else:
                 events = event_arr[start:]
 
-            pol_on = (events["polarity"] == 1)
+            pol_on = (events[:, 3] == 1)
             pol_off = np.logical_not(pol_on)
             img_on, _, _ = np.histogram2d(
-                    events["x"][pol_on], events["y"][pol_on],
+                    events[pol_on, 2], events[pol_on, 1],
                     bins=(height, width), range=histrange)
             img_off, _, _ = np.histogram2d(
-                    events["x"][pol_off], events["y"][pol_off],
+                    events[pol_off, 2], events[pol_off, 1],
                     bins=(height, width), range=histrange)
             if clip_value is not None:
                 integrated_img = np.clip(
                     (img_on - img_off), -clip_value, clip_value)
             else:
                 integrated_img = (img_on - img_off)
+            rendered_frames.append(integrated_img)
             img = (integrated_img + clip_value) / float(clip_value * 2)
             out.write(
                 cv2.cvtColor(
@@ -98,6 +100,9 @@ class Base(object):
             if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
                 break
         out.release()
+
+        rendered_frames = np.vstack(rendered_frames)
+        return rendered_frames
 
 
 class RenderFromImages(Base):
