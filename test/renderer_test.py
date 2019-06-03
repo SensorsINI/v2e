@@ -76,7 +76,7 @@ if __name__ == "__main__":
         r_events = RenderFromEvents(
             frame_ts,
             events,
-            "../data/from_events.avi"
+            "../data/from_event.avi"
         )
 
         frames_events = r_events.render(height, width)
