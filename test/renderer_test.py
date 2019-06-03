@@ -18,6 +18,12 @@ parser.add_argument(
     required=True,
     help="path of .h5 file"
 )
+parser.add_argument(
+    "--checkpoint",
+    type=str,
+    required=True,
+    help="path of checkpoint"
+)
 
 args = parser.parse_args()
 
@@ -38,7 +44,7 @@ if __name__ == "__main__":
         print("tmp_dir: ", dirname)
 
         s = SuperSloMo(
-            "../data/SuperSloMo38.ckpt",
+            args.checkpoint,
             10,
             dirname
         )
