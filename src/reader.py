@@ -106,8 +106,12 @@ class Reader(object):
                 # data["polarity"] = data["polarity"] * 2 - 1
                 # events.append(data)
                 # current = data["ts"][-1]
-                data[:, 0] = data[:, 0] * 1e-6 + t_offset
-                data[:, 3] = data[:, 3] * 2 - 1
+                data = np.hstack(
+                    (data[:, 0][:, None] * 1e-6 + t_offset,
+                     data[:, 1][:, None],
+                     data[:, 2][:, None],
+                     data[:, 3].astype(np.int)[:, None] * 2 - 1)
+                )
                 events.append(data)
         frames = np.hstack(frames)
         events = np.vstack(events)
