@@ -11,7 +11,22 @@ import os
 import cv2
 import numpy as np
 
-import pdb
+
+def piecewise_log(x, threshold=20):
+    """
+    linear mapping + logrithmic mapping.
+    @author: Zhe He
+    @contact: hezhehz@live.cn
+    """
+
+    y = np.piecewise(
+        x,
+        [x < threshold, x >= threshold],
+        [lambda x: x / threshold * np.log(threshold),
+         lambda x: np.log(x + 1e-6)]
+    )
+
+    return y
 
 
 class EventEmulator(object):
@@ -28,7 +43,7 @@ class EventEmulator(object):
             threhold: float
                 threshold of activation.
         """
-        self.base_frame = base_frame
+        self.base_frame = piecewise_log(base_frame)
         self.threshold = float(threshold)
 
     def compute_events(self, new_frame, ts, verbose=False):
@@ -45,19 +60,20 @@ class EventEmulator(object):
                 [N, 4], each row contains [timestamp, y cordinate,
                 x cordinate, sign of event].
         """
-        diff_frame = new_frame - self.base_frame
-        pos_frame = np.zeros_like(diff_frame) + 1e-6
-        neg_frame = np.zeros_like(diff_frame) + 1e-6
-        pos_frame[diff_frame > 0] = diff_frame[diff_frame > 0]
-        neg_frame[diff_frame < 0] = np.abs(diff_frame[diff_frame < 0])
 
-        pos_thre_frame = (np.log(pos_frame) > self.threshold)
-        neg_thre_frame = (np.log(neg_frame) > self.threshold)
+        log_frame = piecewise_log(new_frame)
+        diff_frame = self.base_frame - log_frame
+        pos_frame = np.zeros_like(diff_frame)
+        neg_frame = np.zeros_like(diff_frame)
+        pos_frame[diff_frame > 0] = diff_frame[diff_frame > 0]
+        neg_frame[diff_frame > 0] = np.abs(diff_frame[diff_frame > 0])
+        pos_cord = (pos_frame > self.threshold)
+        neg_cord = (neg_frame > self.threshold)
 
         # generate events
-        pos_event_xy = np.where(pos_thre_frame)
+        pos_event_xy = np.where(pos_cord)
         num_pos_events = pos_event_xy[0].shape[0]
-        neg_event_xy = np.where(neg_thre_frame)
+        neg_event_xy = np.where(neg_cord)
         num_neg_events = neg_event_xy[0].shape[0]
         num_events = num_pos_events + num_neg_events
 
@@ -77,7 +93,7 @@ class EventEmulator(object):
                 (np.ones((num_pos_events, 1), dtype=np.float32) * ts,
                  pos_event_xy[1][..., np.newaxis],
                  pos_event_xy[0][..., np.newaxis],
-                 np.ones((num_pos_events, 1), dtype=np.float32)))
+                 np.ones((num_pos_events, 1), dtype=np.float32) * -1))
             # pos_events = np.core.records.fromarrays(
             #     [np.ones((num_pos_events, 1)) * ts,
             #      pos_event_xy[1][..., np.newaxis],
@@ -99,7 +115,7 @@ class EventEmulator(object):
                 (np.ones((num_neg_events, 1), dtype=np.float32) * ts,
                  neg_event_xy[1][..., np.newaxis],
                  neg_event_xy[0][..., np.newaxis],
-                 np.ones((num_neg_events, 1), dtype=np.float32)*-1))
+                 np.ones((num_neg_events, 1), dtype=np.float32)))
             # neg_events = np.core.records.fromarrays(
             #     [np.ones((num_neg_events, 1)) * ts,
             #      neg_event_xy[1][..., np.newaxis],
@@ -126,9 +142,9 @@ class EventEmulator(object):
 
         # update base frame
         if num_pos_events > 0:
-            self.base_frame[pos_thre_frame] = new_frame[pos_thre_frame]
+            self.base_frame[pos_cord] = log_frame[pos_cord]
         if num_neg_events > 0:
-            self.base_frame[neg_thre_frame] = new_frame[neg_thre_frame]
+            self.base_frame[neg_cord] = log_frame[neg_cord]
 
         if num_events > 0:
             return events
@@ -196,8 +212,8 @@ class EventFrameRenderer(object):
         @Return:
             np.ndarray
         """
-        img = cv2.imread(path)
-        img = img.astype(np.float, cv2.IMREAD_GRAYSCALE) / 255.
+        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        img = img.astype(np.float) / 255.
         return img
 
     def _get_events(self):
@@ -214,7 +230,7 @@ class EventFrameRenderer(object):
         height = base_frame.shape[0]
         width = base_frame.shape[1]
         emulator = EventEmulator(base_frame,
-                                 threshold=np.log(self.threshold))
+                                 threshold=self.threshold)
 
         event_list = list()
         time_list = list()
@@ -277,13 +293,13 @@ class EventFrameRenderer(object):
             else:
                 events = event_arr[pos_list[start]:, :]
 
-            pol_on = (events["polarity"] == 1)
+            pol_on = (events[:, 3] == 1)
             pol_off = np.logical_not(pol_on)
             img_on, _, _ = np.histogram2d(
-                    events["x"][pol_on], events["y"][pol_on],
+                    events[pol_on, 2], events[pol_on, 1],
                     bins=(height, width), range=histrange)
             img_off, _, _ = np.histogram2d(
-                    events["x"][pol_off], events["y"][pol_off],
+                    events[pol_off, 2], events[pol_off, 1],
                     bins=(height, width), range=histrange)
             if clip_value is not None:
                 integrated_img = np.clip(

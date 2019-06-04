@@ -139,7 +139,7 @@ class RenderFromImages(Base):
         base_frame = self.__read_image(self.all_images[0])
         self.emulator = EventEmulator(
             base_frame,
-            threshold=np.log(threshold))
+            threshold=threshold)
 
     def __all_images(self, data_path):
         """Return path of all input images. Assume that the ascending order of
