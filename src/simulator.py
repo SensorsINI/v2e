@@ -31,7 +31,7 @@ class EventEmulator(object):
         self.base_frame = base_frame
         self.threshold = float(threshold)
 
-    def compute_events(self, new_frame, ts, verbose=True):
+    def compute_events(self, new_frame, ts, verbose=False):
         """compute events in new frame.
         @Args:
             new_frame: np.ndarray
