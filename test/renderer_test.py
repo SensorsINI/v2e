@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
         frames_events = r_events.render(height, width)
 
-        for threshold in range(0.01, 0.2, 0.01):
+        for threshold in np.arange(0.01, 0.2, 0.01):
 
             r = RenderFromImages(
                 dirname,
