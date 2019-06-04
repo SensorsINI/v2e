@@ -171,7 +171,7 @@ class RenderFromImages(Base):
             np.ndarray
         """
         img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-        img = img.astype(np.float) / 255.
+        img = img.astype(np.float)
         return img
 
     def _get_events(self):
