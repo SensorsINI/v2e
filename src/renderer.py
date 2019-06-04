@@ -103,7 +103,7 @@ class Base(object):
         out.release()
 
         rendered_frames = np.vstack(rendered_frames)
-        return rendered_frames
+        return rendered_frames, event_arr.shape[0]
 
 
 class RenderFromImages(Base):

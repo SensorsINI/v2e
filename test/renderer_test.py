@@ -51,6 +51,8 @@ if __name__ == "__main__":
     m = Reader(args.fname, start=args.start, stop=args.stop)
     frames, events = m.read()
 
+    results = []
+
     with TemporaryDirectory() as dirname:
 
         print("tmp_dir: ", dirname)
@@ -71,7 +73,7 @@ if __name__ == "__main__":
             "../data/from_event.avi"
         )
 
-        frames_events = r_events.render(height, width)
+        frames_events, num_events = r_events.render(height, width)
 
         for threshold in np.arange(0.01, 0.2, 0.01):
 
@@ -79,12 +81,17 @@ if __name__ == "__main__":
                 dirname,
                 frame_ts,
                 threshold,
-                "../data/from_image.avi")
+                "../data/from_image_{}.avi".format(threshold))
 
-            frames_images = r.render(height, width)
+            frames_images, num_images = r.render(height, width)
 
             l1_error = np.mean(
                     np.abs(frames_images - frames_events)
                 )
+            results.append(
+                [threshold, np.abs(num_events - num_images), l1_error]
+            )
             print("Threshold: {} \t MEAN L1 ERROR: {}".format(threshold,
                                                               l1_error))
+    results = np.array(results)
+    np.save('../data/results.npy', results)
