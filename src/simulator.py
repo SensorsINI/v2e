@@ -35,7 +35,7 @@ class EventEmulator(object):
     - contact: zhehe@student.ethz.ch
     """
 
-    def __init__(self, base_frame, threshold=np.log(0.01)):
+    def __init__(self, base_frame, threshold=0.01):
         """
         @Args:
             base_frame: np.ndarray
@@ -66,7 +66,7 @@ class EventEmulator(object):
         pos_frame = np.zeros_like(diff_frame)
         neg_frame = np.zeros_like(diff_frame)
         pos_frame[diff_frame > 0] = diff_frame[diff_frame > 0]
-        neg_frame[diff_frame > 0] = np.abs(diff_frame[diff_frame > 0])
+        neg_frame[diff_frame < 0] = np.abs(diff_frame[diff_frame < 0])
         pos_cord = (pos_frame > self.threshold)
         neg_cord = (neg_frame > self.threshold)
 
