@@ -178,7 +178,7 @@ class RenderFromImages(Base):
 
         event_list = list()
 
-        for i, ts in enumerate(self.frame_ts):
+        for i, ts in enumerate(self.frame_ts[1:]):
             new_frame = self.__read_image(self.all_images[i])
             tmp_events = self.emulator.compute_events(new_frame, ts)
 
