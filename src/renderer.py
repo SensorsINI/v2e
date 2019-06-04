@@ -4,6 +4,8 @@ import os
 import glob
 import pdb
 
+from tqdm import tqdm
+
 from simulator import EventEmulator
 
 
@@ -62,7 +64,8 @@ class Base(object):
 
         rendered_frames = list()
 
-        for ts_idx in range(self.frame_ts.shape[0] - 1):
+        for ts_idx in tqdm(range(self.frame_ts.shape[0] - 1),
+                           desc="rendering: "):
             # assume time_list is sorted.
 
             start = np.searchsorted(event_arr[:, 0],
@@ -97,8 +100,6 @@ class Base(object):
             out.write(
                 cv2.cvtColor(
                     (img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR))
-            if ts_idx % 20 == 0:
-                print('Rendered {} frames'.format(ts_idx))
             if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
                 break
         out.release()
@@ -180,16 +181,13 @@ class RenderFromImages(Base):
 
         event_list = list()
 
-        for i, ts in enumerate(self.frame_ts[1:]):
-            new_frame = self.__read_image(self.all_images[i])
+        for i in tqdm(range(self.frame_ts.shape[0] - 1),
+                      desc="image2events: "):
+            new_frame = self.__read_image(self.all_images[i + 1])
+            ts = (self.frame_ts[i] + self.frame_ts[i + 1]) / 2
             tmp_events = self.emulator.compute_events(new_frame, ts)
-
             if tmp_events is not None:
                 event_list.append(tmp_events)
-
-            if (i + 1) % 20 == 0:
-                print("Image2Events processed {} frames".format(i + 1))
-
         event_arr = np.vstack(event_list)
         print("Amount of events: {}".format(event_arr.shape[0]))
 
