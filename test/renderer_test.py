@@ -75,13 +75,13 @@ if __name__ == "__main__":
 
         frames_events, num_events = r_events.render(height, width)
 
-        for threshold in np.arange(0.01, 0.2, 0.01):
+        for threshold in np.arange(0.01, 0.91, 0.01):
 
             r = RenderFromImages(
                 dirname,
                 frame_ts,
                 threshold,
-                "../data/from_image_{}.avi".format(threshold))
+                "../data/from_image_{:.2f}.avi".format(threshold))
 
             frames_images, num_images = r.render(height, width)
 
