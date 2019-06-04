@@ -74,7 +74,6 @@ class HDF5(mp.Process):
                 extra_shape = ttype[1]
                 ttype = ttype[0]
                 self.ndims[tname] += 1
-            print(tname)
             self.datasets[tname] = rnode.create_dataset(
                 subtname,
                 (SIZE_INC,) + extra_shape,

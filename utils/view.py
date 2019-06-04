@@ -112,7 +112,6 @@ class HDF5Stream(mp.Process):
         self.size = {k: len(self.f[k]['data']) - v * CHUNK_SIZE
                      for k, v in self.block_offset.items()}
         self.blocks = {k: v // CHUNK_SIZE for k, v in self.size.items()}
-        print(self.blocks)
         self.blocks_rem = {
             k: mp.Value('L', v) for k, v in self.blocks.items() if v}
 
