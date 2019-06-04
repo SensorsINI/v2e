@@ -70,7 +70,7 @@ class Base(object):
 
             start = np.searchsorted(event_arr[:, 0],
                                     self.frame_ts[ts_idx],
-                                    side='right')
+                                    side='left')
             end = np.searchsorted(event_arr[:, 0],
                                   self.frame_ts[ts_idx + 1],
                                   side='right')
