@@ -74,10 +74,6 @@ class Base(object):
             end = np.searchsorted(event_arr[:, 0],
                                   self.frame_ts[ts_idx + 1],
                                   side='right')
-            if start == end:
-                print("start: {} \t end: {}".format(start, end))
-                print("ts[i]: {} \t ts[i + 1]: {}".format(
-                    self.frame_ts[ts_idx], self.frame_ts[ts_idx + 1]))
             # select events, assume that pos_list is sorted
             if ts_idx < len(self.frame_ts) - 1:
                 events = event_arr[start: end]
