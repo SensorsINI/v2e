@@ -65,14 +65,6 @@ if __name__ == "__main__":
         frame_ts = s.get_ts(frames["ts"])
         height, width = frames["frame"].shape[1:]
 
-        r = RenderFromImages(
-            dirname,
-            frame_ts,
-            args.threshold,
-            "../data/from_image.avi")
-
-        frames_images = r.render(height, width)
-
         r_events = RenderFromEvents(
             frame_ts,
             events,
@@ -80,8 +72,19 @@ if __name__ == "__main__":
         )
 
         frames_events = r_events.render(height, width)
-    l1_error = np.mean(
-            np.abs(frames_images - frames_events)
-        )
-    print("Threshold: {} \t MEAN L1 ERROR: {}".format(args.threshold,
-                                                      l1_error))
+
+        for threshold in range(0.01, 0.2, 0.01):
+
+            r = RenderFromImages(
+                dirname,
+                frame_ts,
+                threshold,
+                "../data/from_image.avi")
+
+            frames_images = r.render(height, width)
+
+            l1_error = np.mean(
+                    np.abs(frames_images - frames_events)
+                )
+            print("Threshold: {} \t MEAN L1 ERROR: {}".format(threshold,
+                                                              l1_error))
