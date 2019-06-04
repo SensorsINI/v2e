@@ -76,7 +76,7 @@ class Base(object):
                                   side='right')
             if start == end:
                 print("start: {} \t end: {}".format(start, end))
-                print("ts[i]: {} \t ts[i + 1]: ".format(
+                print("ts[i]: {} \t ts[i + 1]: {}".format(
                     self.frame_ts[ts_idx], self.frame_ts[ts_idx + 1]))
             # select events, assume that pos_list is sorted
             if ts_idx < len(self.frame_ts) - 1:
