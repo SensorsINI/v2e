@@ -90,7 +90,7 @@ if __name__ == "__main__":
                 )
             abs_diff = np.abs(num_events - num_images)
             if len(results) > 0 and abs_diff >= results[-1][1]:
-                print("Optimal Threshold Found: {}".format(threshold))
+                print("Optimal Threshold Found: {}".format(results[-1][0]))
                 break
             results.append(
                 [threshold, abs_diff, l1_error]
