@@ -182,8 +182,8 @@ class RenderFromImages(Base):
         for i in tqdm(range(self.frame_ts.shape[0] - 1),
                       desc="image2events: "):
             new_frame = self.__read_image(self.all_images[i + 1])
-            ts = (self.frame_ts[i] + self.frame_ts[i + 1]) / 2
-            tmp_events = self.emulator.compute_events(new_frame, ts)
+            tmp_events = self.emulator.compute_events(
+                new_frame, self.frame_ts[i], self.frame_ts[i + 1])
             if tmp_events is not None:
                 event_list.append(tmp_events)
         event_arr = np.vstack(event_list)

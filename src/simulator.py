@@ -23,7 +23,7 @@ def piecewise_log(x, threshold=20):
         x,
         [x < threshold, x >= threshold],
         [lambda x: x / threshold * np.log(threshold),
-         lambda x: np.log(x + 1e-6)]
+         lambda x: np.log(x)]
     )
 
     return y
@@ -35,7 +35,7 @@ class EventEmulator(object):
     - contact: zhehe@student.ethz.ch
     """
 
-    def __init__(self, base_frame, threshold=0.01):
+    def __init__(self, base_frame, threshold=0.19):
         """
         @Args:
             base_frame: np.ndarray
@@ -46,7 +46,7 @@ class EventEmulator(object):
         self.base_frame = piecewise_log(base_frame)
         self.threshold = float(threshold)
 
-    def compute_events(self, new_frame, ts, verbose=False):
+    def compute_events(self, new_frame, t_start, t_end):
         """compute events in new frame.
         @Args:
             new_frame: np.ndarray
@@ -61,92 +61,76 @@ class EventEmulator(object):
                 x cordinate, sign of event].
         """
 
+        if t_start > t_end:
+            raise ValueError("t_start must be smaller than t_end")
+
         log_frame = piecewise_log(new_frame)
         diff_frame = self.base_frame - log_frame
+
         pos_frame = np.zeros_like(diff_frame)
         neg_frame = np.zeros_like(diff_frame)
         pos_frame[diff_frame > 0] = diff_frame[diff_frame > 0]
         neg_frame[diff_frame < 0] = np.abs(diff_frame[diff_frame < 0])
-        pos_cord = (pos_frame > self.threshold)
-        neg_cord = (neg_frame > self.threshold)
 
-        # generate events
-        pos_event_xy = np.where(pos_cord)
-        num_pos_events = pos_event_xy[0].shape[0]
-        neg_event_xy = np.where(neg_cord)
-        num_neg_events = neg_event_xy[0].shape[0]
-        num_events = num_pos_events + num_neg_events
+        max_event = max(np.abs(diff_frame.max(), np.abs(diff_frame.min())))
+        num_iters = int(max_event // self.threshold)
 
-        if verbose is True:
+        events = []
+
+        for i in range(num_iters):
+
+            ts = t_start + (t_end - t_start) * (i + 1) / (num_iters + 1)
+
+            pos_cord = (pos_frame > self.threshold * (i + 1))
+            neg_cord = (neg_frame > self.threshold * (i + 1))
+
+            # generate events
+            pos_event_xy = np.where(pos_cord)
+            num_pos_events = pos_event_xy[0].shape[0]
+            neg_event_xy = np.where(neg_cord)
+            num_neg_events = neg_event_xy[0].shape[0]
+            num_events = num_pos_events + num_neg_events
+
+            # sort out the positive event and negative event
             if num_pos_events > 0:
-                print("Number of positive events", num_pos_events,
-                      pos_event_xy[0].shape,
-                      pos_event_xy[1].shape)
+                pos_events = np.hstack(
+                    (np.ones((num_pos_events, 1), dtype=np.float32) * ts,
+                     pos_event_xy[1][..., np.newaxis],
+                     pos_event_xy[0][..., np.newaxis],
+                     np.ones((num_pos_events, 1), dtype=np.float32) * -1))
+
+            else:
+                pos_events = None
             if num_neg_events > 0:
-                print("Number of negative events", num_neg_events,
-                      neg_event_xy[0].shape,
-                      neg_event_xy[1].shape)
+                neg_events = np.hstack(
+                    (np.ones((num_neg_events, 1), dtype=np.float32) * ts,
+                     neg_event_xy[1][..., np.newaxis],
+                     neg_event_xy[0][..., np.newaxis],
+                     np.ones((num_neg_events, 1), dtype=np.float32)))
 
-        # sort out the positive event and negative event
-        if num_pos_events > 0:
-            pos_events = np.hstack(
-                (np.ones((num_pos_events, 1), dtype=np.float32) * ts,
-                 pos_event_xy[1][..., np.newaxis],
-                 pos_event_xy[0][..., np.newaxis],
-                 np.ones((num_pos_events, 1), dtype=np.float32) * -1))
-            # pos_events = np.core.records.fromarrays(
-            #     [np.ones((num_pos_events, 1)) * ts,
-            #      pos_event_xy[1][..., np.newaxis],
-            #      pos_event_xy[0][..., np.newaxis],
-            #      np.ones((num_pos_events, 1))],
-            #     dtype=np.dtype(
-            #         [
-            #             ("ts", np.float64),
-            #             ("y", np.uint32),
-            #             ("x", np.uint32),
-            #             ("polarity", np.int8)
-            #         ]
-            #     )
-            # )
-        else:
-            pos_events = None
-        if num_neg_events > 0:
-            neg_events = np.hstack(
-                (np.ones((num_neg_events, 1), dtype=np.float32) * ts,
-                 neg_event_xy[1][..., np.newaxis],
-                 neg_event_xy[0][..., np.newaxis],
-                 np.ones((num_neg_events, 1), dtype=np.float32)))
-            # neg_events = np.core.records.fromarrays(
-            #     [np.ones((num_neg_events, 1)) * ts,
-            #      neg_event_xy[1][..., np.newaxis],
-            #      neg_event_xy[0][..., np.newaxis],
-            #      np.ones((num_neg_events, 1)) * -1],
-            #     dtype=np.dtype(
-            #         [
-            #             ("ts", np.float64),
-            #             ("y", np.uint32),
-            #             ("x", np.uint32),
-            #             ("polarity", np.int8)
-            #         ]
-            #     )
-            # )
-        else:
-            neg_events = None
+            else:
+                neg_events = None
 
-        if pos_events is not None and neg_events is not None:
-            events = np.vstack((pos_events, neg_events))
-            events = events.take(np.random.permutation(events.shape[0]),
-                                 axis=0)
-        else:
-            events = pos_events if pos_events is not None else neg_events
+            if pos_events is not None and neg_events is not None:
+                events_tmp = np.vstack((pos_events, neg_events))
+                events_tmp = events_tmp.take(
+                    np.random.permutation(
+                        events_tmp.shape[0]), axis=0)
+            else:
+                events_tmp = pos_events if pos_events else neg_events
 
-        # update base frame
-        if num_pos_events > 0:
-            self.base_frame[pos_cord] = log_frame[pos_cord]
-        if num_neg_events > 0:
-            self.base_frame[neg_cord] = log_frame[neg_cord]
+            if i == 0:
+                # update base frame
+                if num_pos_events > 0:
+                    self.base_frame[pos_cord] = log_frame[pos_cord]
+                if num_neg_events > 0:
+                    self.base_frame[neg_cord] = log_frame[neg_cord]
 
-        if num_events > 0:
+            if num_events > 0:
+                events.append(events_tmp)
+
+        if len(events) > 0:
+            events = np.vstack(events)
             return events
         else:
             return None
