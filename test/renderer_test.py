@@ -68,7 +68,8 @@ if __name__ == "__main__":
         r_events = RenderFromEvents(
             frame_ts,
             events,
-            "../data/from_event.avi"
+            "../data/from_event.avi",
+            rotate=True
         )
 
         frames_events, num_events = r_events.render(height, width)
@@ -77,7 +78,8 @@ if __name__ == "__main__":
             dirname,
             frame_ts,
             args.threshold,
-            "../data/from_image.avi")
+            "../data/from_image.avi",
+            rotate=True)
 
         frames_images, num_images = r.render(height, width)
 

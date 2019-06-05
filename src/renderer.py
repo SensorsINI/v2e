@@ -19,7 +19,8 @@ class Base(object):
     def __init__(
         self,
         frame_ts,
-        output_path
+        output_path,
+        rotate=False
     ):
         """
         Init.
@@ -31,6 +32,7 @@ class Base(object):
         """
         self.frame_ts = frame_ts
         self.output_path = output_path
+        self.rotate = rotate
 
     def _get_events(self):
         """
@@ -95,6 +97,10 @@ class Base(object):
                 integrated_img = (img_on - img_off)
             rendered_frames.append(integrated_img)
             img = (integrated_img + clip_value) / float(clip_value * 2)
+
+            if self.rotate:
+                img = np.rot90(img, k=2)
+
             out.write(
                 cv2.cvtColor(
                     (img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR))
@@ -120,6 +126,7 @@ class RenderFromImages(Base):
         frame_ts,
         threshold,
         output_path,
+        rotate=False
     ):
         """
         init
@@ -133,7 +140,7 @@ class RenderFromImages(Base):
             output_path: str,
                 path to store output video.
         """
-        super().__init__(frame_ts, output_path)
+        super().__init__(frame_ts, output_path, rotate=rotate)
         self.all_images = self.__all_images(images_path)
         self.frame_ts = frame_ts
         base_frame = self.__read_image(self.all_images[0])
@@ -204,6 +211,7 @@ class RenderFromEvents(Base):
         frame_ts,
         events,
         output_path,
+        rotate=False,
     ):
         """
         Init.
@@ -215,7 +223,7 @@ class RenderFromEvents(Base):
             output_path: str,
                 path to store output video.
         """
-        super().__init__(frame_ts, output_path)
+        super().__init__(frame_ts, output_path, rotate=rotate)
         self.events = events
 
     def _get_events(self):
