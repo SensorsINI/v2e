@@ -95,8 +95,8 @@ if __name__ == "__main__":
             results.append(
                 [threshold, abs_diff, l1_error]
             )
-            print("Threshold: {:.2f} \t Absolute Diff: {} \
-                \t MEAN L1 ERROR: {}".format(
-                threshold, abs_diff, l1_error))
+            print("Threshold: {:.2f}".format(threshold))
+            print("Absolute Diff: {}".format(abs_diff))
+            print("MEAN L1 ERROR: {}".format(l1_error))
     results = np.array(results)
     np.save('../data/results.npy', results)
