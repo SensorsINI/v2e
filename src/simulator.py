@@ -117,7 +117,10 @@ class EventEmulator(object):
                     np.random.permutation(
                         events_tmp.shape[0]), axis=0)
             else:
-                events_tmp = pos_events if pos_events else neg_events
+                if pos_events is not None:
+                    events_tmp = pos_events
+                else:
+                    events_tmp = neg_events
 
             if i == 0:
                 # update base frame
