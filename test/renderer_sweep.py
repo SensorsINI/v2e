@@ -88,7 +88,7 @@ if __name__ == "__main__":
             l1_error = np.mean(
                     np.abs(frames_images - frames_events)
                 )
-            if len(results > 0) and l1_error <= results[-1][-1]:
+            if len(results) > 0 and l1_error <= results[-1][-1]:
                 print("Optimal Threshold Found: {}".format(threshold))
                 break
             results.append(
