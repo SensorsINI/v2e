@@ -72,7 +72,7 @@ class EventEmulator(object):
         pos_frame[diff_frame > 0] = diff_frame[diff_frame > 0]
         neg_frame[diff_frame < 0] = np.abs(diff_frame[diff_frame < 0])
 
-        max_event = max(np.abs(diff_frame.max(), np.abs(diff_frame.min())))
+        max_event = max(np.abs(diff_frame.max()), np.abs(diff_frame.min()))
         num_iters = int(max_event // self.threshold)
 
         events = []
