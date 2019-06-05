@@ -88,13 +88,15 @@ if __name__ == "__main__":
             l1_error = np.mean(
                     np.abs(frames_images - frames_events)
                 )
-            if len(results) > 0 and l1_error >= results[-1][-1]:
+            abs_diff = np.abs(num_events - num_images)
+            if len(results) > 0 and abs_diff >= results[-1][1]:
                 print("Optimal Threshold Found: {}".format(threshold))
                 break
             results.append(
-                [threshold, np.abs(num_events - num_images), l1_error]
+                [threshold, abs_diff, l1_error]
             )
-            print("Threshold: {} \t MEAN L1 ERROR: {}".format(threshold,
-                                                              l1_error))
+            print("Threshold: {:.2f} \t Absolute Diff: {} \
+                \t MEAN L1 ERROR: {}".format(
+                threshold, abs_diff, l1_error))
     results = np.array(results)
     np.save('../data/results.npy', results)
