@@ -90,7 +90,7 @@ if __name__ == "__main__":
             "../data/from_image.avi",
             rotate=True)
 
-        frames_images, num_images = r.render(height, width)
+        frames_images, _, _ = r.render(height, width)
 
     l1_error = np.mean(
             np.abs(frames_images - frames_events)
