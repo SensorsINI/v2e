@@ -101,12 +101,12 @@ if __name__ == "__main__":
 
             if len(results) > 0:
                 if abs_pos_diff >= results[-1][1] and pos_thres < 0:
-                    print("Optimal Pos Threshold Found: {}".format(results[-1][0]))
                     pos_thres = results[-1][0]
                 if abs_neg_diff >= results[-1][2] and neg_thres < 0:
-                    print("Optimal Neg Threshold Found: {}".format(results[-1][0]))
                     neg_thres = results[-1][0]
             if pos_thres > 0 and neg_thres > 0:
+                print("Optimal Pos Threshold Found: {}".format(pos_thres))
+                print("Optimal Neg Threshold Found: {}".format(neg_thres))
                 break
             results.append(
                 [threshold, abs_pos_diff, abs_neg_diff, l1_error]
