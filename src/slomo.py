@@ -267,7 +267,7 @@ class SuperSloMo(object):
                 if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
                     break
 
-            frame_paths = self.__all_images(self.video_path)
+            frame_paths = self.__all_images(self.output_path)
             # write slomo frames into video
             for path in frame_paths:
                 frame = self.__read_image(path)
