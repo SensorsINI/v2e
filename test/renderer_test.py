@@ -58,7 +58,9 @@ if __name__ == "__main__":
         s = SuperSloMo(
             args.checkpoint,
             10,
-            dirname
+            dirname,
+            video_path="../data/",
+            rotate=True
         )
 
         s.interpolate(frames["frame"])
