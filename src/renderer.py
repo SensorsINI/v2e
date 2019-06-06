@@ -108,8 +108,11 @@ class Base(object):
                 break
         out.release()
 
+        num_pos = event_arr[event_arr[:, 3] < 0].shape[0]
+        num_neg = event_arr.shape[0] - num_pos
+
         rendered_frames = np.vstack(rendered_frames)
-        return rendered_frames, event_arr.shape[0]
+        return rendered_frames, num_pos, num_neg
 
 
 class RenderFromImages(Base):

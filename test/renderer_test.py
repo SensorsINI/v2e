@@ -74,7 +74,7 @@ if __name__ == "__main__":
             rotate=True
         )
 
-        frames_events, num_events = r_events.render(height, width)
+        frames_events, _, _ = r_events.render(height, width)
 
         r = RenderFromImages(
             dirname,
