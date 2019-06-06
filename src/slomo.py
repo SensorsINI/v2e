@@ -258,7 +258,7 @@ class SuperSloMo(object):
                 if self.rotate:
                     frame = np.rot90(frame, k=2)
                 for _ in range(self.sf):
-                    slomo_writer.write(
+                    ori_writer.write(
                         cv2.cvtColor(
                             frame,
                             cv2.COLOR_GRAY2BGR
@@ -273,7 +273,7 @@ class SuperSloMo(object):
                 frame = self.__read_image(path)
                 if self.rotate:
                     frame = np.rot90(frame, k=2)
-                ori_writer.write(
+                slomo_writer.write(
                     cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
                 )
                 if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
