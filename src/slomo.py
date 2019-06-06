@@ -10,6 +10,8 @@
 import torch
 import os
 import numpy as np
+import cv2
+import glob
 
 import torchvision.transforms as transforms
 import torch.nn.functional as F
@@ -19,6 +21,29 @@ import model
 
 from PIL import Image
 from tqdm import tqdm
+
+
+def video_writer(output_path, height, width):
+    """
+    Return a video writer.
+    @params:
+        output_path: str,
+            path to store output video.
+        height: int,
+            height of a frame.
+        width: int,
+            width of a frame.
+    @return:
+        an instance of cv2.VideoWriter.
+    """
+
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(
+                output_path,
+                fourcc,
+                30.0,
+                (width, height))
+    return out
 
 
 class SuperSloMo(object):
@@ -137,6 +162,27 @@ class SuperSloMo(object):
         video_frame_loader, dim, ori_dim = self.__load_data(images)
         flow_estimator, warpper, interpolator = self.__model(dim)
 
+        ori_writer = video_writer(
+            os.path.join(self.output_path, "original.avi"),
+            ori_dim[0],
+            ori_dim[1]
+        )
+
+        slomo_writer = video_writer(
+            os.path.join(self.output_path, "slomo.avi"),
+            ori_dim[0],
+            ori_dim[1]
+        )
+
+        # write input frames into video
+        for frame in images:
+            for _ in range(self.sf):
+                slomo_writer.write(
+                    cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+                )
+            if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
+                break
+
         frameCounter = 1
 
         with torch.no_grad():
@@ -165,7 +211,7 @@ class SuperSloMo(object):
 
                     g_I0_F_t_0 = warpper(I0, F_t_0)
                     g_I1_F_t_1 = warpper(I1, F_t_1)
-                    
+             
                     intrpOut = interpolator(
                         torch.cat(
                             (I0, I1, F_0_1, F_1_0,
@@ -191,6 +237,7 @@ class SuperSloMo(object):
 
                         img = self.to_image(Ft_p[batchIndex].cpu().detach())
                         img_resize = img.resize(ori_dim, Image.BILINEAR)
+
                         save_path = os.path.join(
                             self.output_path,
                             str(frameCounter + self.sf * batchIndex) + ".png")
@@ -199,6 +246,48 @@ class SuperSloMo(object):
 
                 # Set counter accounting for batching of frames
                 frameCounter += self.sf * (self.batch_size - 1)
+
+        new_frames = self.__all_images(self.output_path)
+        # write slomo frames into video
+        for frame in new_frames:
+            ori_writer.write(
+                cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+            )
+            if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
+                break
+
+    def __all_images(self, data_path):
+        """Return path of all input images. Assume that the ascending order of
+        file names is the same as the order of time sequence.
+
+        @Args:
+            data_path: str
+                path of the folder which contains input images.
+        @Return:
+            List[str]
+                sorted in numerical order.
+        """
+        images = glob.glob(os.path.join(data_path, '*.png'))
+        if len(images) == 0:
+            raise ValueError(("Input folder is empty or images are not in"
+                              " 'png' format."))
+        images_sorted = sorted(
+                images,
+                key=lambda line: int(line.split('/')[-1].split('.')[0]))
+        return images_sorted
+
+    @staticmethod
+    def __read_image(path):
+        """Read image.
+        @Args:
+            path: str
+                path of image.
+        @Return:
+            np.ndarray
+        """
+        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        img = img.astype(np.float)
+        return img
 
     def get_ts(self, ts):
         """
