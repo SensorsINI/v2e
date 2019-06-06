@@ -243,14 +243,14 @@ class SuperSloMo(object):
         if self.video_path is not None:
             ori_writer = video_writer(
                 os.path.join(self.video_path, "original.avi"),
-                ori_dim[0],
-                ori_dim[1]
+                ori_dim[1],
+                ori_dim[0]
             )
 
             slomo_writer = video_writer(
                 os.path.join(self.video_path, "slomo.avi"),
-                ori_dim[0],
-                ori_dim[1]
+                ori_dim[1],
+                ori_dim[0]
             )
 
             # write input frames into video
