@@ -92,6 +92,7 @@ class SuperSloMo(object):
         self.sf = slow_factor
         self.output_path = output_path
         self.video_path = video_path
+        self.rotate = rotate
 
         # initialize the Transform instances.
         self.to_tensor, self.to_image = self.__transform()
