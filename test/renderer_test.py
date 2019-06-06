@@ -7,10 +7,16 @@ from tempfile import TemporaryDirectory
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--threshold",
+    "--pos_thres",
     type=float,
-    default=0.01,
-    help="threshold to trigger event"
+    default=0.21,
+    help="threshold to trigger a positive event"
+)
+parser.add_argument(
+    "--neg_thres",
+    type=float,
+    default=0.17,
+    help="threshold to trigger a negative event"
 )
 parser.add_argument(
     "--start",
@@ -79,7 +85,8 @@ if __name__ == "__main__":
         r = RenderFromImages(
             dirname,
             frame_ts,
-            args.threshold,
+            args.pos_thres,
+            args.neg_thres,
             "../data/from_image.avi",
             rotate=True)
 

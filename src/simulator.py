@@ -35,16 +35,24 @@ class EventEmulator(object):
     - contact: zhehe@student.ethz.ch
     """
 
-    def __init__(self, base_frame, threshold=0.19):
+    def __init__(
+        self,
+        base_frame,
+        pos_thres,
+        neg_thres
+    ):
         """
         @Args:
             base_frame: np.ndarray
                 [height, width].
-            threhold: float
-                threshold of activation.
+            pos_thres: float
+                threshold of triggering positive event.
+            neg_thres: float
+                threshold of triggering negative event.
         """
         self.base_frame = piecewise_log(base_frame)
-        self.threshold = float(threshold)
+        self.pos_thres = float(pos_thres)
+        self.neg_thres = float(neg_thres)
 
     def compute_events(self, new_frame, t_start, t_end):
         """compute events in new frame.
@@ -72,8 +80,13 @@ class EventEmulator(object):
         pos_frame[diff_frame > 0] = diff_frame[diff_frame > 0]
         neg_frame[diff_frame < 0] = np.abs(diff_frame[diff_frame < 0])
 
-        max_event = max(np.abs(diff_frame.max()), np.abs(diff_frame.min()))
-        num_iters = int(max_event // self.threshold)
+        max_pos_event = pos_frame.max()
+        pos_iters = int(max_pos_event // self.pos_thres)
+
+        max_neg_event = neg_frame.max()
+        neg_iters = int(max_neg_event // self.neg_thres)
+
+        num_iters = max(pos_iters, neg_iters)
 
         events = []
 
@@ -81,8 +94,8 @@ class EventEmulator(object):
 
             ts = t_start + (t_end - t_start) * (i + 1) / (num_iters + 1)
 
-            pos_cord = (pos_frame > self.threshold * (i + 1))
-            neg_cord = (neg_frame > self.threshold * (i + 1))
+            pos_cord = (pos_frame > self.pos_thres * (i + 1))
+            neg_cord = (neg_frame > self.neg_thres * (i + 1))
 
             # generate events
             pos_event_xy = np.where(pos_cord)
@@ -101,6 +114,7 @@ class EventEmulator(object):
 
             else:
                 pos_events = None
+
             if num_neg_events > 0:
                 neg_events = np.hstack(
                     (np.ones((num_neg_events, 1), dtype=np.float32) * ts,

@@ -127,7 +127,8 @@ class RenderFromImages(Base):
         self,
         images_path,
         frame_ts,
-        threshold,
+        pos_thres,
+        neg_thres,
         output_path,
         rotate=False
     ):
@@ -138,8 +139,10 @@ class RenderFromImages(Base):
                 path of all images.
             frame_ts: np.array
                 ts of interpolated frames.
-            threshold: float,
-                threshold of triggering an event.
+            pos_thres: float,
+                threshold of triggering a positive event.
+            neg_thres: float,
+                threshold of triggering a negative event.
             output_path: str,
                 path to store output video.
         """
@@ -149,7 +152,9 @@ class RenderFromImages(Base):
         base_frame = self.__read_image(self.all_images[0])
         self.emulator = EventEmulator(
             base_frame,
-            threshold=threshold)
+            pos_thres=pos_thres,
+            neg_thres=neg_thres
+        )
 
     def __all_images(self, data_path):
         """Return path of all input images. Assume that the ascending order of
