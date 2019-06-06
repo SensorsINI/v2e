@@ -62,9 +62,26 @@ class SuperSloMo(object):
         checkpoint,
         slow_factor,
         output_path,
-        batch_size=1
+        batch_size=1,
+        video_path=None,
+        rotate=False
     ):
-        """init"""
+        """
+        init
+        @params:
+            checkpoint: str,
+                path of the stored Pytorch checkpoint.
+            slow_factor: int,
+                slow motion factor.
+            output_path: str,
+                a temporary path to store interpolated frames.
+            batch_size: int,
+                batch size.
+            video_path: str or None,
+                str if videos need to be stored else None
+            rotate: bool,
+                True if frames need to be rotated else False
+        """
 
         if torch.cuda.is_available():
             self.device = "cuda:0"
@@ -74,6 +91,7 @@ class SuperSloMo(object):
         self.batch_size = batch_size
         self.sf = slow_factor
         self.output_path = output_path
+        self.video_path = video_path
 
         # initialize the Transform instances.
         self.to_tensor, self.to_image = self.__transform()
@@ -162,27 +180,6 @@ class SuperSloMo(object):
         video_frame_loader, dim, ori_dim = self.__load_data(images)
         flow_estimator, warpper, interpolator = self.__model(dim)
 
-        ori_writer = video_writer(
-            os.path.join(self.output_path, "original.avi"),
-            ori_dim[0],
-            ori_dim[1]
-        )
-
-        slomo_writer = video_writer(
-            os.path.join(self.output_path, "slomo.avi"),
-            ori_dim[0],
-            ori_dim[1]
-        )
-
-        # write input frames into video
-        for frame in images:
-            for _ in range(self.sf):
-                slomo_writer.write(
-                    cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-                )
-            if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
-                break
-
         frameCounter = 1
 
         with torch.no_grad():
@@ -195,11 +192,6 @@ class SuperSloMo(object):
                 F_0_1 = flowOut[:, :2, :, :]
                 F_1_0 = flowOut[:, 2:, :, :]
 
-                # Save reference frames in output folder
-                # for batchIndex in range(args.batch_size):
-                #     (TP(frame0[batchIndex].detach())).resize(videoFrames.origDim, Image.BILINEAR).save(os.path.join(outputPath, str(frameCounter + args.sf * batchIndex) + ".png"))
-                # frameCounter += 1
-
                 # Generate intermediate frames
                 for intermediateIndex in range(0, self.sf):
                     t = (intermediateIndex + 0.5) / self.sf
@@ -211,7 +203,7 @@ class SuperSloMo(object):
 
                     g_I0_F_t_0 = warpper(I0, F_t_0)
                     g_I1_F_t_1 = warpper(I1, F_t_1)
-             
+
                     intrpOut = interpolator(
                         torch.cat(
                             (I0, I1, F_0_1, F_1_0,
@@ -247,14 +239,44 @@ class SuperSloMo(object):
                 # Set counter accounting for batching of frames
                 frameCounter += self.sf * (self.batch_size - 1)
 
-        new_frames = self.__all_images(self.output_path)
-        # write slomo frames into video
-        for frame in new_frames:
-            ori_writer.write(
-                cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        if self.video_path is not None:
+            ori_writer = video_writer(
+                os.path.join(self.video_path, "original.avi"),
+                ori_dim[0],
+                ori_dim[1]
             )
-            if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
-                break
+
+            slomo_writer = video_writer(
+                os.path.join(self.video_path, "slomo.avi"),
+                ori_dim[0],
+                ori_dim[1]
+            )
+
+            # write input frames into video
+            for frame in images:
+                if self.rotate:
+                    frame = np.rot90(frame, k=2)
+                for _ in range(self.sf):
+                    slomo_writer.write(
+                        cv2.cvtColor(
+                            frame,
+                            cv2.COLOR_GRAY2BGR
+                        )
+                    )
+                if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
+                    break
+
+            frame_paths = self.__all_images(self.video_path)
+            # write slomo frames into video
+            for path in frame_paths:
+                frame = self.__read_image(path)
+                if self.rotate:
+                    frame = np.rot90(frame, k=2)
+                ori_writer.write(
+                    cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+                )
+                if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
+                    break
 
     def __all_images(self, data_path):
         """Return path of all input images. Assume that the ascending order of
@@ -286,7 +308,6 @@ class SuperSloMo(object):
             np.ndarray
         """
         img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-        img = img.astype(np.float)
         return img
 
     def get_ts(self, ts):
