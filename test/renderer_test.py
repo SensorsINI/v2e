@@ -80,7 +80,7 @@ if __name__ == "__main__":
             rotate=True
         )
 
-        frames_events, _, _ = r_events.render(height, width)
+        _, _, _ = r_events.render(height, width)
 
         r = RenderFromImages(
             dirname,
@@ -90,10 +90,4 @@ if __name__ == "__main__":
             "../data/from_image.avi",
             rotate=True)
 
-        frames_images, _, _ = r.render(height, width)
-
-    l1_error = np.mean(
-            np.abs(frames_images - frames_events)
-        )
-    print("Threshold: {} \t MEAN L1 ERROR: {}".format(
-        args.threshold, l1_error))
+        _, _, _ = r.render(height, width)
