@@ -1,0 +1,7 @@
+h5py==2.9.0
+numpy==1.16.2
+opencv-python==4.1.0.25
+Pillow==5.4.1
+torch==1.1.0
+torchvision==0.2.1
+tqdm==4.31.1
