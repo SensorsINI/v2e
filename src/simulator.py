@@ -11,6 +11,9 @@ import os
 import cv2
 import numpy as np
 
+# random seed
+np.random.seed(42)
+
 
 def piecewise_log(x, threshold=20):
     """

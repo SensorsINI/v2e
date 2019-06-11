@@ -2,7 +2,6 @@ import numpy as np
 import cv2
 import os
 import glob
-import pdb
 
 from tqdm import tqdm
 
