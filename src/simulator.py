@@ -1,17 +1,19 @@
-"""DVS Generator.
-
-Author: Yuhuang Hu
-Email : yuhuang.hu@ini.uzh.ch
 """
+DVS simulator.
+Compute events from input frames.
 
-from __future__ import print_function, absolute_import
+@author: Zhe He
+@contact: zhehe@student.ethz.ch
+@credits: Yuhuang Hu
+@latest updaste: 2019-Jun-13
+"""
 
 import glob
 import os
 import cv2
 import numpy as np
 
-# random seed
+# random seed. Why 42? it is the solution of everything :)
 np.random.seed(42)
 
 
@@ -54,8 +56,14 @@ class EventEmulator(object):
                 threshold of triggering negative event.
         """
         self.base_frame = piecewise_log(base_frame)
-        self.pos_thres = float(pos_thres)
-        self.neg_thres = float(neg_thres)
+        # take the variance of threshold into account.
+        pos_thres = np.random.normal(pos_thres, 0.03, base_frame.shape)
+        # to avoid the situation where the threshold is too small.
+        pos_thres[pos_thres < 0.01] = 0.01
+        neg_thres = np.random.normal(neg_thres, 0.03, base_frame.shape)
+        neg_thres[neg_thres < 0.01] = 0.01
+        self.pos_thres = pos_thres
+        self.neg_thres = neg_thres
 
     def compute_events(self, new_frame, t_start, t_end):
         """compute events in new frame.
@@ -83,11 +91,8 @@ class EventEmulator(object):
         pos_frame[diff_frame > 0] = diff_frame[diff_frame > 0]
         neg_frame[diff_frame < 0] = np.abs(diff_frame[diff_frame < 0])
 
-        max_pos_event = pos_frame.max()
-        pos_iters = int(max_pos_event // self.pos_thres)
-
-        max_neg_event = neg_frame.max()
-        neg_iters = int(max_neg_event // self.neg_thres)
+        pos_iters = int((pos_frame // self.pos_thres).max())
+        neg_iters = int((neg_frame // self.neg_thres).max())
 
         num_iters = max(pos_iters, neg_iters)
 
@@ -168,7 +173,8 @@ class EventFrameRenderer(object):
                  output_path,
                  input_fps,
                  output_fps,
-                 threshold):
+                 pos_thres,
+                 neg_thres):
         """
         @Args:
             data_path: str
@@ -185,7 +191,8 @@ class EventFrameRenderer(object):
         self.output_path = output_path
         self.input_fps = input_fps
         self.output_fps = output_fps
-        self.threshold = threshold
+        self.pos_thres = pos_thres
+        self.neg_thres = neg_thres
 
     def __all_images(self, data_path):
         """Return path of all input images. Assume that the ascending order of
@@ -233,8 +240,11 @@ class EventFrameRenderer(object):
         print(base_frame.shape)
         height = base_frame.shape[0]
         width = base_frame.shape[1]
-        emulator = EventEmulator(base_frame,
-                                 threshold=self.threshold)
+        emulator = EventEmulator(
+            base_frame,
+            pos_thres=self.pos_thres,
+            neg_thres=self.neg_thres
+        )
 
         event_list = list()
         time_list = list()
@@ -245,13 +255,18 @@ class EventFrameRenderer(object):
 
         for idx in range(1, num_frames):
             new_frame = self.__read_image(images[idx])
-            ts = input_ts[idx]
-            tmp_events = emulator.compute_events(new_frame, ts)
+            t_start = input_ts[idx - 1]
+            t_end = input_ts[idx]
+            tmp_events = emulator.compute_events(
+                new_frame,
+                t_start,
+                t_end
+            )
 
             if tmp_events is not None:
                 event_list.append(tmp_events)
                 pos_list.append(pos)
-                time_list.append(ts)
+                time_list.append(t_end)
 
                 # update pos
                 pos += tmp_events.shape[0]
