@@ -1,4 +1,4 @@
-# frame2dvs
+# frame2dvs [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Python code for converting APS frames with low frame rate into DVS frames with high frame rate.
 
