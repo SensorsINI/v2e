@@ -6,12 +6,7 @@ from tempfile import TemporaryDirectory
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--threshold",
-    type=float,
-    default=0.01,
-    help="threshold to trigger event"
-)
+
 parser.add_argument(
     "--start",
     type=float,
@@ -36,6 +31,12 @@ parser.add_argument(
     required=True,
     help="path of checkpoint"
 )
+parser.add_argument(
+    "--sf",
+    type=int,
+    required=True,
+    help="slow motion factor"
+)
 
 args = parser.parse_args()
 
@@ -59,7 +60,7 @@ if __name__ == "__main__":
 
         s = SuperSloMo(
             args.checkpoint,
-            10,
+            args.sf,
             dirname
         )
 

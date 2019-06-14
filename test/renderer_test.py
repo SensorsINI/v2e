@@ -42,6 +42,12 @@ parser.add_argument(
     required=True,
     help="path of checkpoint"
 )
+parser.add_argument(
+    "--sf",
+    type=int,
+    required=True,
+    help="slow motion factor"
+)
 
 args = parser.parse_args()
 
@@ -63,7 +69,7 @@ if __name__ == "__main__":
 
         s = SuperSloMo(
             args.checkpoint,
-            10,
+            args.sf,
             dirname,
             video_path="../data/",
             rotate=True

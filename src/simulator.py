@@ -13,7 +13,7 @@ import os
 import cv2
 import numpy as np
 
-# random seed. Why 42? it is the solution of everything :)
+# random seed. Why 42? it is the answer to everything :)
 np.random.seed(42)
 
 
@@ -43,16 +43,16 @@ class EventEmulator(object):
     def __init__(
         self,
         base_frame,
-        pos_thres,
-        neg_thres
+        pos_thres=0.21,
+        neg_thres=0.17
     ):
         """
         @Args:
             base_frame: np.ndarray
                 [height, width].
-            pos_thres: float
+            pos_thres: float, default 0.21
                 threshold of triggering positive event.
-            neg_thres: float
+            neg_thres: float, default 0.17
                 threshold of triggering negative event.
         """
         self.base_frame = piecewise_log(base_frame)
