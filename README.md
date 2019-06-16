@@ -38,7 +38,7 @@ The program is designed to serve multiple purposes. Please read to code if you w
 
 ## Dataset
 
-DDD17 is the first public end-to-end training dataset of automotive driving using a DAVIS event + frame camera. This dataset is maintained by the Sensors Research Group of Institute of Neuroinformatics. Please read the document [[link](https://docs.google.com/document/d/1HM0CSmjO8nOpUeTvmPjopcBcVCk7KXvLUuiZFS6TWSg/pub)] for details about downloading the dataset.
+DDD17+ is the first public end-to-end training dataset of automotive driving using a DAVIS event + frame camera. This dataset is maintained by the Sensors Research Group of Institute of Neuroinformatics. Please go to the website of Sensors Group [[link](http://sensors.ini.uzh.ch/databases.html)] for details about downloading the dataset.
 
 ## Download Checkpoint
 
