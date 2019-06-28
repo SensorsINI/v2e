@@ -144,6 +144,8 @@ class Reader(object):
                 if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
                     break
                 continue
+            if d['etype'] == 'polarity_event':
+                continue
 
 
 if __name__ == "__main__":

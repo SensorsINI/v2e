@@ -78,7 +78,7 @@ class Reader(object):
                     print('ts reset detected, setting offset', timestamp)
                     t_offset += current
                     # NOTE the timestamp of this special event is not meaningful
-                    continue
+                continue
             if d['etype'] == 'frame_event':
                 ts = d['timestamp'] + t_offset
                 frame = filter_frame(unpack_data(d))
@@ -102,6 +102,7 @@ class Reader(object):
                      data[:, 3].astype(np.int)[:, None] * 2 - 1)
                 )
                 events.append(data)
+                continue
         frames = np.hstack(frames)
         events = np.vstack(events)
         frames["ts"] -= frames["ts"][0]
