@@ -48,6 +48,11 @@ parser.add_argument(
     required=True,
     help="slow motion factor"
 )
+parser.add_argument(
+    "--frame_rate",
+    type=int,
+    help="frame rate of output video"
+)
 
 args = parser.parse_args()
 
@@ -62,6 +67,11 @@ if __name__ == "__main__":
 
     m = Reader(args.fname, start=args.start, stop=args.stop)
     frames, events = m.read()
+    frame_ts = np.arange(
+        m.start,
+        m.stop,
+        1 / args.frame_rate
+    )
 
     with TemporaryDirectory() as dirname:
 
@@ -76,7 +86,7 @@ if __name__ == "__main__":
         )
 
         s.interpolate(frames["frame"])
-        frame_ts = s.get_ts(frames["ts"])
+        # frame_ts = s.get_ts(frames["ts"])
         height, width = frames["frame"].shape[1:]
 
         r_events = RenderFromEvents(
