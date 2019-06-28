@@ -126,6 +126,7 @@ class RenderFromImages(Base):
         self,
         images_path,
         frame_ts,
+        interpolated_ts,
         pos_thres,
         neg_thres,
         output_path,
@@ -137,6 +138,8 @@ class RenderFromImages(Base):
             images_path: str
                 path of all images.
             frame_ts: np.array
+                ts of output frames.
+            interpolated_ts: np.array
                 ts of interpolated frames.
             pos_thres: float,
                 threshold of triggering a positive event.
@@ -148,6 +151,7 @@ class RenderFromImages(Base):
         super().__init__(frame_ts, output_path, rotate=rotate)
         self.all_images = self.__all_images(images_path)
         self.frame_ts = frame_ts
+        self.interpolated_ts = interpolated_ts
         base_frame = self.__read_image(self.all_images[0])
         self.emulator = EventEmulator(
             base_frame,
@@ -193,11 +197,11 @@ class RenderFromImages(Base):
 
         event_list = list()
 
-        for i in tqdm(range(self.frame_ts.shape[0] - 1),
+        for i in tqdm(range(self.interpolated_ts.shape[0] - 1),
                       desc="image2events: "):
             new_frame = self.__read_image(self.all_images[i + 1])
             tmp_events = self.emulator.compute_events(
-                new_frame, self.frame_ts[i], self.frame_ts[i + 1])
+                new_frame, self.interpolated_ts[i], self.interpolated_ts[i + 1])
             if tmp_events is not None:
                 event_list.append(tmp_events)
         event_arr = np.vstack(event_list)

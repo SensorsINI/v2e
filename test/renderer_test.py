@@ -86,7 +86,7 @@ if __name__ == "__main__":
         )
 
         s.interpolate(frames["frame"])
-        # frame_ts = s.get_ts(frames["ts"])
+        interpolated_ts = s.get_ts(frames["ts"])
         height, width = frames["frame"].shape[1:]
 
         r_events = RenderFromEvents(
@@ -101,6 +101,7 @@ if __name__ == "__main__":
         r = RenderFromImages(
             dirname,
             frame_ts,
+            interpolated_ts,
             args.pos_thres,
             args.neg_thres,
             "../data/from_image.avi",
