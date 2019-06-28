@@ -68,8 +68,8 @@ if __name__ == "__main__":
     m = Reader(args.fname, start=args.start, stop=args.stop)
     frames, events = m.read()
     frame_ts = np.arange(
-        m.start,
-        m.stop,
+        frames["ts"][0],
+        frames["ts"][-1],
         1 / args.frame_rate
     )
 
