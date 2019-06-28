@@ -24,8 +24,7 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    action="store_true",
-    help="path to store the outpur video"
+    action="store_true"
 )
 
 args = parser.parse_args()
