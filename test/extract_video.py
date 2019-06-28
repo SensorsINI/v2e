@@ -24,6 +24,7 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--rotate",
     action="store_true"
 )
 
