@@ -152,4 +152,6 @@ if __name__ == "__main__":
     r = Reader(
         args.fname,
         writer,
-        rotate=args.rotate)
+        rotate=args.rotate
+    )
+    r.read()
