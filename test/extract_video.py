@@ -45,14 +45,14 @@ parser.add_argument(
 parser.add_argument(
     "--start",
     type=float,
-    default=0.0,
+    default=None,
     help="start point of video stream"
 )
 
 parser.add_argument(
     "--stop",
     type=float,
-    default=5.0,
+    default=None,
     help="stop point of video stream"
 )
 
