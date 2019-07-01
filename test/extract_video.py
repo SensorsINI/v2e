@@ -43,6 +43,20 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--start",
+    type=float,
+    default=0.0,
+    help="start point of video stream"
+)
+
+parser.add_argument(
+    "--stop",
+    type=float,
+    default=5.0,
+    help="stop point of video stream"
+)
+
+parser.add_argument(
     "--rotate",
     action="store_true"
 )
@@ -154,6 +168,8 @@ if __name__ == "__main__":
     r = Reader(
         args.fname,
         writer,
+        start=args.start,
+        stop=args.stop,
         rotate=args.rotate
     )
     r.read()
