@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import argparse
+import os
 
 from tempfile import TemporaryDirectory
 
@@ -53,6 +54,12 @@ parser.add_argument(
     type=int,
     help="frame rate of output video"
 )
+parser.add_argument(
+    "--video_path",
+    type=str,
+    required=True,
+    help="path to store output vidoes"
+)
 
 args = parser.parse_args()
 
@@ -64,6 +71,9 @@ if __name__ == "__main__":
     from src.renderer import RenderFromImages, RenderFromEvents
     from src.slomo import SuperSloMo
     from src.reader import Reader
+
+    if not os.path.exists(args.video_path):
+        os.mkdir(args.video_path)
 
     m = Reader(args.fname, start=args.start, stop=args.stop)
     frames, events = m.read()
@@ -81,7 +91,7 @@ if __name__ == "__main__":
             args.checkpoint,
             args.sf,
             dirname,
-            video_path="../data/",
+            video_path=args.video_path,
             rotate=True
         )
 
@@ -92,7 +102,7 @@ if __name__ == "__main__":
         r_events = RenderFromEvents(
             frame_ts,
             events,
-            "../data/from_event.avi",
+            os.path.join(args.video_path, "from_event.avi"),
             rotate=True
         )
 
@@ -104,7 +114,7 @@ if __name__ == "__main__":
             interpolated_ts,
             args.pos_thres,
             args.neg_thres,
-            "../data/from_image.avi",
+            os.path.join(args.video_path, "from_image.avi"),
             rotate=True)
 
         _, _, _ = r.render(height, width)
