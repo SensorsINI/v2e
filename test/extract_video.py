@@ -164,7 +164,7 @@ class Reader(object):
 
 if __name__ == "__main__":
 
-    writer = video_writer(args.output_path, 346, 260)
+    writer = video_writer(args.output_path, 260, 346)
     r = Reader(
         args.fname,
         writer,
