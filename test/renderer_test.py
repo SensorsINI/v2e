@@ -75,6 +75,13 @@ if __name__ == "__main__":
     if not os.path.exists(args.video_path):
         os.mkdir(args.video_path)
 
+    with open(os.path.join(args.video_path, "info.txt"), "w") as f:
+        f.write("file name: {}\n".format(args.fname.split("/")[-1]))
+        f.write("start point: {:.2f}\n".format(args.start))
+        f.write("stop point: {:.2f}\n".format(args.stop))
+        f.write("slow motion factor: {}\n".format(args.sf))
+        f.write("output frame rate: {}\n".format(args.frame_rate))
+
     m = Reader(args.fname, start=args.start, stop=args.stop)
     frames, events = m.read()
     frame_ts = np.arange(
