@@ -132,7 +132,6 @@ if __name__ == "__main__":
             interpolated_ts,
             args.pos_thres,
             args.neg_thres,
-            os.path.join(args.video_path, "from_image.avi"),
-            rotate=True)
+            os.path.join(args.video_path, "from_image.avi"))
 
         _, _, _ = r.render(height, width)
