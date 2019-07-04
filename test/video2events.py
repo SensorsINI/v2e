@@ -71,6 +71,9 @@ if __name__ == "__main__":
     from src.renderer import RenderFromImages
     from src.slomo import SuperSloMo
 
+    if not os.path.exists(args.video_path):
+        os.mkdir(args.video_path)
+
     frames = []
 
     cap = cv2.VideoCapture(args.input)
