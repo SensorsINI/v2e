@@ -46,6 +46,14 @@ parser.add_argument(
     required=True,
     help="slow motion factor"
 )
+
+parser.add_argument(
+    "--checkpoint",
+    type=str,
+    required=True,
+    help="path of checkpoint"
+)
+
 parser.add_argument(
     "--frame_rate",
     type=int,
