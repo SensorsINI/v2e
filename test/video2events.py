@@ -109,7 +109,7 @@ if __name__ == "__main__":
     output_ts = np.arange(
         0,
         frames.shape[0] / fps,
-        1 / args.frame_rate
+        1 / args.frame_rate if args.frame_rate else 1 / fps,
     )
 
     with TemporaryDirectory() as dirname:
