@@ -104,10 +104,12 @@ if __name__ == "__main__":
                 break
         cap.release()
         frames = np.stack(frames)
-        input_ts = output_ts = np.arange(
+        num_frames = frames.shape[0]
+        input_ts = output_ts = np.linspace(
             0,
-            frames.shape[0] / fps,
-            1 / fps
+            num_frames / fps,
+            num_frames,
+            endpoint=False
         )
 
         with TemporaryDirectory() as dirname:
@@ -126,10 +128,11 @@ if __name__ == "__main__":
 
             for factor in [1, 10]:
 
-                output_ts = np.arange(
+                output_ts = np.linspace(
                     0,
-                    frames.shape[0] / fps,
-                    1 / (factor * fps),
+                    num_frames,
+                    factor * num_frames,
+                    endpoint=False
                 )
 
                 r = RenderFromImages(
