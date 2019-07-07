@@ -83,7 +83,7 @@ if __name__ == "__main__":
         video = os.path.join(args.dataset, action, random.choice(candidates))
         output_path = os.path.join(args.output, action)
         os.mkdir(output_path)
-        print("{:d} - Action: {:s} \t Video: {:s}".format(i, action, video))
+        print("{:d} - Action: {:s}\nVideo: {:s}".format(i, action, video))
 
         frames = []
 
