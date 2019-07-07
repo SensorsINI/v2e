@@ -12,7 +12,6 @@ import numpy as np
 import sys
 import os
 import random
-from tqdm import tqdm
 import shutil
 
 from tempfile import TemporaryDirectory
@@ -78,13 +77,13 @@ if __name__ == "__main__":
 
     classes = os.listdir(args.dataset)
 
-    for action in tqdm(classes):
+    for i, action in enumerate(classes):
 
         candidates = os.listdir(os.path.join(args.dataset, action))
         video = os.path.join(args.dataset, action, random.choice(candidates))
         output_path = os.path.join(args.output, action)
         os.mkdir(output_path)
-        print("Action: {:s} \t Video: {:s}".format(action, video))
+        print("{:d} - Action: {:s} \t Video: {:s}".format(i, action, video))
 
         frames = []
 
@@ -130,8 +129,8 @@ if __name__ == "__main__":
 
                 output_ts = np.linspace(
                     0,
-                    num_frames,
-                    factor * num_frames,
+                    (num_frames - 1) / fps,
+                    factor * (num_frames - 1),
                     endpoint=False
                 )
 

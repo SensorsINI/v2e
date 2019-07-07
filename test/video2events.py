@@ -104,14 +104,14 @@ if __name__ == "__main__":
     input_ts = output_ts = np.linspace(
         0,
         num_frames / fps,
-        frames.shape[0],
+        num_frames,
         endpoint=False
     )
 
     output_ts = np.linspace(
         0,
-        num_frames / fps,
-        num_frames * args.frame_rate if args.frame_rate else num_frames,
+        (num_frames - 1) / fps,
+        (num_frames - 1) * args.frame_rate if args.frame_rate else num_frames,
         endpoint=False
     )
 
