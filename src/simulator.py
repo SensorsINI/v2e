@@ -47,13 +47,14 @@ class EventEmulator(object):
         neg_thres=0.17
     ):
         """
-        @Args:
-            base_frame: np.ndarray
-                [height, width].
-            pos_thres: float, default 0.21
-                threshold of triggering positive event.
-            neg_thres: float, default 0.17
-                threshold of triggering negative event.
+        Parameters
+        ----------
+        base_frame: np.ndarray
+            [height, width].
+        pos_thres: float, default 0.21
+            threshold of triggering positive event.
+        neg_thres: float, default 0.17
+            threshold of triggering negative event.
         """
         self.base_frame = piecewise_log(base_frame)
         # take the variance of threshold into account.
@@ -66,18 +67,22 @@ class EventEmulator(object):
         self.neg_thres = neg_thres
 
     def compute_events(self, new_frame, t_start, t_end):
-        """compute events in new frame.
-        @Args:
-            new_frame: np.ndarray
-                [height, width]
-            ts: float
-                timestamp of new frame.
-            verbose: bool
-                verbose.
-        @Return:
-            events: np.ndarray if any event else None
-                [N, 4], each row contains [timestamp, y cordinate,
-                x cordinate, sign of event].
+        """Compute events in new frame.
+
+        Parameters
+        ----------
+        new_frame: np.ndarray
+            [height, width]
+        ts: float
+            timestamp of new frame.
+        verbose: bool
+            verbose.
+
+        Returns
+        -------
+        events: np.ndarray if any event else None
+            [N, 4], each row contains [timestamp, y cordinate,
+            x cordinate, sign of event].
         """
 
         if t_start > t_end:
@@ -162,7 +167,7 @@ class EventEmulator(object):
 
 
 class EventFrameRenderer(object):
-    """
+    """ Deprecated
     class for rendering event frames.
     - author: Zhe He
     - contact: zhehe@student.ethz.ch
@@ -176,15 +181,16 @@ class EventFrameRenderer(object):
                  pos_thres,
                  neg_thres):
         """
-        @Args:
-            data_path: str
-                path of frames.
-            output_path: str
-                path of output video.
-            input_fps: int
-                frame rate of input video.
-            output_fps: int
-                frame rate of output video.
+        Parameters
+        ----------
+        data_path: str
+            path of frames.
+        output_path: str
+            path of output video.
+        input_fps: int
+            frame rate of input video.
+        output_fps: int
+            frame rate of output video.
         """
 
         self.data_path = data_path
@@ -198,12 +204,15 @@ class EventFrameRenderer(object):
         """Return path of all input images. Assume that the ascending order of
         file names is the same as the order of time sequence.
 
-        @Args:
-            data_path: str
-                path of the folder which contains input images.
-        @Return:
-            List[str]
-                sorted in numerical order.
+        Parameters
+        ----------
+        data_path: str
+            path of the folder which contains input images.
+
+        Returns
+        -------
+        List[str]
+            sorted in numerical order.
         """
         images = glob.glob(os.path.join(data_path, '*.png'))
         if len(images) == 0:
@@ -217,18 +226,23 @@ class EventFrameRenderer(object):
     @staticmethod
     def __read_image(path):
         """Read image.
-        @Args:
-            path: str
-                path of image.
-        @Return:
-            np.ndarray
+
+        Parameters
+        ----------
+        path: str
+            path of image.
+
+        Returns
+        -------
+        img: np.ndarray
         """
         img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
         img = img.astype(np.float) / 255.
         return img
 
     def _get_events(self):
-        """Get all events."""
+        """Get all events.
+        """
         images = self.__all_images(self.data_path)
         num_frames = len(images)
         input_ts = np.linspace(

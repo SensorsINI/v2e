@@ -34,11 +34,16 @@ class Reader(object):
     """
 
     def __init__(self, fname, start=None, stop=None):
-        """
-        Init
-        @params:
-            fname: str
-                path of input hdf5 file.
+        """Init
+
+        Parameters
+        ----------
+        fname: str
+            path of input hdf5 file.
+        start: float
+            start time of the stream.
+        stop: float
+            stop time of the stream.
         """
 
         self.m = MergedStream(HDF5Stream(fname, {'dvs'}))
@@ -49,14 +54,16 @@ class Reader(object):
     def read(self):
         """
         Read data.
-        @return:
-            aps_ts: np.array,
-                timestamps of aps frames.
-            aps_frame: np.ndarray, [n, width, height]
-                aps frames
-            events: numpy record array.
-                events, col names: ["ts", "y", "x", "polarity"], \
-                    data types: ["<f8", "<i8", "<i8", "<i8"]
+
+        Returns
+        -------
+        aps_ts: np.array,
+            timestamps of aps frames.
+        aps_frame: np.ndarray, [n, width, height]
+            aps frames
+        events: numpy record array.
+            events, col names: ["ts", "y", "x", "polarity"], \
+                data types: ["<f8", "<i8", "<i8", "<i8"]
         """
         sys_ts, t_offset, current = 0, 0, 0
         timestamp = 0

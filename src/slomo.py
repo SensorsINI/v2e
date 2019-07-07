@@ -24,17 +24,20 @@ from tqdm import tqdm
 
 
 def video_writer(output_path, height, width):
-    """
-    Return a video writer.
-    @params:
-        output_path: str,
-            path to store output video.
-        height: int,
-            height of a frame.
-        width: int,
-            width of a frame.
-    @return:
-        an instance of cv2.VideoWriter.
+    """ Return a video writer.
+
+    Parameters
+    ----------
+    output_path: str,
+        path to store output video.
+    height: int,
+        height of a frame.
+    width: int,
+        width of a frame.
+
+    Returns
+    -------
+    an instance of cv2.VideoWriter.
     """
 
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -51,10 +54,6 @@ class SuperSloMo(object):
         @author: Zhe He
         @contact: hezhehz@live.cn
         @latest update: 2019-May-27th
-
-        ------
-
-        @methods:
     """
 
     def __init__(
@@ -68,19 +67,21 @@ class SuperSloMo(object):
     ):
         """
         init
-        @params:
-            checkpoint: str,
-                path of the stored Pytorch checkpoint.
-            slow_factor: int,
-                slow motion factor.
-            output_path: str,
-                a temporary path to store interpolated frames.
-            batch_size: int,
-                batch size.
-            video_path: str or None,
-                str if videos need to be stored else None
-            rotate: bool,
-                True if frames need to be rotated else False
+
+        Parameters
+        ----------
+        checkpoint: str,
+            path of the stored Pytorch checkpoint.
+        slow_factor: int,
+            slow motion factor.
+        output_path: str,
+            a temporary path to store interpolated frames.
+        batch_size: int,
+            batch size.
+        video_path: str or None,
+            str if videos need to be stored else None
+        rotate: bool,
+            True if frames need to be rotated else False
         """
 
         if torch.cuda.is_available():
@@ -100,9 +101,10 @@ class SuperSloMo(object):
     def __transform(self):
         """create the Transform instances.
 
-            @Return:
-                to_tensor: Pytorch Transform instance.
-                to_image: Pytorch Transform instance.
+        Returns
+        -------
+        to_tensor: Pytorch Transform instance.
+        to_image: Pytorch Transform instance.
         """
         mean = [0.428]
         std = [1]
@@ -124,14 +126,16 @@ class SuperSloMo(object):
         """Return a Dataloader instance, which is constructed with \
             APS frames.
 
-            @Params:
-                images: np.ndarray, [N, W, H]
-                    input APS frames.
+        Parameters
+        ---------
+        images: np.ndarray, [N, W, H]
+            input APS frames.
 
-            @Return:
-                videoFramesloader: Pytorch Dataloader instance.
-                frames.dim: new size.
-                frames.origDim: original size.
+        Returns
+        -------
+        videoFramesloader: Pytorch Dataloader instance.
+        frames.dim: new size.
+        frames.origDim: original size.
         """
         frames = dataloader.Frames(images, transform=self.to_tensor)
         videoFramesloader = torch.utils.data.DataLoader(
@@ -142,13 +146,17 @@ class SuperSloMo(object):
 
     def __model(self, dim):
         """Initialize the pytorch model
-            @Params:
-                dim: tuple
-                    size of resized images.
-            @Return:
-                flow_estimator: nn.Module
-                warpper: nn.Module
-                interpolator: nn.Module
+
+        Parameters
+        ---------
+        dim: tuple
+            size of resized images.
+
+        Returns
+        -------
+        flow_estimator: nn.Module
+        warpper: nn.Module
+        interpolator: nn.Module
         """
 
         flow_estimator = model.UNet(2, 4)
@@ -172,10 +180,12 @@ class SuperSloMo(object):
         return flow_estimator, warpper, interpolator
 
     def interpolate(self, images):
-        """Run interpolation.
+        """Run interpolation. \
             Interpolated frames will be saved in folder self.output_path.
-            @Params:
-                images: np.ndarray, [N, W, H]
+        
+        Parameters
+        ----------
+        images: np.ndarray, [N, W, H]
         """
 
         video_frame_loader, dim, ori_dim = self.__load_data(images)
@@ -283,12 +293,15 @@ class SuperSloMo(object):
         """Return path of all input images. Assume that the ascending order of
         file names is the same as the order of time sequence.
 
-        @Args:
-            data_path: str
-                path of the folder which contains input images.
-        @Return:
-            List[str]
-                sorted in numerical order.
+        Parameters
+        ----------
+        data_path: str
+            path of the folder which contains input images.
+
+        Returns
+        -------
+        List[str]
+            sorted in numerical order.
         """
         images = glob.glob(os.path.join(data_path, '*.png'))
         if len(images) == 0:
@@ -302,24 +315,31 @@ class SuperSloMo(object):
     @staticmethod
     def __read_image(path):
         """Read image.
-        @Args:
-            path: str
-                path of image.
-        @Return:
+
+        Parameters
+        ----------
+        path: str
+            path of image.
+
+        Return
+        ------
             np.ndarray
         """
         img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
         return img
 
     def get_ts(self, ts):
-        """
-        Interpolate the timestamps.
-        @params:
-            ts: np.array, np.float64,
-                timestamps.
-        @return:
-            np.array, np.float64,
-                interpolated timestamps.
+        """ Interpolate the timestamps.
+
+        Parameters
+        ----------
+        ts: np.array, np.float64,
+            timestamps.
+
+        Returns
+        -------
+        np.array, np.float64,
+            interpolated timestamps.
         """
         new_ts = []
         for i in range(ts.shape[0] - 1):

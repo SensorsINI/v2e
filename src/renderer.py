@@ -21,36 +21,54 @@ class Base(object):
         output_path,
         rotate=False
     ):
-        """
-        Init.
-        @params:
-            frame_ts: np.array,
-                timestamps of interpolated frames.
-            output_path: str,
-                path of output video. Example: ../../XX.avi.
+        """ Init.
+
+        Parameters
+        ----------
+        frame_ts: np.array,
+            timestamps of interpolated frames.
+        output_path: str,
+            path of output video. Example: ../../XX.avi.
         """
         self.frame_ts = frame_ts
         self.output_path = output_path
         self.rotate = rotate
 
     def _get_events(self):
-        """
-        return all events.
-        @Return: np.ndarray.
+        """ return all events.
+
+        Returns
+        -------
+        np.ndarray.
             [timestamp, x, y, polarity]
+
+        Raises
+        ------
+        NotImplementedError
+            If the method is not implemented.
         """
         raise NotImplementedError(
             "method self._get_events() needs to be defined."
         )
 
     def render(self, height, width):
-        """
-        Render event frames.
-        @params:
-            height: int,
-                height of the frame.
-            width: int,
-                width of the frame.
+        """ Render event frames.
+
+        Parameters
+        ----------
+        height: int,
+            height of the frame.
+        width: int,
+            width of the frame.
+
+        Returns
+        -------
+        rendered_frames: np.ndarray
+            rendered event frames.
+        num_pos: int
+            amount of positive events.
+        num_neg: int
+            amount of negative events.
         """
 
         event_arr = self._get_events()
@@ -132,21 +150,22 @@ class RenderFromImages(Base):
         output_path,
         rotate=False
     ):
-        """
-        init
-        @params:
-            images_path: str
-                path of all images.
-            frame_ts: np.array
-                ts of output frames.
-            interpolated_ts: np.array
-                ts of interpolated frames.
-            pos_thres: float,
-                threshold of triggering a positive event.
-            neg_thres: float,
-                threshold of triggering a negative event.
-            output_path: str,
-                path to store output video.
+        """ Init.
+
+        Parameters
+        ----------
+        images_path: str
+            path of all images.
+        frame_ts: np.array
+            ts of output frames.
+        interpolated_ts: np.array
+            ts of interpolated frames.
+        pos_thres: float,
+            threshold of triggering a positive event.
+        neg_thres: float,
+            threshold of triggering a negative event.
+        output_path: str,
+            path to store output video.
         """
         super().__init__(frame_ts, output_path, rotate=rotate)
         self.all_images = self.__all_images(images_path)
@@ -163,12 +182,15 @@ class RenderFromImages(Base):
         """Return path of all input images. Assume that the ascending order of
         file names is the same as the order of time sequence.
 
-        @Args:
-            data_path: str
-                path of the folder which contains input images.
-        @Return:
-            List[str]
-                sorted in numerical order.
+        Parameters
+        ----------
+        data_path: str
+            path of the folder which contains input images.
+
+        Return
+        ------
+        List[str]
+            sorted in numerical order.
         """
         images = glob.glob(os.path.join(data_path, '*.png'))
         if len(images) == 0:
@@ -182,11 +204,15 @@ class RenderFromImages(Base):
     @staticmethod
     def __read_image(path):
         """Read image.
-        @Args:
-            path: str
-                path of image.
-        @Return:
-            np.ndarray
+
+        Parameters
+        ----------
+        path: str
+            path of image.
+
+        Returns
+        -------
+        img: np.ndarray
         """
         img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
         img = img.astype(np.float)
@@ -224,24 +250,26 @@ class RenderFromEvents(Base):
         output_path,
         rotate=False,
     ):
-        """
-        Init.
-        @params:
-            frame_ts: np.array,
-                timestamps of interpolated frames.
-            events: numpy structured array.
-                keys: {"ts", "events"}
-            output_path: str,
-                path to store output video.
+        """ Init.
+
+        Parameters
+        ----------
+        frame_ts: np.array,
+            timestamps of interpolated frames.
+        events: numpy structured array.
+            keys: {"ts", "events"}
+        output_path: str,
+            path to store output video.
         """
         super().__init__(frame_ts, output_path, rotate=rotate)
         self.events = events
 
     def _get_events(self):
-        """
-        Return events.
-        @return:
-            self.events: numpy structured array.
-                keys: {"ts", "events"}
+        """ Return events.
+
+        Returns
+        -------
+        self.events: numpy structured array.
+            keys: {"ts", "events"}
         """
         return self.events
