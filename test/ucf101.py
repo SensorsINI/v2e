@@ -81,7 +81,7 @@ if __name__ == "__main__":
     for action in tqdm(classes):
 
         candidates = os.listdir(os.path.join(args.dataset, action))
-        video = os.path.join(args.dataset, random.choice(candidates))
+        video = os.path.join(args.dataset, action, random.choice(candidates))
         output_path = os.path.join(args.output, action)
         os.mkdir(output_path)
         print("Action: {:s} \t Video: {:s}".format(action, video))
