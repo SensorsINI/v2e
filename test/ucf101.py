@@ -12,7 +12,7 @@ import numpy as np
 import sys
 import os
 import random
-import tqdm
+from tqdm import tqdm
 import shutil
 
 from tempfile import TemporaryDirectory
