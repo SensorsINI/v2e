@@ -108,7 +108,7 @@ if __name__ == "__main__":
         endpoint=False
     )
 
-    output_ts = np.arange(
+    output_ts = np.linspace(
         0,
         num_frames / fps,
         num_frames * args.frame_rate if args.frame_rate else num_frames,
