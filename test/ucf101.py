@@ -126,14 +126,10 @@ if __name__ == "__main__":
             height, width = frames.shape[1:]
 
             for factor in [1, 10]:
-                if factor == 1:
-                    steps = num_frames - 1
-                else:
-                    steps = factor * (num_frames - 1)
                 output_ts = np.linspace(
                     0,
                     (num_frames - 1) / fps,
-                    steps,
+                    factor * (num_frames - 1),
                     endpoint=False
                 )
 
