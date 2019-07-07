@@ -100,16 +100,19 @@ if __name__ == "__main__":
             break
     cap.release()
     frames = np.stack(frames)
-    input_ts = output_ts = np.arange(
+    num_frames = frames.shape[0]
+    input_ts = output_ts = np.linspace(
         0,
-        frames.shape[0] / fps,
-        1 / fps
+        num_frames / fps,
+        frames.shape[0],
+        endpoint=False
     )
 
     output_ts = np.arange(
         0,
-        frames.shape[0] / fps,
-        1 / args.frame_rate if args.frame_rate else 1 / fps,
+        num_frames / fps,
+        num_frames * args.frame_rate if args.frame_rate else num_frames,
+        endpoint=False
     )
 
     with TemporaryDirectory() as dirname:

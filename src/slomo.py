@@ -182,7 +182,7 @@ class SuperSloMo(object):
     def interpolate(self, images):
         """Run interpolation. \
             Interpolated frames will be saved in folder self.output_path.
-        
+
         Parameters
         ----------
         images: np.ndarray, [N, W, H]
