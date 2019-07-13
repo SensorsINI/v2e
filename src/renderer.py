@@ -227,7 +227,119 @@ class RenderFromImages(Base):
                       desc="image2events: "):
             new_frame = self.__read_image(self.all_images[i + 1])
             tmp_events = self.emulator.compute_events(
-                new_frame, self.interpolated_ts[i], self.interpolated_ts[i + 1])
+                new_frame,
+                self.interpolated_ts[i],
+                self.interpolated_ts[i + 1]
+            )
+            if tmp_events is not None:
+                event_list.append(tmp_events)
+        event_arr = np.vstack(event_list)
+        print("Amount of events: {}".format(event_arr.shape[0]))
+
+        return event_arr
+
+
+class RenderFromArray(Base):
+    """
+    Subclass of Base, to render events frames from image array.
+    @authur: Zhe He
+    @contact: hezhehz@live.cn
+    @latest update: 2019-July-13
+    """
+
+    def __init__(
+        self,
+        image_arr,
+        frame_ts,
+        interpolated_ts,
+        pos_thres,
+        neg_thres,
+        output_path,
+        rotate=False
+    ):
+        """ Init.
+
+        Parameters
+        ----------
+        images_arr: np.ndarray
+            input frame array.
+        frame_ts: np.array
+            ts of output frames.
+        interpolated_ts: np.array
+            ts of interpolated frames.
+        pos_thres: float,
+            threshold of triggering a positive event.
+        neg_thres: float,
+            threshold of triggering a negative event.
+        output_path: str,
+            path to store output video.
+        """
+        super().__init__(frame_ts, output_path, rotate=rotate)
+        if not image_arr.shape[0] == frame_ts.shape[0]:
+            raise ValueError(
+                "first dim of image_arr does not match first dim of frame_ts")
+        self.all_images = image_arr
+        self.frame_ts = frame_ts
+        base_frame = self.__read_image(self.all_images[0])
+        self.emulator = EventEmulator(
+            base_frame,
+            pos_thres=pos_thres,
+            neg_thres=neg_thres
+        )
+
+    def __all_images(self, data_path):
+        """Return path of all input images. Assume that the ascending order of
+        file names is the same as the order of time sequence.
+
+        Parameters
+        ----------
+        data_path: str
+            path of the folder which contains input images.
+
+        Return
+        ------
+        List[str]
+            sorted in numerical order.
+        """
+        images = glob.glob(os.path.join(data_path, '*.png'))
+        if len(images) == 0:
+            raise ValueError(("Input folder is empty or images are not in"
+                              " 'png' format."))
+        images_sorted = sorted(
+                images,
+                key=lambda line: int(line.split('/')[-1].split('.')[0]))
+        return images_sorted
+
+    @staticmethod
+    def __read_image(path):
+        """Read image.
+
+        Parameters
+        ----------
+        path: str
+            path of image.
+
+        Returns
+        -------
+        img: np.ndarray
+        """
+        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        img = img.astype(np.float)
+        return img
+
+    def _get_events(self):
+        """Get all events."""
+
+        event_list = list()
+
+        for i in tqdm(range(self.interpolated_ts.shape[0] - 1),
+                      desc="image2events: "):
+            new_frame = self.__read_image(self.all_images[i + 1])
+            tmp_events = self.emulator.compute_events(
+                new_frame,
+                self.interpolated_ts[i],
+                self.interpolated_ts[i + 1]
+            )
             if tmp_events is not None:
                 event_list.append(tmp_events)
         event_arr = np.vstack(event_list)

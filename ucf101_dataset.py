@@ -9,22 +9,16 @@ In each action class, one video is randomly selected.
 import argparse
 import cv2
 import numpy as np
-import sys
 import os
 import random
 import shutil
 
 from tempfile import TemporaryDirectory
 
+from src.renderer import RenderFromImages
+from src.slomo import SuperSloMo
 
 if __name__ == "__main__":
-
-    sys.path.append("../")
-    sys.path.append("../src/")
-    sys.path.append("../utils/")
-
-    from src.renderer import RenderFromImages
-    from src.slomo import SuperSloMo
 
     parser = argparse.ArgumentParser()
 
@@ -85,6 +79,7 @@ if __name__ == "__main__":
         os.mkdir(output_path)
         print("{:d} - Action: {:s}\nVideo: {:s}".format(i, action, video))
 
+        # load frames from the input video.
         frames = []
 
         cap = cv2.VideoCapture(video)
@@ -93,7 +88,7 @@ if __name__ == "__main__":
         while(cap.isOpened()):
             ret, frame = cap.read()
             if ret:
-                # convert RGB frame into luminance.
+                # convert RGB frame into luminance frame.
                 frame = (0.02126 * frame[:, :, 0] +
                          0.7152 * frame[:, :, 1] +
                          0.0722 * frame[:, :, 2])
@@ -104,6 +99,7 @@ if __name__ == "__main__":
         cap.release()
         frames = np.stack(frames)
         num_frames = frames.shape[0]
+
         input_ts = output_ts = np.linspace(
             0,
             num_frames / fps,

@@ -7,7 +7,6 @@ events.
 @latest update: 2019-Jul-4th
 """
 
-
 import argparse
 import cv2
 import numpy as np

@@ -6,16 +6,9 @@ Python code for extracting frames from .hdf5 file in DDD17+ dataset.
 @latest update: 2019-June-28 22:27
 """
 
-import sys
-
-sys.path.append("../")
-sys.path.append("../src/")
-sys.path.append("../utils/")
-
 import numpy as np
 import argparse
 import cv2
-import tqdm
 import queue as Queue
 import time
 # import pdb
