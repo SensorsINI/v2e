@@ -5,7 +5,7 @@ import glob
 
 from tqdm import tqdm
 
-from simulator import EventEmulator
+from src.simulator import EventEmulator
 
 
 class Base(object):
