@@ -17,7 +17,7 @@ import torchvision.transforms as transforms
 import torch.nn.functional as F
 
 from src.dataloader import Frames
-import model
+import src.model as model
 
 from PIL import Image
 from tqdm import tqdm
