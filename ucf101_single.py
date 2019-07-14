@@ -10,12 +10,11 @@ import argparse
 import cv2
 import numpy as np
 import os
-import random
 import shutil
 
 from tempfile import TemporaryDirectory
 
-from src.renderer import RenderFromImages
+from src.renderer import RenderFromImages, RenderFromArray
 from src.slomo import SuperSloMo
 
 if __name__ == "__main__":
@@ -122,7 +121,7 @@ if __name__ == "__main__":
                 endpoint=False
             )
 
-            r = RenderFromImages(
+            r_slomo = RenderFromImages(
                 dirname,
                 output_ts,
                 interpolated_ts,
@@ -130,9 +129,23 @@ if __name__ == "__main__":
                 args.neg_thres,
                 os.path.join(
                     args.output_dir,
-                    "from_image_{:d}.avi".format(int(factor * fps))
+                    "interpolated_{:d}.avi".format(int(factor * fps))
                 )
             )
 
-            _, _, _ = r.render(height, width)
-        shutil.copy2(video, output_path)
+            r_input = RenderFromArray(
+                frames,
+                output_ts,
+                input_ts,
+                args.pos_thres,
+                args.neg_thres,
+                os.path.join(
+                    args.output_dir,
+                    "input_{:d}.avi".format(int(factor * fps))
+                )
+            )
+
+            _, _, _ = r_slomo.render(height, width)
+            _, _, _ = r_input.render(height, width)
+
+        shutil.copy2(args.input, args.output_dir)
