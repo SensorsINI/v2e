@@ -16,7 +16,7 @@ import glob
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 
-from dataloader import Frames
+from src.dataloader import Frames
 import model
 
 from PIL import Image
