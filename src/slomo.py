@@ -16,7 +16,7 @@ import glob
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 
-from src.dataloader import Frames
+import src.dataloader as dataloader
 import src.model as model
 
 from PIL import Image
@@ -137,7 +137,7 @@ class SuperSloMo(object):
         frames.dim: new size.
         frames.origDim: original size.
         """
-        frames = Frames(images, transform=self.to_tensor)
+        frames = dataloader.Frames(images, transform=self.to_tensor)
         videoFramesloader = torch.utils.data.DataLoader(
                 frames,
                 batch_size=self.batch_size,

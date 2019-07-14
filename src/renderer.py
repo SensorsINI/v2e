@@ -275,9 +275,9 @@ class RenderFromArray(Base):
             path to store output video.
         """
         super().__init__(frame_ts, output_path, rotate=rotate)
-        if not image_arr.shape[0] == frame_ts.shape[0]:
+        if not image_arr.shape[0] == input_ts.shape[0]:
             raise ValueError(
-                "first dim of image_arr does not match first dim of frame_ts")
+                "first dim of image_arr does not match first dim of input_ts")
         self.all_images = image_arr
         self.frame_ts = frame_ts
         self.input_ts = input_ts
