@@ -45,8 +45,8 @@ class Reader(object):
         stop: float
             stop time of the stream.
         """
-
-        self.m = MergedStream(HDF5Stream(fname, {'dvs'}))
+        self.f_in = HDF5Stream(fname, {'dvs'})
+        self.m = MergedStream(self.f_in)
         self.start = int(self.m.tmin + 1e6 * start) if start else 0
         self.stop = (self.m.tmin + 1e6 * stop) if stop else self.m.tmax
         self.m.search(self.start)
@@ -114,5 +114,9 @@ class Reader(object):
         events = np.vstack(events)
         frames["ts"] -= frames["ts"][0]
         events[:, 0] -= events[0][0]
+        self.f_in.exit.set()
+        self.m.exit.set()
+        self.f_in.join()
+        self.m.join()
 
         return frames, events

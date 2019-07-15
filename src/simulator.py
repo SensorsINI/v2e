@@ -24,6 +24,10 @@ def piecewise_log(x, threshold=20):
     @contact: hezhehz@live.cn
     """
 
+    # converting x into np.float32.
+    if x.dtype is not np.float32:
+        x = x.astype(np.float32)
+
     y = np.piecewise(
         x,
         [x < threshold, x >= threshold],
