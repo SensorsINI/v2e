@@ -212,7 +212,7 @@ class RenderFromImages(Base):
 
         Returns
         -------
-        img: np.ndarray
+        img: np.ndarray, pixel value in the range of [0., 255.].
         """
         img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
         img = img.astype(np.float)

@@ -346,7 +346,8 @@ def getWarpCoeff(indices, device):
     Gets coefficients used for calculating final intermediate
     frame `It_gen` from backwarped images using flows F_t_0 and F_t_1.
 
-    It_gen = (C0 x V_t_0 x g_I_0_F_t_0 + C1 x V_t_1 x g_I_1_F_t_1) / (C0 x V_t_0 + C1 x V_t_1)
+    It_gen = (C0 x V_t_0 x g_I_0_F_t_0 + C1 x V_t_1 x g_I_1_F_t_1) / \
+        (C0 x V_t_0 + C1 x V_t_1)
 
     where,
     C0 = 1 - t

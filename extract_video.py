@@ -133,7 +133,8 @@ class Reader(object):
                 if any(d['data'] == 0):
                     print('ts reset detected, setting offset', timestamp)
                     t_offset += current
-                    # NOTE the timestamp of this special event is not meaningful
+                    # NOTE the timestamp of this special event is
+                    # not meaningful
                     continue
             if d['etype'] == 'frame_event':
                 ts = d['timestamp'] + t_offset
