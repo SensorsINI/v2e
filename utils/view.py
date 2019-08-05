@@ -27,8 +27,9 @@ import cv2
 import time
 import queue as Queue
 import multiprocessing as mp
-from caer import DVS_SHAPE, unpack_header, unpack_data
-from datasets import CHUNK_SIZE
+
+from utils.caer import DVS_SHAPE, unpack_header, unpack_data
+from utils.datasets import CHUNK_SIZE
 
 
 VIEW_DATA = {
