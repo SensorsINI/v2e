@@ -1,5 +1,5 @@
 """
-Python code for extracting frames from video and converting them into DVS
+Python code for extracting frames from video and converting it into DVS
 events.
 
 @author: Zhe He
@@ -10,10 +10,12 @@ events.
 import argparse
 import cv2
 import numpy as np
-import sys
 import os
 
 from tempfile import TemporaryDirectory
+
+from src.renderer import RenderFromImages
+from src.slomo import SuperSloMo
 
 
 parser = argparse.ArgumentParser()
@@ -68,15 +70,11 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+for arg, value in args._get_kwargs():
+    print("{}:\t{}".format(arg, value))
+
 
 if __name__ == "__main__":
-
-    sys.path.append("../")
-    sys.path.append("../src/")
-    sys.path.append("../utils/")
-
-    from src.renderer import RenderFromImages
-    from src.slomo import SuperSloMo
 
     if not os.path.exists(args.video_path):
         os.mkdir(args.video_path)
