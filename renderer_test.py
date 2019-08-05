@@ -1,0 +1,135 @@
+""" Render event frames from DVS record file in DDD17+ dataset.
+
+@author: Zhe He
+@contact: zhehe@student.ethz.ch
+@latest update: 2019-08-05
+"""
+
+
+import numpy as np
+import argparse
+import os
+
+from tempfile import TemporaryDirectory
+
+from src.renderer import RenderFromImages, RenderFromEvents
+from src.slomo import SuperSloMo
+from src.reader import Reader
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--pos_thres",
+    type=float,
+    default=0.21,
+    help="threshold to trigger a positive event"
+)
+parser.add_argument(
+    "--neg_thres",
+    type=float,
+    default=0.17,
+    help="threshold to trigger a negative event"
+)
+parser.add_argument(
+    "--start",
+    type=float,
+    default=0.0,
+    help="start point of video stream"
+)
+parser.add_argument(
+    "--stop",
+    type=float,
+    default=5.0,
+    help="stop point of video stream"
+)
+parser.add_argument(
+    "--fname",
+    type=str,
+    required=True,
+    help="path of .h5 file"
+)
+parser.add_argument(
+    "--checkpoint",
+    type=str,
+    required=True,
+    help="path of checkpoint"
+)
+parser.add_argument(
+    "--sf",
+    type=int,
+    required=True,
+    help="slow motion factor"
+)
+parser.add_argument(
+    "--frame_rate",
+    type=int,
+    help="frame rate of output video"
+)
+parser.add_argument(
+    "--video_path",
+    type=str,
+    required=True,
+    help="path to store output vidoes"
+)
+
+args = parser.parse_args()
+
+for arg, value in args._get_kwargs():
+    print("{}:\t{}".format(arg, value))
+
+
+if __name__ == "__main__":
+
+    if not os.path.exists(args.video_path):
+        os.mkdir(args.video_path)
+
+    with open(os.path.join(args.video_path, "info.txt"), "w") as f:
+        f.write("file name: {}\n".format(args.fname.split("/")[-1]))
+        f.write("start point: {:.2f}\n".format(args.start))
+        f.write("stop point: {:.2f}\n".format(args.stop))
+        f.write("slow motion factor: {}\n".format(args.sf))
+        f.write("output frame rate: {}\n".format(args.frame_rate))
+
+    m = Reader(args.fname, start=args.start, stop=args.stop)
+    frames, events = m.read()
+    frame_ts = np.arange(
+        frames["ts"][0],
+        frames["ts"][-1],
+        1 / (args.frame_rate * args.df)
+    )
+
+    with TemporaryDirectory() as dirname:
+
+        print("tmp_dir: ", dirname)
+
+        s = SuperSloMo(
+            args.checkpoint,
+            args.sf,
+            dirname,
+            video_path=args.video_path,
+            rotate=True
+        )
+
+        s.interpolate(frames["frame"])
+        interpolated_ts = s.get_ts(frames["ts"])
+        height, width = frames["frame"].shape[1:]
+
+        r_events = RenderFromEvents(
+            frame_ts,
+            events,
+            os.path.join(args.video_path, "from_event.avi"),
+            rotate=True
+        )
+
+        _, _, _ = r_events.render(height, width)
+
+        r = RenderFromImages(
+            dirname,
+            frame_ts,
+            interpolated_ts,
+            args.pos_thres,
+            args.neg_thres,
+            os.path.join(args.video_path, "from_image.avi"),
+            rotate=True)
+
+        _, _, _ = r.render(height, width)
