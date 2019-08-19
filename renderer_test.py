@@ -75,7 +75,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 for arg, value in args._get_kwargs():
-    print("{}:\t{}".format(arg, value))
+    print("{}: {}".format(arg, value))
 
 
 if __name__ == "__main__":

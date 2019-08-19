@@ -89,7 +89,7 @@ if __name__ == "__main__":
             ret, frame = cap.read()
             if ret:
                 # convert RGB frame into luminance frame.
-                frame = (0.02126 * frame[:, :, 0] +
+                frame = (0.2126 * frame[:, :, 0] +
                          0.7152 * frame[:, :, 1] +
                          0.0722 * frame[:, :, 2])
                 frame = frame.astype(np.uint8)
