@@ -19,8 +19,8 @@ class Base(object):
         self,
         frame_ts,
         video_path,
-        rotate=False,
-        event_path=None
+        event_path=None,
+        rotate=False
     ):
         """ Init.
 
@@ -64,8 +64,6 @@ class Base(object):
         Returns
         -------
         rendered_frames: np.ndarray, rendered event frames.
-        num_pos: int, amount of positive events.
-        num_neg: int, amount of negative events.
         """
 
         event_arr = self._get_events()
@@ -127,11 +125,8 @@ class Base(object):
                 break
         out.release()
 
-        num_pos = event_arr[event_arr[:, 3] < 0].shape[0]
-        num_neg = event_arr.shape[0] - num_pos
-
         rendered_frames = np.vstack(rendered_frames)
-        return rendered_frames, num_pos, num_neg
+        return rendered_frames
 
 
 class RenderFromImages(Base):

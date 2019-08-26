@@ -123,7 +123,7 @@ if __name__ == "__main__":
             rotate=True
         )
 
-        _, _, _ = r_events.render(height, width)
+        _, = r_events.render(height, width)
 
         r = RenderFromImages(
             dirname,
@@ -135,4 +135,4 @@ if __name__ == "__main__":
             event_path=os.path.join(args.path, "events_aps.npy"),
             rotate=True)
 
-        _, _, _ = r.render(height, width)
+        _, = r.render(height, width)

@@ -1,8 +1,11 @@
-import sys
 import numpy as np
 import argparse
 
 from tempfile import TemporaryDirectory
+
+from src.renderer import RenderFromImages, RenderFromEvents
+from src.slomo import SuperSloMo
+from src.reader import Reader
 
 
 parser = argparse.ArgumentParser()
@@ -42,12 +45,6 @@ args = parser.parse_args()
 
 
 if __name__ == "__main__":
-    sys.path.append("../")
-    sys.path.append("../src/")
-    sys.path.append("../utils/")
-    from src.renderer import RenderFromImages, RenderFromEvents
-    from src.slomo import SuperSloMo
-    from src.reader import Reader
 
     m = Reader(args.fname, start=args.start, stop=args.stop)
     frames, events = m.read()
@@ -71,12 +68,13 @@ if __name__ == "__main__":
         r_events = RenderFromEvents(
             frame_ts,
             events,
-            "../data/from_event.avi"
+            "data/from_event.avi"
         )
 
-        (frames_events,
-         num_pos_events,
-         num_neg_events) = r_events.render(height, width)
+        events_dvs = r_events._get_events()
+
+        num_pos_dvs = events_dvs[events_dvs[:, 3] == 1].shape[0]
+        num_neg_dvs = events_dvs.shape[0] - num_pos_dvs
 
         pos_thres = -1.
         neg_thres = -1.
@@ -88,17 +86,15 @@ if __name__ == "__main__":
                 frame_ts,
                 threshold,
                 threshold,
-                "../data/from_image_{:.2f}.avi".format(threshold))
+                "data/from_image_{:.2f}.avi".format(threshold))
 
-            (frames_images,
-             num_pos_images,
-             num_neg_images) = r.render(height, width)
+            events_aps = r._get_events()
 
-            l1_error = np.mean(
-                    np.abs(frames_images - frames_events)
-                )
-            abs_pos_diff = np.abs(num_pos_events - num_pos_images)
-            abs_neg_diff = np.abs(num_neg_events - num_neg_images)
+            num_pos_aps = events_aps[events_aps[:, 3] == 1].shape[0]
+            num_neg_aps = events_aps.shape[0] - num_pos_aps
+
+            abs_pos_diff = np.abs(num_pos_dvs - num_pos_aps)
+            abs_neg_diff = np.abs(num_neg_dvs - num_neg_aps)
 
             if len(results) > 0:
                 if abs_pos_diff >= results[-1][1] and pos_thres < 0:
@@ -110,11 +106,10 @@ if __name__ == "__main__":
                 print("Optimal Neg Threshold Found: {}".format(neg_thres))
                 break
             results.append(
-                [threshold, abs_pos_diff, abs_neg_diff, l1_error]
+                [threshold, abs_pos_diff, abs_neg_diff]
             )
             print("Threshold: {:.2f}".format(threshold))
             print("Pos Thres: {:.2f}".format(pos_thres))
             print("Neg Thres: {:.2f}".format(neg_thres))
-            print("MEAN L1 ERROR: {}".format(l1_error))
     results = np.array(results)
-    np.save('../data/results.npy', results)
+    np.save('data/results.npy', results)

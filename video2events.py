@@ -134,4 +134,4 @@ if __name__ == "__main__":
             args.neg_thres,
             os.path.join(args.video_path, "from_image.avi"))
 
-        _, _, _ = r.render(height, width)
+        _, = r.render(height, width)
