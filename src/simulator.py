@@ -60,6 +60,10 @@ class EventEmulator(object):
         neg_thres: float, default 0.17
             threshold of triggering negative event.
         """
+
+        print("positive threshold: {}".format(pos_thres))
+        print("negative threshold: {}".format(neg_thres))
+
         self.base_frame = piecewise_log(base_frame)
         # take the variance of threshold into account.
         pos_thres = np.random.normal(pos_thres, 0.03, base_frame.shape)
