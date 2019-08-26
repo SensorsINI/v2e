@@ -131,7 +131,7 @@ class EventEmulator(object):
                     (np.ones((num_pos_events, 1), dtype=np.float32) * ts,
                      pos_event_xy[1][..., np.newaxis],
                      pos_event_xy[0][..., np.newaxis],
-                     np.ones((num_pos_events, 1), dtype=np.float32) * -1))
+                     np.ones((num_pos_events, 1), dtype=np.float32) * 1))
 
             else:
                 pos_events = None
@@ -141,7 +141,7 @@ class EventEmulator(object):
                     (np.ones((num_neg_events, 1), dtype=np.float32) * ts,
                      neg_event_xy[1][..., np.newaxis],
                      neg_event_xy[0][..., np.newaxis],
-                     np.ones((num_neg_events, 1), dtype=np.float32)))
+                     np.ones((num_neg_events, 1), dtype=np.float32) * -1))
 
             else:
                 neg_events = None
