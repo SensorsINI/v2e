@@ -18,29 +18,31 @@ class Base(object):
     def __init__(
         self,
         frame_ts,
-        output_path,
-        rotate=False
+        video_path,
+        rotate=False,
+        event_path=None
     ):
         """ Init.
 
         Parameters
         ----------
-        frame_ts: np.array,
-            timestamps of output frames.
-        output_path: str,
-            path of output video. Example: ../../XX.avi.
+        frame_ts: np.array, timestamps of output frames.
+        video_path: str, path of output video. Example: ../../XX.avi.
+        rotate: bool, to ratate the output frames or not.
+        event_path: str or None, str if the events need to be saved \
+            else None.
         """
         self.frame_ts = frame_ts
-        self.output_path = output_path
+        self.video_path = video_path
         self.rotate = rotate
+        self.event_path = event_path
 
     def _get_events(self):
         """ return all events.
 
         Returns
         -------
-        np.ndarray.
-            [timestamp, x, y, polarity]
+        np.ndarray, [timestamp, x, y, polarity]
 
         Raises
         ------
@@ -56,27 +58,27 @@ class Base(object):
 
         Parameters
         ----------
-        height: int,
-            height of the frame.
-        width: int,
-            width of the frame.
+        height: int, height of the frame.
+        width: int, width of the frame.
 
         Returns
         -------
-        rendered_frames: np.ndarray
-            rendered event frames.
-        num_pos: int
-            amount of positive events.
-        num_neg: int
-            amount of negative events.
+        rendered_frames: np.ndarray, rendered event frames.
+        num_pos: int, amount of positive events.
+        num_neg: int, amount of negative events.
         """
 
         event_arr = self._get_events()
+
+        if self.event_path:
+            np.save(self.event_path, event_arr)
+            print("events saved!")
+
         clip_value = 2
         histrange = [(0, v) for v in (height, width)]
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         out = cv2.VideoWriter(
-                  self.output_path,
+                  self.video_path,
                   fourcc,
                   30.0,
                   (width, height))
@@ -147,27 +149,21 @@ class RenderFromImages(Base):
         interpolated_ts,
         pos_thres,
         neg_thres,
-        output_path,
+        video_path,
         rotate=False
     ):
         """ Init.
 
         Parameters
         ----------
-        images_path: str
-            path of all images.
-        frame_ts: np.array
-            ts of output frames.
-        interpolated_ts: np.array
-            ts of interpolated frames.
-        pos_thres: float,
-            threshold of triggering a positive event.
-        neg_thres: float,
-            threshold of triggering a negative event.
-        output_path: str,
-            path to store output video.
+        images_path: str, path of all images.
+        frame_ts: np.array, ts of output frames.
+        interpolated_ts: np.array, ts of interpolated frames.
+        pos_thres: float, threshold of triggering a positive event.
+        neg_thres: float, threshold of triggering a negative event.
+        video_path: str, path to store output video.
         """
-        super().__init__(frame_ts, output_path, rotate=rotate)
+        super().__init__(frame_ts, video_path, rotate=rotate)
         self.all_images = self.__all_images(images_path)
         self.frame_ts = frame_ts
         self.interpolated_ts = interpolated_ts
@@ -184,13 +180,11 @@ class RenderFromImages(Base):
 
         Parameters
         ----------
-        data_path: str
-            path of the folder which contains input images.
+        data_path: str, path of the folder which contains input images.
 
         Return
         ------
-        List[str]
-            sorted in numerical order.
+        List[str], sorted in numerical order.
         """
         images = glob.glob(os.path.join(data_path, '*.png'))
         if len(images) == 0:
@@ -207,8 +201,7 @@ class RenderFromImages(Base):
 
         Parameters
         ----------
-        path: str
-            path of image.
+        path: str, path of image.
 
         Returns
         -------
@@ -254,27 +247,21 @@ class RenderFromArray(Base):
         input_ts,
         pos_thres,
         neg_thres,
-        output_path,
+        video_path,
         rotate=False
     ):
         """ Init.
 
         Parameters
         ----------
-        images_arr: np.ndarray
-            input frame array.
-        frame_ts: np.array
-            ts of output frames.
-        input_ts: np.array
-            ts of input frames.
-        pos_thres: float,
-            threshold of triggering a positive event.
-        neg_thres: float,
-            threshold of triggering a negative event.
-        output_path: str,
-            path to store output video.
+        images_arr: np.ndarray, input frame array.
+        frame_ts: np.array, ts of output frames.
+        input_ts: np.array, ts of input frames.
+        pos_thres: float, threshold of triggering a positive event.
+        neg_thres: float, threshold of triggering a negative event.
+        video_path: str, path to store output video.
         """
-        super().__init__(frame_ts, output_path, rotate=rotate)
+        super().__init__(frame_ts, video_path, rotate=rotate)
         if not image_arr.shape[0] == input_ts.shape[0]:
             raise ValueError(
                 "first dim of image_arr does not match first dim of input_ts")
@@ -319,21 +306,18 @@ class RenderFromEvents(Base):
         self,
         frame_ts,
         events,
-        output_path,
+        video_path,
         rotate=False,
     ):
         """ Init.
 
         Parameters
         ----------
-        frame_ts: np.array,
-            timestamps of interpolated frames.
-        events: numpy structured array.
-            keys: {"ts", "events"}
-        output_path: str,
-            path to store output video.
+        frame_ts: np.array, timestamps of interpolated frames.
+        events: numpy structured array, keys: {"ts", "events"}
+        video_path: str, path to store output video.
         """
-        super().__init__(frame_ts, output_path, rotate=rotate)
+        super().__init__(frame_ts, video_path, rotate=rotate)
         self.events = events
 
     def _get_events(self):
@@ -341,7 +325,6 @@ class RenderFromEvents(Base):
 
         Returns
         -------
-        self.events: numpy structured array.
-            keys: {"ts", "events"}
+        self.events: numpy structured array, keys: {"ts", "events"}
         """
         return self.events
