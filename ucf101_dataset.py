@@ -141,5 +141,5 @@ if __name__ == "__main__":
                     )
                 )
 
-                _, = r.render(height, width)
+                _ = r.render(height, width)
             shutil.copy2(video, output_path)

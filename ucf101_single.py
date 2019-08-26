@@ -145,7 +145,7 @@ if __name__ == "__main__":
                 )
             )
 
-            _, = r_slomo.render(height, width)
-            _, = r_input.render(height, width)
+            _ = r_slomo.render(height, width)
+            _ = r_input.render(height, width)
 
         shutil.copy2(args.input, args.output_dir)
