@@ -150,6 +150,7 @@ class RenderFromImages(Base):
         pos_thres,
         neg_thres,
         video_path,
+        event_path=None,
         rotate=False
     ):
         """ Init.
@@ -162,8 +163,11 @@ class RenderFromImages(Base):
         pos_thres: float, threshold of triggering a positive event.
         neg_thres: float, threshold of triggering a negative event.
         video_path: str, path to store output video.
+        event_path: str if the events need to be saved, else None.
+        ratate: bool, True if the output frames need to be rotated, else False.
         """
-        super().__init__(frame_ts, video_path, rotate=rotate)
+        super().__init__(
+            frame_ts, video_path, event_path=event_path, rotate=rotate)
         self.all_images = self.__all_images(images_path)
         self.frame_ts = frame_ts
         self.interpolated_ts = interpolated_ts
@@ -248,6 +252,7 @@ class RenderFromArray(Base):
         pos_thres,
         neg_thres,
         video_path,
+        event_path=None,
         rotate=False
     ):
         """ Init.
@@ -260,8 +265,11 @@ class RenderFromArray(Base):
         pos_thres: float, threshold of triggering a positive event.
         neg_thres: float, threshold of triggering a negative event.
         video_path: str, path to store output video.
+        event_path: str if the events need to be saved, else None.
+        ratate: bool, True if the output frames need to be rotated, else False.
         """
-        super().__init__(frame_ts, video_path, rotate=rotate)
+        super().__init__(
+            frame_ts, video_path, event_path=event_path, rotate=rotate)
         if not image_arr.shape[0] == input_ts.shape[0]:
             raise ValueError(
                 "first dim of image_arr does not match first dim of input_ts")
@@ -307,6 +315,7 @@ class RenderFromEvents(Base):
         frame_ts,
         events,
         video_path,
+        event_path=None,
         rotate=False,
     ):
         """ Init.
@@ -316,8 +325,11 @@ class RenderFromEvents(Base):
         frame_ts: np.array, timestamps of interpolated frames.
         events: numpy structured array, keys: {"ts", "events"}
         video_path: str, path to store output video.
+        event_path: str if the events need to be saved, else None.
+        ratate: bool, True if the output frames need to be rotated, else False.
         """
-        super().__init__(frame_ts, video_path, rotate=rotate)
+        super().__init__(
+            frame_ts, video_path, event_path=event_path, rotate=rotate)
         self.events = events
 
     def _get_events(self):

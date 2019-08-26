@@ -66,10 +66,10 @@ parser.add_argument(
     help="frame rate of output video"
 )
 parser.add_argument(
-    "--video_path",
+    "--path",
     type=str,
     required=True,
-    help="path to store output vidoes"
+    help="path to store output files"
 )
 
 args = parser.parse_args()
@@ -80,10 +80,10 @@ for arg, value in args._get_kwargs():
 
 if __name__ == "__main__":
 
-    if not os.path.exists(args.video_path):
-        os.mkdir(args.video_path)
+    if not os.path.exists(args.path):
+        os.mkdir(args.path)
 
-    with open(os.path.join(args.video_path, "info.txt"), "w") as f:
+    with open(os.path.join(args.path, "info.txt"), "w") as f:
         f.write("file name: {}\n".format(args.fname.split("/")[-1]))
         f.write("start point: {:.2f}\n".format(args.start))
         f.write("stop point: {:.2f}\n".format(args.stop))
@@ -107,7 +107,7 @@ if __name__ == "__main__":
             args.checkpoint,
             args.sf,
             dirname,
-            video_path=args.video_path,
+            video_path=args.path,
             rotate=True
         )
 
@@ -118,7 +118,8 @@ if __name__ == "__main__":
         r_events = RenderFromEvents(
             frame_ts,
             events,
-            os.path.join(args.video_path, "from_event.avi"),
+            os.path.join(args.path, "video_dvs.avi"),
+            event_path=os.path.join(args.path, "events_dvs.npy"),
             rotate=True
         )
 
@@ -130,7 +131,8 @@ if __name__ == "__main__":
             interpolated_ts,
             args.pos_thres,
             args.neg_thres,
-            os.path.join(args.video_path, "from_image.avi"),
+            os.path.join(args.path, "video_aps.avi"),
+            event_path=os.path.join(args.path, "events_aps.npy"),
             rotate=True)
 
         _, _, _ = r.render(height, width)
