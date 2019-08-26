@@ -113,7 +113,7 @@ if __name__ == "__main__":
         interpolated_ts = s.get_ts(input_ts)
         height, width = frames.shape[1:]
 
-        for factor in [1, 10]:
+        for factor in [1, args.sf]:
             output_ts = np.linspace(
                 0,
                 (num_frames - 1) / fps,
