@@ -3,3 +3,4 @@
 *.pyc
 data/
 notebook/
+*.sh
