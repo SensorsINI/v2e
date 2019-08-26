@@ -97,7 +97,7 @@ class EventEmulator(object):
             raise ValueError("t_start must be smaller than t_end")
 
         log_frame = piecewise_log(new_frame)
-        diff_frame = self.base_frame - log_frame
+        diff_frame = log_frame - self.base_frame
 
         pos_frame = np.zeros_like(diff_frame)
         neg_frame = np.zeros_like(diff_frame)
