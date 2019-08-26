@@ -84,6 +84,7 @@ if __name__ == "__main__":
             r = RenderFromImages(
                 dirname,
                 frame_ts,
+                frame_ts,
                 threshold,
                 threshold,
                 "data/from_image_{:.2f}.avi".format(threshold))
