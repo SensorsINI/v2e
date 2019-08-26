@@ -95,8 +95,8 @@ if __name__ == "__main__":
     frame_ts = np.arange(
         frames["ts"][0],
         frames["ts"][-1],
-        # 1 / args.frame_rate
-        1 / (args.sf * frames.shape[0] / (frames["ts"][-1] - frames["ts"][0]))
+        1 / args.frame_rate
+        # 1 / (args.sf * frames.shape[0] / (frames["ts"][-1] - frames["ts"][0]))
     )
 
     with TemporaryDirectory() as dirname:
