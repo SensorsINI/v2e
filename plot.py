@@ -77,7 +77,7 @@ def counting(events, start=0, stop=3.5, bin_size=0.5, polarity=None):
 
     ticks = np.arange(start, stop, bin_size)
     bin_num = ticks.shape[0]
-    ts_cnt = np.zeros([bin_num, 2])
+    ts_cnt = np.zeros([bin_num - 1, 2])
     for i in range(bin_num - 1):
         condition = np.logical_and(events[:, 0] >= ticks[i],
                                    events[:, 0] < ticks[i + 1])
@@ -95,54 +95,111 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", type=str, help="path of input files")
     parser.add_argument("--bin_size", type=float, help="the size of bin")
-    parser.add_argument(
-        "--type",
-        type=str,
-        choices=["positive", "negative", "all"],
-        help="polarity")
+    parser.add_argument("--start", type=float, help="start time")
+    parser.add_argument("--stop", type=float, help="stop time")
+    parser.add_argument("--x", type=int, nargs=2, help="x, two integers")
+    parser.add_argument("--y", type=int, nargs=2, help="y, two integers")
+    # parser.add_argument(
+    #     "--type",
+    #     type=str,
+    #     choices=["positive", "negative", "all"],
+    #     help="polarity")
     args = parser.parse_args()
 
-    if args.type == "positive":
-        polarity = 1
-    elif args.type == "negative":
-        polarity = -1
-    else:
-        polarity = None
+    # if args.type == "positive":
+    #     polarity = 1
+    # elif args.type == "negative":
+    #     polarity = -1
+    # else:
+    #     polarity = None
 
     events_aps = np.load(os.path.join(args.path, "events_aps.npy"))
     events_dvs = np.load(os.path.join(args.path, "events_dvs.npy"))
 
-    x = (70, 75)
-    y = (65, 70)
+    x = tuple(args.x)
+    y = tuple(args.y)
 
     aps = select(events_aps, x, y)
     dvs = select(events_dvs, x, y)
-    aps_count = counting(aps, bin_size=args.bin_size, polarity=polarity)
-    dvs_count = counting(dvs, bin_size=args.bin_size, polarity=polarity)
 
-    y_lim = max(aps_count[:, 1].max(), dvs_count[:, 1].max()) + 10
+    aps_all = counting(aps, bin_size=args.bin_size, polarity=None,
+                       start=args.start, stop=args.stop)
+    dvs_all = counting(dvs, bin_size=args.bin_size, polarity=None,
+                       start=args.start, stop=args.stop)
+    aps_pos = counting(aps, bin_size=args.bin_size, polarity=1,
+                       start=args.start, stop=args.stop)
+    dvs_pos = counting(dvs, bin_size=args.bin_size, polarity=1,
+                       start=args.start, stop=args.stop)
+    aps_neg = counting(aps, bin_size=args.bin_size, polarity=-1,
+                       start=args.start, stop=args.stop)
+    dvs_neg = counting(dvs, bin_size=args.bin_size, polarity=-1,
+                       start=args.start, stop=args.stop)
 
-    fig = plt.figure(figsize=(16, 4))
+    fig = plt.figure(figsize=(20, 20))
 
-    plt.subplot(1, 2, 1)
-    plt.bar(aps_count[:, 0], aps_count[:, 1],
+    y_max = max(aps_all[:, 1].max(), dvs_all[:, 1].max()) + 1
+    plt.subplot(3, 2, 1)
+    plt.bar(aps_all[:, 0], aps_all[:, 1],
             width=args.bin_size / 2, color='blue')
     plt.xlabel("t [s]", fontsize=16)
     plt.ylabel("#(events)", fontsize=16)
-    plt.ylim([0, y_lim])
+    plt.ylim([0, y_max])
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
-    plt.title("From APS ({})".format(args.type), fontsize=18)
+    plt.title("From APS (all)", fontsize=18)
 
-    plt.subplot(1, 2, 2)
-    plt.bar(dvs_count[:, 0], dvs_count[:, 1],
+    plt.subplot(3, 2, 2)
+    plt.bar(dvs_all[:, 0], dvs_all[:, 1],
             width=args.bin_size / 1.6, color='orange')
     plt.xlabel("t [s]", fontsize=16)
     plt.ylabel("#(events)", fontsize=16)
-    plt.ylim([0, y_lim])
+    plt.ylim([0, y_max])
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
-    plt.title("From DVS ({})".format(args.type), fontsize=18)
+    plt.title("From DVS (all)", fontsize=18)
+
+    y_max = max(aps_pos[:, 1].max(), dvs_pos[:, 1].max()) + 1
+    plt.subplot(3, 2, 3)
+    plt.bar(aps_pos[:, 0], aps_pos[:, 1],
+            width=args.bin_size / 2, color='blue')
+    plt.xlabel("t [s]", fontsize=16)
+    plt.ylabel("#(events)", fontsize=16)
+    plt.ylim([0, y_max])
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.title("From APS (positive)", fontsize=18)
+
+    plt.subplot(3, 2, 4)
+    plt.bar(dvs_pos[:, 0], dvs_pos[:, 1],
+            width=args.bin_size / 1.6, color='orange')
+    plt.xlabel("t [s]", fontsize=16)
+    plt.ylabel("#(events)", fontsize=16)
+    plt.ylim([0, y_max])
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.title("From DVS (positive)", fontsize=18)
+
+    y_max = max(aps_neg[:, 1].max(), dvs_neg[:, 1].max()) + 1
+
+    plt.subplot(3, 2, 5)
+    plt.bar(aps_neg[:, 0], aps_neg[:, 1],
+            width=args.bin_size / 2, color='blue')
+    plt.xlabel("t [s]", fontsize=16)
+    plt.ylabel("#(events)", fontsize=16)
+    plt.ylim([0, y_max])
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.title("From APS (negative)", fontsize=18)
+
+    plt.subplot(3, 2, 6)
+    plt.bar(dvs_neg[:, 0], dvs_neg[:, 1],
+            width=args.bin_size / 1.6, color='orange')
+    plt.xlabel("t [s]", fontsize=16)
+    plt.ylabel("#(events)", fontsize=16)
+    plt.ylim([0, y_max])
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.title("From DVS (negative)", fontsize=18)
 
     # save the figure
-    plt.savefig(os.path.join(args.path, "{}.png".format(args.type)))
+    plt.savefig(os.path.join(args.path, "plot.pdf"))
