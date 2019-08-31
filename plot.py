@@ -2,6 +2,7 @@ import numpy as np
 import argparse
 import os
 import matplotlib
+import cv2
 matplotlib.use('PS')
 
 from matplotlib import pyplot as plt
@@ -43,7 +44,7 @@ def select(events, x, y):
 
     elif isinstance(y, tuple):
         if y[0] < 0 or y[1] < 0 or \
-           y[0] > y_lim or x[1] > y_lim or \
+           y[0] > y_lim or y[1] > y_lim or \
            y[0] > y[1]:
             raise ValueError("y is not in the valid range.")
         y_region = np.logical_and(events[:, 2] >= y[0], events[:, 2] <= y[1])
@@ -99,33 +100,56 @@ if __name__ == "__main__":
     parser.add_argument("--stop", type=float, help="stop time")
     parser.add_argument("--x", type=int, nargs=2, help="x, two integers")
     parser.add_argument("--y", type=int, nargs=2, help="y, two integers")
-    # parser.add_argument(
-    #     "--type",
-    #     type=str,
-    #     choices=["positive", "negative", "all"],
-    #     help="polarity")
+    parser.add_argument(
+        "--rotate", type=bool, help="whether the video needs to be rotated")
     args = parser.parse_args()
-
-    # if args.type == "positive":
-    #     polarity = 1
-    # elif args.type == "negative":
-    #     polarity = -1
-    # else:
-    #     polarity = None
 
     events_aps = np.load(os.path.join(args.path, "events_aps.npy"))
     events_dvs = np.load(os.path.join(args.path, "events_dvs.npy"))
 
-    x = tuple(args.x)
-    y = tuple(args.y)
+    cap = cv2.VideoCapture(os.path.join(args.path, "video_dvs.avi"))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(
+                os.path.join(args.path, "counting.avi"),
+                fourcc,
+                fps,
+                (width, height))
+
+    print("width: {} \t height: {}".format(width, height))
+
+    if not args.rotate:
+        x = tuple(args.x)
+        y = tuple(args.y)
+    else:
+        x = tuple([width - 1 - args.x[1], width - 1 - args.x[0]])
+        y = tuple([height - 1 - args.y[1], height - 1 - args.y[0]])
+
+    start = int(args.start * fps)
+    stop = int(args.stop * fps)
+    i = 0
+    while(cap.isOpened()):
+        ret, img = cap.read()
+        if ret and i >= start and i <= stop:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            cv2.rectangle(
+                img, (args.x[0], args.y[0]), (args.x[1], args.y[1]), 255, 2)
+            out.write(cv2.cvtColor((img * 255).astype(np.uint8),
+                                   cv2.COLOR_GRAY2BGR))
+            if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
+                break
+        else:
+            break
+        i += 1
+    out.release()
+
+    print("finished writing video.")
 
     aps = select(events_aps, x, y)
     dvs = select(events_dvs, x, y)
 
-    aps_all = counting(aps, bin_size=args.bin_size, polarity=None,
-                       start=args.start, stop=args.stop)
-    dvs_all = counting(dvs, bin_size=args.bin_size, polarity=None,
-                       start=args.start, stop=args.stop)
     aps_pos = counting(aps, bin_size=args.bin_size, polarity=1,
                        start=args.start, stop=args.stop)
     dvs_pos = counting(dvs, bin_size=args.bin_size, polarity=1,
@@ -135,71 +159,29 @@ if __name__ == "__main__":
     dvs_neg = counting(dvs, bin_size=args.bin_size, polarity=-1,
                        start=args.start, stop=args.stop)
 
-    fig = plt.figure(figsize=(20, 20))
-
-    y_max = max(aps_all[:, 1].max(), dvs_all[:, 1].max()) + 1
-    plt.subplot(3, 2, 1)
-    plt.bar(aps_all[:, 0], aps_all[:, 1],
-            width=args.bin_size / 2, color='blue')
-    plt.xlabel("t [s]", fontsize=16)
-    plt.ylabel("#(events)", fontsize=16)
-    plt.ylim([0, y_max])
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
-    plt.title("From APS (all)", fontsize=18)
-
-    plt.subplot(3, 2, 2)
-    plt.bar(dvs_all[:, 0], dvs_all[:, 1],
-            width=args.bin_size / 1.6, color='orange')
-    plt.xlabel("t [s]", fontsize=16)
-    plt.ylabel("#(events)", fontsize=16)
-    plt.ylim([0, y_max])
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
-    plt.title("From DVS (all)", fontsize=18)
+    fig = plt.figure(figsize=(8, 6))
+    width = args.bin_size / 2
 
     y_max = max(aps_pos[:, 1].max(), dvs_pos[:, 1].max()) + 1
-    plt.subplot(3, 2, 3)
-    plt.bar(aps_pos[:, 0], aps_pos[:, 1],
-            width=args.bin_size / 2, color='blue')
+    y_min = -max(aps_neg[:, 1].max(), dvs_neg[:, 1].max()) - 1
+
+    plt.bar(aps_pos[:, 0] - 0.5 * width, aps_pos[:, 1],
+            width=width, color='blue')
+    plt.bar(aps_neg[:, 0] - 0.5 * width, -aps_neg[:, 1],
+            width=width, color='green')
+    plt.bar(dvs_pos[:, 0] + 0.5 * width, dvs_pos[:, 1],
+            width=width, color='red')
+    plt.bar(dvs_neg[:, 0] + 0.5 * width, -dvs_neg[:, 1],
+            width=width, color='orange')
+
     plt.xlabel("t [s]", fontsize=16)
     plt.ylabel("#(events)", fontsize=16)
-    plt.ylim([0, y_max])
+    plt.ylim([y_min, y_max])
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
     plt.title("From APS (positive)", fontsize=18)
 
-    plt.subplot(3, 2, 4)
-    plt.bar(dvs_pos[:, 0], dvs_pos[:, 1],
-            width=args.bin_size / 1.6, color='orange')
-    plt.xlabel("t [s]", fontsize=16)
-    plt.ylabel("#(events)", fontsize=16)
-    plt.ylim([0, y_max])
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
-    plt.title("From DVS (positive)", fontsize=18)
-
-    y_max = max(aps_neg[:, 1].max(), dvs_neg[:, 1].max()) + 1
-
-    plt.subplot(3, 2, 5)
-    plt.bar(aps_neg[:, 0], aps_neg[:, 1],
-            width=args.bin_size / 2, color='blue')
-    plt.xlabel("t [s]", fontsize=16)
-    plt.ylabel("#(events)", fontsize=16)
-    plt.ylim([0, y_max])
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
-    plt.title("From APS (negative)", fontsize=18)
-
-    plt.subplot(3, 2, 6)
-    plt.bar(dvs_neg[:, 0], dvs_neg[:, 1],
-            width=args.bin_size / 1.6, color='orange')
-    plt.xlabel("t [s]", fontsize=16)
-    plt.ylabel("#(events)", fontsize=16)
-    plt.ylim([0, y_max])
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
-    plt.title("From DVS (negative)", fontsize=18)
+    plt.legend(["APS+", "APS-", "DVS+", "DVS-"])
 
     # save the figure
     plt.savefig(os.path.join(args.path, "plot.pdf"))
