@@ -21,13 +21,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--pos_thres",
     type=float,
-    default=0.21,
+    default=0.25,
     help="threshold to trigger a positive event"
 )
 parser.add_argument(
     "--neg_thres",
     type=float,
-    default=0.17,
+    default=0.36,
     help="threshold to trigger a negative event"
 )
 parser.add_argument(

@@ -49,27 +49,35 @@ mkdir data
 mv SuperSloMo39.ckpt ./data
 ```
 
-## Render DVS Frames
+## Render DVS Frames from DDD17+ Dataset.
 
 ```bash
-cd test
-python renderer_test.py \
+python renderer_ddd17+.py \
+--pos_thres [positive threshold] \
+--neg_thres [negative threshold] \
 --start [start] \
 --stop [end] \
 --fname [path to the .hdf5 DVS recording file]] \
 --checkpoint [the .ckpt checkpoint of the slow motion network]] \
---pos_thres [threshold of triggering a positive event] \
---nega_thres [threshold of triggering a negative event] \
 --sf [slow motion factor]
+--frame_rate [frame rate of rendered video] \
+--path [path to store output files]
 ```
 
-Run the commands above, then two videos 'from_images.avi' and 'from_events.avi' will be created under './data/'
+Run the command above, and the following files will be created.
 
-If you don't like the file names, you could change them in 'renderer_test.py'.
+```bash
+original.avi  slomo.avi  video_dvs.avi  video_aps.avi
+```
+
+_original.avi_: original video slowed down without interpolating the frames, ans the frame rate is 30 FPS.
+_slomo.avi_: slow motion video, and the frame rate is 30 FPS.
+_video_dvs.avi_: DVS frames from ddd17+ dataset, played at normal frame rate.
+_video_aps.avi_: Frames interpolated from the APS frames, played at normal frame rate.
 
 ## Calibrate the Threshold
 
-To get the threshold of triggering an event, you need to run the commands below,
+To get the threshold of triggering an event, you need to run the commands below.
 
 ```bash
 cd test
@@ -81,7 +89,7 @@ python renderer_sweep.py \
 --sf [slow motion factor]
 ```
 
-The program will take the DVS recording data, which starts at time 'start' and ends at time 'end', to calculate the best threshold values for positive events and negative events separately.
+The program will take the DVS recording data, which starts at time 'start' and ends at time 'end', to calculate the best threshold values for positive and negative events separately.
 
 In order to get the best approximations, the input video needs to satisfy the requirements below,
 
@@ -89,3 +97,12 @@ In order to get the best approximations, the input video needs to satisfy the re
 - Cloudy
 - No rain
 - High frame rate
+
+#### Default Thresholds ####
+_pos_thres_: 0.25
+_neg_thres_: 0.35
+Both of them are approximated based on the file rec1500403661.hdf5.
+
+## Generating Synthetic DVS Dataset from UCF-101 ##
+
+_TBD_
