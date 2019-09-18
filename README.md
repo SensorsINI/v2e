@@ -3,7 +3,7 @@
 Python code for converting APS frames with low frame rate into DVS frames with high frame rate.
 
 ## Contact
-Zhe He (zhhe@ini.uzh.ch)
+Zhe He (hezhehz@live.cn)
 Yuhuang Hu (yuhuang.hu@ini.uzh.ch)
 Tobi Delbruck (tobi@ini.uzh.ch)
 
