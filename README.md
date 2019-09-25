@@ -94,12 +94,16 @@ python plot.py \
 
 '--rotate' is very **IMPORTANT**, some files in ddd17+ dataset are recorded upside down. More information regarding this could be found in the documentation of ddd17+ dataset.
 
+<p float="left">
+  <img src="media/counting.gif" width="350" class="center" />
+  <img src="media/plot.png" width="350"  class="center"/> 
+</p>
+
 ## Calibrate the Thresholds
 
 To get the threshold of triggering an event, you need to run the commands below.
 
 ```bash
-cd test
 python renderer_sweep.py \
 --start [start] \
 --stop [end] \
@@ -133,7 +137,7 @@ The thresholds vary slightly depending on the time interval of the input APS fra
 | 25s - 35s  | 0.21 | 0.31|
 | 35s - 45s  | 0.22 | 0.33|
 
-All the thresholds above are estimated based on the file rec1500403661.hdf5. The estimated thresholds also slightly vary depending on the input file. For example, based on the APS frames in the time interval 35s - 45s from the file rec1499025222.hdf5, the estimated positive threshold is 0.28, and the negative threshold is 0.42.
+All the thresholds above are estimated based on the file rec1500403661.hdf5. The estimated thresholds also slightly vary depending on the input file. For example, based on the APS frames in the time interval 35s - 45s from the file rec1499025222.hdf5, the estimated positive threshold is 0.28, and the estimated negative threshold is 0.42.
 
 ## Generating Synthetic DVS Dataset from UCF-101 ##
 
