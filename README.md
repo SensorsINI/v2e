@@ -94,6 +94,8 @@ python plot.py \
 
 '--rotate' is very **IMPORTANT**, some files in ddd17+ dataset are recorded upside down. More information regarding this could be found in the documentation of ddd17+ dataset.
 
+One example is shown below, 
+
 <p float="left">
   <img src="media/counting.gif" width="350" class="center" />
   <img src="media/plot.png" width="350"  class="center"/> 

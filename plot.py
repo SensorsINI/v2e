@@ -179,7 +179,7 @@ if __name__ == "__main__":
     plt.ylim([y_min, y_max])
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
-    plt.title("From APS (positive)", fontsize=18)
+    plt.title("#(Events) - Time", fontsize=18)
 
     plt.legend(["APS+", "APS-", "DVS+", "DVS-"])
 
