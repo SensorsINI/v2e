@@ -36,6 +36,8 @@ tqdm==4.31.1
 
 The program is designed to serve multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for extracting DVS events from APS frames.
 
+**NOTE** It is highly recommended to run the APS-to-DVS conversion scripts on GPUs.
+
 ## Dataset
 
 DDD17+ is the first public end-to-end training dataset of automotive driving using a DAVIS event + frame camera. This dataset is maintained by the Sensors Research Group of Institute of Neuroinformatics. Please go to the website of Sensors Group [[link](http://sensors.ini.uzh.ch/databases.html)] for details about downloading the dataset.
@@ -120,6 +122,19 @@ _pos_thres_: 0.25
 _neg_thres_: 0.35
 Both of them are approximated based on the file rec1500403661.hdf5.
 
+**NOTE** 
+
+The thresholds vary slightly depending on the time interval of the input APS frames.
+
+|  Time Interval   |  _pos_thres_ | _neg_thres_ |
+|  ----  | ----  | ----|
+| 5s - 15s  | 0.25 | 0.36|
+| 15s - 25s  | 0.24 | 0.33|
+| 25s - 35s  | 0.21 | 0.31|
+| 35s - 45s  | 0.22 | 0.33|
+
+All the thresholds above are estimated based on the file rec1500403661.hdf5. The estimated thresholds also slightly vary depending on the input file. For example, based on the APS frames in the time interval 35s - 45s from the file rec1499025222.hdf5, the estimated positive threshold is 0.28, and the negative threshold is 0.42.
+
 ## Generating Synthetic DVS Dataset from UCF-101 ##
 
 To generate synthetic data from a single input video.
@@ -135,3 +150,7 @@ python ucf101_single.py \
 ```
 
 The code needs to be modified accordingly if the input video is from other dataset.
+
+## Technical Details ##
+
+Click [PDF](docs/technical_report.pdf) to download.
