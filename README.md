@@ -94,10 +94,10 @@ python plot.py \
 
 '--rotate' is very **IMPORTANT**, some files in ddd17+ dataset are recorded upside down. More information regarding this could be found in the documentation of ddd17+ dataset.
 
-One example is shown below, 
+One example is shown below, the left side is the ground-truth DVS frames, and the figure on the right side shows the histogram plot of the generated events within the region denoted by the black box. Histograms of the ground-truth events and our generated events are plotted in the same figure. It can be seen that the distribution of generated events is quite similar to the distribution of the real events.
 
 <p float="left">
-  <img src="media/counting.gif" width="350" class="center" />
+  <img src="media/counting.gif" width="320" class="center" />
   <img src="media/plot.png" width="350"  class="center"/> 
 </p>
 
