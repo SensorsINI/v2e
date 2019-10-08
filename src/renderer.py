@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import os
 import glob
+import h5py
 
 from tqdm import tqdm
 
@@ -229,6 +230,52 @@ class RenderFromImages(Base):
         print("Amount of events: {}".format(event_arr.shape[0]))
 
         return event_arr
+
+    def export_event(self, file_name):
+        """Export events to a HDF5 file.
+
+        Parameters
+        ----------
+        file_name : str
+            file name of the HDF5 file
+        """
+        # open the file
+        dataset = h5py.File(file_name, "w")
+
+        event_data = dataset.create_dataset(
+            name="event",
+            shape=(0, 4),
+            maxshape=(None, 4),
+            dtype="uint32")
+
+        # generating events
+        num_events = 0
+        for i in tqdm(range(self.interpolated_ts.shape[0] - 1),
+                      desc="image2events: "):
+            new_frame = self.__read_image(self.all_images[i + 1])
+            tmp_events = self.emulator.compute_events(
+                new_frame,
+                self.interpolated_ts[i],
+                self.interpolated_ts[i + 1]
+            )
+            if tmp_events is not None:
+                # convert data to uint32 (microsecs) format
+                tmp_events[:, 0] = tmp_events[:, 0]*1e6
+                tmp_events[tmp_events[:, 3] == -1, 3] = 0
+                tmp_events = tmp_events.astype(np.uint32)
+
+                # save events
+                event_data.resize(
+                    event_data.shape[0]+tmp_events.shape[0],
+                    axis=0)
+
+                event_data[-tmp_events.shape[0]:] = tmp_events
+                dataset.flush()
+
+                num_events += tmp_events.shape[0]
+
+        dataset.close()
+        print("Generated {} events".format(num_events))
 
 
 class RenderFromArray(Base):

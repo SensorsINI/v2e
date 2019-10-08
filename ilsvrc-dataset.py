@@ -113,50 +113,37 @@ for vid_path in collectd_paths:
     with TemporaryDirectory() as dirname:
         print("tmp_dir: ", dirname)
 
+        # do not export video
         s = SuperSloMo(
             args.checkpoint,
             args.sf,
             dirname,
-            video_path=vid_out_path
+            video_path=None
         )
         s.interpolate(frames)
         interpolated_ts = s.get_ts(input_ts)
         height, width = frames.shape[1:]
 
-        for factor in [1, args.sf]:
-            output_ts = np.linspace(
-                0,
-                (num_frames - 1) / fps,
-                factor * (num_frames - 1),
-                endpoint=False
+        # render events
+        output_ts = np.linspace(
+            0,
+            (num_frames - 1) / fps,
+            args.sf * (num_frames - 1),
+            endpoint=False
+        )
+
+        r_slomo = RenderFromImages(
+            dirname,
+            output_ts,
+            interpolated_ts,
+            args.pos_thres,
+            args.neg_thres,
+            os.path.join(
+                vid_out_path,
+                "interpolated_{:d}.avi".format(int(args.sf*fps))
             )
+        )
 
-            r_slomo = RenderFromImages(
-                dirname,
-                output_ts,
-                interpolated_ts,
-                args.pos_thres,
-                args.neg_thres,
-                os.path.join(
-                    vid_out_path,
-                    "interpolated_{:d}.avi".format(int(factor * fps))
-                )
-            )
-
-            r_input = RenderFromArray(
-                frames,
-                output_ts,
-                input_ts,
-                args.pos_thres,
-                args.neg_thres,
-                os.path.join(
-                    vid_out_path,
-                    "input_{:d}.avi".format(int(factor * fps))
-                )
-            )
-
-            _ = r_slomo.render(height, width)
-            _ = r_input.render(height, width)
-
-        #  shutil.copy2(args.input, args.output_dir)
-    break
+        # generate and save events
+        r_slomo.export_event(
+            os.path.join(vid_out_path, "events.hdf5"))
