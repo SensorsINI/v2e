@@ -9,13 +9,12 @@ from __future__ import print_function, absolute_import
 import argparse
 import numpy as np
 import os
-import shutil
 import glob
 from skimage.io import imread
 
 from tempfile import TemporaryDirectory
 
-from src.renderer import RenderFromImages, RenderFromArray
+from src.renderer import RenderFromImages
 from src.slomo import SuperSloMo
 
 # define a parser
