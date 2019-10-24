@@ -104,7 +104,9 @@ class EventEmulator(object):
         pos_frame[diff_frame > 0] = diff_frame[diff_frame > 0]
         neg_frame[diff_frame < 0] = np.abs(diff_frame[diff_frame < 0])
 
+        pos_evts_frame = pos_frame // self.pos_thres
         pos_iters = int((pos_frame // self.pos_thres).max())
+        neg_evts_frame = neg_frame // self.neg_thres
         neg_iters = int((neg_frame // self.neg_thres).max())
 
         num_iters = max(pos_iters, neg_iters)
@@ -160,9 +162,13 @@ class EventEmulator(object):
             if i == 0:
                 # update base frame
                 if num_pos_events > 0:
-                    self.base_frame[pos_cord] = log_frame[pos_cord]
+                    #  self.base_frame[pos_cord] = log_frame[pos_cord]
+                    self.base_frame[pos_cord] += \
+                        pos_evts_frame[pos_cord]*self.pos_thres[pos_cord]
                 if num_neg_events > 0:
-                    self.base_frame[neg_cord] = log_frame[neg_cord]
+                    #  self.base_frame[neg_cord] = log_frame[neg_cord]
+                    self.base_frame[pos_cord] += \
+                        neg_evts_frame[pos_cord]*self.neg_thres[neg_cord]
 
             if num_events > 0:
                 events.append(events_tmp)
