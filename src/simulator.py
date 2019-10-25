@@ -164,11 +164,11 @@ class EventEmulator(object):
                 if num_pos_events > 0:
                     #  self.base_frame[pos_cord] = log_frame[pos_cord]
                     self.base_frame[pos_cord] += \
-                        pos_evts_frame[pos_cord]*self.pos_thres
+                        pos_evts_frame[pos_cord]*self.pos_thres[pos_cord]
                 if num_neg_events > 0:
                     #  self.base_frame[neg_cord] = log_frame[neg_cord]
                     self.base_frame[pos_cord] += \
-                        neg_evts_frame[pos_cord]*self.neg_thres
+                        neg_evts_frame[pos_cord]*self.neg_thres[pos_cord]
 
             if num_events > 0:
                 events.append(events_tmp)
