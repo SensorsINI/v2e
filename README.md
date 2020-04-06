@@ -1,6 +1,6 @@
 # v2e [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Python torch + opencv code for converting APS frames with low frame rate into DVS event camera frames with high frame rate.
+Python torch + opencv code for converting APS video frames with low frame rate into DVS event camera frames with high frame rate.
 
 ## Contact
 Zhe He (hezhehz@live.cn)
