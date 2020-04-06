@@ -31,6 +31,13 @@ torch==1.1.0
 torchvision==0.2.1
 tqdm==4.31.1
 ```
+For conda users, you can first make an env with pip in it, then install with pip. The torch and opencv-python packages are not available in conda.
+
+'''bash
+conda create -n pt-v2e python=3.7 pip
+conda activate pt-v2e
+pip install -r requirements.txt
+'''
 
 ## Usage
 
