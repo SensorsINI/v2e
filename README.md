@@ -148,9 +148,10 @@ The thresholds vary slightly depending on the time interval of the input APS fra
 
 All the thresholds above are estimated based on the file rec1500403661.hdf5. The estimated thresholds also slightly vary depending on the input file. For example, based on the APS frames in the time interval 35s - 45s from the file rec1499025222.hdf5, the estimated positive threshold is 0.28, and the estimated negative threshold is 0.42.
 
-## Generating Synthetic DVS Dataset from UCF-101 ##
+## Generating Synthetic DVS Dataset from UCF-101 action recognition dataset ##
 
-To generate synthetic data from a single input video.
+To generate synthetic data from a single input video UCF-101 [[link] (https://www.crcv.ucf.edu/data/UCF101.php)] .
+video
 
 ```bash
 python ucf101_single.py \
@@ -162,7 +163,7 @@ python ucf101_single.py \
 --output_dir [path to store the output videos]
 ```
 
-The code needs to be modified accordingly if the input video is from other dataset.
+The code needs to be modified accordingly if the input video is from a different dataset.
 
 ## Technical Details ##
 
