@@ -51,7 +51,7 @@ DDD17+ is the first public end-to-end training dataset of automotive driving usi
 
 ## Download Checkpoint
 
-We used the [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects/superslomo/) framework to interpolate the APS frames. However, since APS frames only record light intensity, the model needs to be trained on grayscale images. You can download our pre-trained model from Google Drive [[link](https://drive.google.com/file/d/17QSN207h05S_b2ndXjLrqPbBTnYIl0Vb/view?usp=sharing)].
+We used the [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects/superslomo/) framework to interpolate the APS frames. However, since APS frames only record light intensity, the model needs to be trained on grayscale images. You can download our pre-trained model from Google Drive [[link](https://drive.google.com/file/d/17QSN207h05S_b2ndXjLrqPbBTnYIl0Vb/view?usp=sharing)] (151 MB).
 
 ```bash
 mkdir data
