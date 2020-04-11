@@ -21,6 +21,7 @@ from src.slomo import SuperSloMo
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
+    # TODO add usage extra info with webpage link
 
     parser.add_argument(
         "--dataset",

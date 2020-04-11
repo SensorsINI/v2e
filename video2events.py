@@ -17,6 +17,7 @@ from tempfile import TemporaryDirectory
 from src.renderer import RenderFromImages
 from src.slomo import SuperSloMo
 
+#TODO rename to webcam2events.py
 
 parser = argparse.ArgumentParser()
 

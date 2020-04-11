@@ -227,7 +227,7 @@ class RenderFromImages(Base):
             if tmp_events is not None:
                 event_list.append(tmp_events)
         event_arr = np.vstack(event_list)
-        print("Amount of events: {}".format(event_arr.shape[0]))
+        print("Number of events: {}".format(event_arr.shape[0]))
 
         return event_arr
 
@@ -340,7 +340,7 @@ class RenderFromArray(Base):
             if tmp_events is not None:
                 event_list.append(tmp_events)
         event_arr = np.vstack(event_list)
-        print("Amount of events: {}".format(event_arr.shape[0]))
+        print("Number of events: {}".format(event_arr.shape[0]))
 
         return event_arr
 

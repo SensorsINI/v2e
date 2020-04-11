@@ -103,7 +103,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--rotate", type=bool, help="whether the video needs to be rotated")
     args = parser.parse_args()
-
+#TODO add usage extra info
     events_aps = np.load(os.path.join(args.path, "events_aps.npy"))
     events_dvs = np.load(os.path.join(args.path, "events_dvs.npy"))
 

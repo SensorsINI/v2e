@@ -22,7 +22,7 @@ from __future__ import print_function
 import argparse
 from argparse import RawTextHelpFormatter
 import numpy as np
-import h5py
+import h5py # https://github.com/djhoese/h5pickle
 import cv2
 import time
 import queue as Queue

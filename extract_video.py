@@ -17,7 +17,7 @@ from utils.view import HDF5Stream, MergedStream
 from utils.caer import unpack_data
 
 from src.slomo import video_writer
-
+#TODO add usage extra info
 
 parser = argparse.ArgumentParser()
 

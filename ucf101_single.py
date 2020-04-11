@@ -1,4 +1,4 @@
-"""Convert videos in UCF-101 dataset into event frames.
+""" TODO not correct doc Convert videos in UCF-101 dataset into event frames.
 In each action class, one video is randomly selected.
 
 @arthur: Zhe He
@@ -16,6 +16,7 @@ from tempfile import TemporaryDirectory
 
 from src.renderer import RenderFromImages, RenderFromArray
 from src.slomo import SuperSloMo
+#TODO appears to convert webccam input to DVS frames
 
 if __name__ == "__main__":
 

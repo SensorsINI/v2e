@@ -17,7 +17,7 @@ import numpy as np
 np.random.seed(42)
 
 
-def piecewise_log(x, threshold=20):
+def lin_log(x, threshold=20):
     """
     linear mapping + logrithmic mapping.
     @author: Zhe He
@@ -43,12 +43,15 @@ class EventEmulator(object):
     - author: Zhe He
     - contact: zhehe@student.ethz.ch
     """
+    # todo add event count statistics for ON and OFF events
 
     def __init__(
         self,
         base_frame,
         pos_thres=0.21,
-        neg_thres=0.17
+        neg_thres=0.17,
+            sigma=0.03,
+            seed=0
     ):
         """
         Parameters
@@ -56,20 +59,25 @@ class EventEmulator(object):
         base_frame: np.ndarray
             [height, width].
         pos_thres: float, default 0.21
-            threshold of triggering positive event.
+            threshold of triggering positive event in log intensity.
         neg_thres: float, default 0.17
-            threshold of triggering negative event.
+            threshold of triggering negative event in log intensity.
+        sigma: float, default 0.03
+            std deviation of threshold in log intensity.
+        seed: int, default=0
+            seed for random threshold variations, fix it to nonzero value to get same mismatch every time
         """
 
         print("positive threshold: {}".format(pos_thres))
         print("negative threshold: {}".format(neg_thres))
 
-        self.base_frame = piecewise_log(base_frame)
+        self.base_frame = lin_log(base_frame) # base_frame are memorized loglin pixel values
         # take the variance of threshold into account.
-        pos_thres = np.random.normal(pos_thres, 0.03, base_frame.shape)
+        if seed !=0: np.random.seed(seed)
+        pos_thres = np.random.normal(pos_thres, sigma, base_frame.shape) # todo put sigma to args
         # to avoid the situation where the threshold is too small.
         pos_thres[pos_thres < 0.01] = 0.01
-        neg_thres = np.random.normal(neg_thres, 0.03, base_frame.shape)
+        neg_thres = np.random.normal(neg_thres, sigma, base_frame.shape)# todo put sigma to args
         neg_thres[neg_thres < 0.01] = 0.01
         self.pos_thres = pos_thres
         self.neg_thres = neg_thres
@@ -96,7 +104,7 @@ class EventEmulator(object):
         if t_start > t_end:
             raise ValueError("t_start must be smaller than t_end")
 
-        log_frame = piecewise_log(new_frame)
+        log_frame = lin_log(new_frame)
         diff_frame = log_frame - self.base_frame
 
         pos_frame = np.zeros_like(diff_frame)
@@ -160,15 +168,15 @@ class EventEmulator(object):
                     events_tmp = neg_events
 
             if i == 0:
-                # update base frame
+                # update base frame todo check math correct here with yuhu
                 if num_pos_events > 0:
                     #  self.base_frame[pos_cord] = log_frame[pos_cord]
                     self.base_frame[pos_cord] += \
-                        pos_evts_frame[pos_cord]*self.pos_thres[pos_cord]
+                        pos_evts_frame[pos_cord]*self.pos_thres[pos_cord] # add to memorized brightness values just the events we emitted. don't add the remainder. the next aps frame might have sufficient value to trigger another event or it might not, but we are correct in not storing the current frame brightness
                 if num_neg_events > 0:
                     #  self.base_frame[neg_cord] = log_frame[neg_cord]
-                    self.base_frame[pos_cord] += \
-                        neg_evts_frame[pos_cord]*self.neg_thres[pos_cord]
+                    self.base_frame[neg_cord] -= \
+                        neg_evts_frame[neg_cord]*self.neg_thres[neg_cord]
 
             if num_events > 0:
                 events.append(events_tmp)
@@ -303,7 +311,7 @@ class EventFrameRenderer(object):
                 print("Image2Events processed {} frames".format(idx + 1))
 
         event_arr = np.vstack(event_list)
-        print("Amount of events: {}".format(event_arr.shape[0]))
+        print("Number of events: {}".format(event_arr.shape[0])) # TODO engineering format, events/sec
 
         return event_arr, time_list, pos_list, num_frames, height, width
 

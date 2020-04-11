@@ -7,6 +7,7 @@ from src.renderer import RenderFromImages, RenderFromEvents
 from src.slomo import SuperSloMo
 from src.reader import Reader
 
+# TODO rename to find_thresholds.py
 
 parser = argparse.ArgumentParser()
 
