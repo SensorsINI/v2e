@@ -15,7 +15,7 @@ import shutil
 
 from tempfile import TemporaryDirectory
 
-from src.renderer import RenderFromImages
+from src.renderer import EventRenderer
 from src.slomo import SuperSloMo
 
 if __name__ == "__main__":
@@ -130,7 +130,7 @@ if __name__ == "__main__":
                     endpoint=False
                 )
 
-                r = RenderFromImages(
+                r = EventRenderer(
                     dirname,
                     output_ts,
                     interpolated_ts,

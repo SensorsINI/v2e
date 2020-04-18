@@ -8,4 +8,6 @@ torchvision==0.5.0
 tqdm==4.31.1
 matplotlib
 scikit-image
+engineering_notation # not on conda-forge, must use pip
+argcomplete
 #pytorch

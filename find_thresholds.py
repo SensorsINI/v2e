@@ -3,9 +3,9 @@ import argparse
 
 from tempfile import TemporaryDirectory
 
-from src.renderer import RenderFromImages, RenderFromEvents
+from src.renderer import VideoSequenceFiles2EventsRenderer, Events2VideoRenderer
 from src.slomo import SuperSloMo
-from src.reader import Reader
+from src.dddh5reader import DDD20ReaderMultiProcessing
 
 # TODO rename to find_thresholds.py
 
@@ -47,8 +47,8 @@ args = parser.parse_args()
 
 if __name__ == "__main__":
 
-    m = Reader(args.fname, start=args.start, stop=args.stop)
-    frames, events = m.read()
+    m = DDD20ReaderMultiProcessing(args.fname, startTimeS=args.start, stopTimeS=args.stop)
+    frames, events = m.readEntire()
 
     results = []
 
@@ -66,7 +66,7 @@ if __name__ == "__main__":
         frame_ts = s.get_ts(frames["ts"])
         height, width = frames["frame"].shape[1:]
 
-        r_events = RenderFromEvents(
+        r_events = Events2VideoRenderer(
             frame_ts,
             events,
             "data/from_event.avi"
@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
         for threshold in np.arange(0.01, 0.91, 0.01):
 
-            r = RenderFromImages(
+            r = VideoSequenceFiles2EventsRenderer(
                 dirname,
                 frame_ts,
                 frame_ts,

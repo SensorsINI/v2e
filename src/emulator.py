@@ -8,14 +8,12 @@ Compute events from input frames.
 @latest updaste: 2019-Jun-13
 """
 
-import glob
 import os
 import cv2
 import numpy as np
-
-# random seed. Why 42? it is the answer to everything :)
-np.random.seed(42)
-
+import logging
+from engineering_notation import EngNumber # only from pip
+from src.v2e_utils import all_images, read_image
 
 def lin_log(x, threshold=20):
     """
@@ -47,56 +45,69 @@ class EventEmulator(object):
 
     def __init__(
         self,
-        base_frame,
+        base_frame: np.ndarray,
         pos_thres=0.21,
         neg_thres=0.17,
-            sigma=0.03,
-            seed=0
+        sigma_thres=0.03,
+        seed=42 # the answer to everything
     ):
         """
         Parameters
         ----------
         base_frame: np.ndarray
-            [height, width].
+            [height, width]. If None, then it is initialized from first data
         pos_thres: float, default 0.21
-            threshold of triggering positive event in log intensity.
+            nominal threshold of triggering positive event in log intensity.
         neg_thres: float, default 0.17
-            threshold of triggering negative event in log intensity.
-        sigma: float, default 0.03
+            nominal threshold of triggering negative event in log intensity.
+        sigma_thres: float, default 0.03
             std deviation of threshold in log intensity.
         seed: int, default=0
             seed for random threshold variations, fix it to nonzero value to get same mismatch every time
         """
 
-        print("positive threshold: {}".format(pos_thres))
-        print("negative threshold: {}".format(neg_thres))
+        logging.info("ON/OFF log_e temporal contrast thresholds: {} / {} +/- {}".format(pos_thres, neg_thres,sigma_thres))
+        self.base_frame=None
+        self.sigma_thres=sigma_thres
+        self.pos_thres=pos_thres
+        self.neg_thres=neg_thres # initialized to scalars
+        self.output_width=None
+        self.output_height=None # set on first frame
+        np.random.seed(seed)
 
-        self.base_frame = lin_log(base_frame) # base_frame are memorized loglin pixel values
+        if not base_frame is None:
+            self._init(base_frame)
+
+    def _init(self,baseFrame):
+        logging.info('initializing random temporal contrast thresholds from from base frame')
+        self.base_frame = lin_log(baseFrame)  # base_frame are memorized lin_log pixel values
         # take the variance of threshold into account.
-        if seed !=0: np.random.seed(seed)
-        pos_thres = np.random.normal(pos_thres, sigma, base_frame.shape) # todo put sigma to args
+        self.pos_thres = np.random.normal(self.pos_thres, self.sigma_thres, self.base_frame.shape)
         # to avoid the situation where the threshold is too small.
-        pos_thres[pos_thres < 0.01] = 0.01
-        neg_thres = np.random.normal(neg_thres, sigma, base_frame.shape)# todo put sigma to args
-        neg_thres[neg_thres < 0.01] = 0.01
-        self.pos_thres = pos_thres
-        self.neg_thres = neg_thres
+        self.pos_thres[self.pos_thres < 0.01] = 0.01
+        self.neg_thres = np.random.normal(self.neg_thres, self.sigma_thres, self.base_frame.shape)
+        self.neg_thres[self.neg_thres < 0.01] = 0.01
 
-    def compute_events(self, new_frame, t_start, t_end):
+    def reset(self):
+        '''resets so that next use will reinitialize the base frame
+        '''
+        self.base_frame=None
+
+    def compute_events(self, new_frame:np.ndarray, t_start:float, t_end:float)->np.ndarray:
         """Compute events in new frame.
 
         Parameters
         ----------
         new_frame: np.ndarray
             [height, width]
-        ts: float
-            timestamp of new frame.
-        verbose: bool
-            verbose.
+        t_start: float
+            starting timestamp of new frame in float seconds
+        t_end: float
+            ending timestamp of new frame in float seconds
 
         Returns
         -------
-        events: np.ndarray if any event else None
+        events: np.ndarray if any events, else None
             [N, 4], each row contains [timestamp, y cordinate,
             x cordinate, sign of event].
         """
@@ -104,27 +115,35 @@ class EventEmulator(object):
         if t_start > t_end:
             raise ValueError("t_start must be smaller than t_end")
 
-        log_frame = lin_log(new_frame)
-        diff_frame = log_frame - self.base_frame
+        if (self.base_frame is None):
+            self._init(new_frame)
+            return None
 
-        pos_frame = np.zeros_like(diff_frame)
+        log_frame = lin_log(new_frame)
+        diff_frame = log_frame - self.base_frame # log intensity (brightness) change from memorized values
+
+        pos_frame = np.zeros_like(diff_frame) # initialize
         neg_frame = np.zeros_like(diff_frame)
-        pos_frame[diff_frame > 0] = diff_frame[diff_frame > 0]
+        pos_frame[diff_frame > 0] = diff_frame[diff_frame > 0] # pixels with ON changes
         neg_frame[diff_frame < 0] = np.abs(diff_frame[diff_frame < 0])
 
-        pos_evts_frame = pos_frame // self.pos_thres
-        pos_iters = int((pos_frame // self.pos_thres).max())
-        neg_evts_frame = neg_frame // self.neg_thres
+        pos_evts_frame = pos_frame // self.pos_thres # compute quantized numbers of ON events for each pixel
+        pos_iters = int((pos_frame // self.pos_thres).max()) # compute number of times to pass over array to compute separated ON events
+        neg_evts_frame = neg_frame // self.neg_thres # same for OFF events
         neg_iters = int((neg_frame // self.neg_thres).max())
 
-        num_iters = max(pos_iters, neg_iters)
+        num_iters = max(pos_iters, neg_iters) # need to iterative this many times
 
         events = []
 
         for i in range(num_iters):
 
+            # intermediate timestamps are linearly spaced
+            # they start after the t_start to make sure that there is space from previous frame
+            # they end at t_end
             ts = t_start + (t_end - t_start) * (i + 1) / (num_iters + 1)
 
+            # for each iteration, compute the ON and OFF event locations for that threshold amount of change
             pos_cord = (pos_frame > self.pos_thres * (i + 1))
             neg_cord = (neg_frame > self.neg_thres * (i + 1))
 
@@ -158,9 +177,8 @@ class EventEmulator(object):
 
             if pos_events is not None and neg_events is not None:
                 events_tmp = np.vstack((pos_events, neg_events))
-                events_tmp = events_tmp.take(
-                    np.random.permutation(
-                        events_tmp.shape[0]), axis=0)
+                # randomly order events to prevent bias to one corner
+                events_tmp = events_tmp.take(np.random.permutation(events_tmp.shape[0]), axis=0)
             else:
                 if pos_events is not None:
                     events_tmp = pos_events
@@ -168,15 +186,12 @@ class EventEmulator(object):
                     events_tmp = neg_events
 
             if i == 0:
-                # update base frame todo check math correct here with yuhu
                 if num_pos_events > 0:
-                    #  self.base_frame[pos_cord] = log_frame[pos_cord]
                     self.base_frame[pos_cord] += \
                         pos_evts_frame[pos_cord]*self.pos_thres[pos_cord] # add to memorized brightness values just the events we emitted. don't add the remainder. the next aps frame might have sufficient value to trigger another event or it might not, but we are correct in not storing the current frame brightness
                 if num_neg_events > 0:
-                    #  self.base_frame[neg_cord] = log_frame[neg_cord]
-                    self.base_frame[neg_cord] -= \
-                        neg_evts_frame[neg_cord]*self.neg_thres[neg_cord]
+                   self.base_frame[neg_cord] -= \
+                        neg_evts_frame[neg_cord]*self.neg_thres[neg_cord] # neg_thres is >0
 
             if num_events > 0:
                 events.append(events_tmp)
@@ -222,58 +237,20 @@ class EventFrameRenderer(object):
         self.pos_thres = pos_thres
         self.neg_thres = neg_thres
 
-    def __all_images(self, data_path):
-        """Return path of all input images. Assume that the ascending order of
-        file names is the same as the order of time sequence.
 
-        Parameters
-        ----------
-        data_path: str
-            path of the folder which contains input images.
-
-        Returns
-        -------
-        List[str]
-            sorted in numerical order.
-        """
-        images = glob.glob(os.path.join(data_path, '*.png'))
-        if len(images) == 0:
-            raise ValueError(("Input folder is empty or images are not in"
-                              " 'png' format."))
-        images_sorted = sorted(
-                images,
-                key=lambda line: int(line.split('/')[-1].split('.')[0]))
-        return images_sorted
-
-    @staticmethod
-    def __read_image(path):
-        """Read image.
-
-        Parameters
-        ----------
-        path: str
-            path of image.
-
-        Returns
-        -------
-        img: np.ndarray
-        """
-        img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-        img = img.astype(np.float) / 255.
-        return img
 
     def _get_events(self):
         """Get all events.
         """
-        images = self.__all_images(self.data_path)
+        images = all_images(self.data_path)
         num_frames = len(images)
         input_ts = np.linspace(
                 0,
                 num_frames / self.input_fps,
                 num_frames,
                 dtype=np.float)
-        base_frame = self.__read_image(images[0])
-        print(base_frame.shape)
+        base_frame = read_image(images[0])
+        logging.info('base frame shape: {}'.format(base_frame.shape))
         height = base_frame.shape[0]
         width = base_frame.shape[1]
         emulator = EventEmulator(
@@ -290,7 +267,7 @@ class EventFrameRenderer(object):
         pos = 0
 
         for idx in range(1, num_frames):
-            new_frame = self.__read_image(images[idx])
+            new_frame = read_image(images[idx])
             t_start = input_ts[idx - 1]
             t_end = input_ts[idx]
             tmp_events = emulator.compute_events(
@@ -308,10 +285,10 @@ class EventFrameRenderer(object):
                 pos += tmp_events.shape[0]
 
             if (idx + 1) % 20 == 0:
-                print("Image2Events processed {} frames".format(idx + 1))
+                logging.info("Image2Events processed {} frames".format(EngNumber(idx + 1)))
 
         event_arr = np.vstack(event_list)
-        print("Number of events: {}".format(event_arr.shape[0])) # TODO engineering format, events/sec
+        logging.info("generated {} events".format(EngNumber(event_arr.shape[0]))) # TODO engineering format, events/sec
 
         return event_arr, time_list, pos_list, num_frames, height, width
 
@@ -366,7 +343,7 @@ class EventFrameRenderer(object):
                 cv2.cvtColor(
                     (img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR))
             if ts_idx % 20 == 0:
-                print('Rendered {} frames'.format(ts_idx))
+                logging.info('Rendered {} frames'.format(ts_idx))
             if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
                 break
         out.release()

@@ -14,7 +14,7 @@ from skimage.io import imread
 
 from tempfile import TemporaryDirectory
 
-from src.renderer import RenderFromImages
+from src.renderer import VideoSequenceFiles2EventsRenderer
 from src.slomo import SuperSloMo
 
 # define a parser
@@ -131,7 +131,7 @@ for vid_path in collectd_paths:
             endpoint=False
         )
 
-        r_slomo = RenderFromImages(
+        r_slomo = EventRenderer(
             dirname,
             output_ts,
             interpolated_ts,
@@ -144,5 +144,5 @@ for vid_path in collectd_paths:
         )
 
         # generate and save events
-        r_slomo.export_event(
+        r_slomo.generateEventsFromFramesAndExportEventsToHDF5(
             os.path.join(vid_out_path, "events.hdf5"))

@@ -13,8 +13,7 @@ import time
 import numpy as np
 import socket, struct
 import multiprocessing as mp
-import queue as Queue
-import sys
+import queue
 
 HOST = "127.0.0.1"
 PORT = 7777
@@ -91,7 +90,7 @@ def unpack_special(p):
         return False
     p_arr = np.fromstring(p['dvs_data'], dtype=np.uint32)
     p_arr = p_arr.reshape((p['ecapacity'], p['esize'] // 4))
-    data, ts = p_arr[:, 0], p_arr[:, 1]
+    data, ts = p_arr[:,0], p_arr[:,1]
     typeid = data & 254
     #valid = data & 1
     #opt = data >> 8
@@ -129,7 +128,7 @@ class Monitor(mp.Process):
         hdata = self.sock.recv(20, socket.MSG_WAITALL)  # header of aer stream
         self.hdata = struct.unpack('llbbh', hdata)
         print('opened connection:', self.hdata)
-        self.q = mp.Queue(bufsize)
+        self.q = mp.queue(bufsize)
         self.maxsize = self.q._maxsize
         self.qsize = 0
         self.exit = mp.Event()
@@ -199,8 +198,8 @@ class Controller(object):
             self.s_commands = socket.socket()
             self.s_commands.connect((HOST, PORT_CTL))
         except socket.error as msg:
-            print('Failed to create socket %s' % msg)
-            sys.exit()
+            print('Failed to create socket ' + str(msg))
+            quit()
 
     def parse_command(self, command):
         '''

@@ -7,7 +7,7 @@ sys.path.append("../utils/")
 
 if __name__ == "__main__":
 
-    from simulator import EventFrameRenderer
+    from emulator import EventFrameRenderer
 
     e = EventFrameRenderer(
         "../data/tmpSloMo/",

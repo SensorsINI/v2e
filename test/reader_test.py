@@ -4,7 +4,7 @@ import argparse
 sys.path.append("../")
 sys.path.append("../utils")
 
-from src.reader import Reader
+from src.dddh5reader import DDD20ReaderMultiProcessing
 
 
 parser = argparse.ArgumentParser()
@@ -17,5 +17,5 @@ args = parser.parse_args()
 
 fname = args.fname
 
-m = Reader(fname, start=5)
-frames, events = m.read()
+m = DDD20ReaderMultiProcessing(fname, startTimeS=5)
+frames, events = m.readEntire()

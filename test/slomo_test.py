@@ -30,6 +30,6 @@ if __name__ == "__main__":
     fname = "../data/rec1487354811.hdf5"
 
     m = Reader(fname, start=5, stop=10)
-    frames, events = m.read()
+    frames, events = m.readEntire()
     new_ts = super_slomo.get_ts(frames["ts"])
     pdb.set_trace()

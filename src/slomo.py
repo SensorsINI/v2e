@@ -12,41 +12,16 @@ import os
 import numpy as np
 import cv2
 import glob
+from src.v2e_utils import video_writer
 
 import torchvision.transforms as transforms
-import torch.nn.functional as F
 
 import src.dataloader as dataloader
 import src.model as model
 
 from PIL import Image
-from tqdm import tqdm
-
-
-def video_writer(output_path, height, width):
-    """ Return a video writer.
-
-    Parameters
-    ----------
-    output_path: str,
-        path to store output video.
-    height: int,
-        height of a frame.
-    width: int,
-        width of a frame.
-
-    Returns
-    -------
-    an instance of cv2.VideoWriter.
-    """
-
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(
-                output_path,
-                fourcc,
-                30.0,
-                (width, height))
-    return out
+import logging
+import atexit
 
 
 class SuperSloMo(object):
@@ -58,9 +33,8 @@ class SuperSloMo(object):
 
     def __init__(
         self,
-        checkpoint,
-        slow_factor,
-        output_path,
+        model,
+        slowdown_factor,
         batch_size=1,
         video_path=None,
         rotate=False
@@ -70,12 +44,10 @@ class SuperSloMo(object):
 
         Parameters
         ----------
-        checkpoint: str,
+        model: str,
             path of the stored Pytorch checkpoint.
-        slow_factor: int,
+        slowdown_factor: int,
             slow motion factor.
-        output_path: str,
-            a temporary path to store interpolated frames.
         batch_size: int,
             batch size.
         video_path: str or None,
@@ -86,17 +58,27 @@ class SuperSloMo(object):
 
         if torch.cuda.is_available():
             self.device = "cuda:0"
+            logging.info('CUDA available, running on GPU :-)')
         else:
             self.device = "cpu"
-        self.checkpoint = checkpoint
+            logging.warning('CUDA not available, will be slow :-(')
+        self.checkpoint = model
         self.batch_size = batch_size
-        self.sf = slow_factor
-        self.output_path = output_path
+        self.sf = slowdown_factor
         self.video_path = video_path
         self.rotate = rotate
 
         # initialize the Transform instances.
         self.to_tensor, self.to_image = self.__transform()
+        self.ori_writer=None
+        self.slomo_writer=None # will be constructed on first need
+        atexit.register(self.cleanup)
+        self.model_loaded=False
+
+    def cleanup(self):
+        logging.info("Closing video writers for original and slomo videos...")
+        if self.ori_writer: self.ori_writer.release()
+        if self.slomo_writer: self.slomo_writer.release()
 
     def __transform(self):
         """create the Transform instances.
@@ -158,7 +140,6 @@ class SuperSloMo(object):
         warpper: nn.Module
         interpolator: nn.Module
         """
-
         flow_estimator = model.UNet(2, 4)
         flow_estimator.to(self.device)
         for param in flow_estimator.parameters():
@@ -173,33 +154,55 @@ class SuperSloMo(object):
                                  self.device)
         warpper = warpper.to(self.device)
 
+        logging.info('loading SuperSloMo model from ' + str(self.checkpoint))
         dict1 = torch.load(self.checkpoint, map_location='cpu')
         interpolator.load_state_dict(dict1['state_dictAT'])
         flow_estimator.load_state_dict(dict1['state_dictFC'])
 
         return flow_estimator, warpper, interpolator
 
-    def interpolate(self, images):
+    def interpolate(self, images:np.ndarray,output_folder:str)->None:
         """Run interpolation. \
             Interpolated frames will be saved in folder self.output_path.
 
         Parameters
         ----------
         images: np.ndarray, [N, W, H]
+        output_folder:str, folder that stores the interpolated images, numbered 1:N*slowdown_factor
+
         """
 
+
         video_frame_loader, dim, ori_dim = self.__load_data(images)
-        flow_estimator, warpper, interpolator = self.__model(dim)
+        if not self.model_loaded: self.flow_estimator, self.warper, self.interpolator = self.__model(dim)
+        self.model_loaded=True
+
+        # construct AVI video output writer now that we know the frame size
+        if self.video_path is not None and not self.ori_writer:
+            self.ori_writer = video_writer(
+                os.path.join(self.video_path, "original.avi"),
+                ori_dim[1],
+                ori_dim[0]
+            )
+
+        if self.video_path is not None and not self.slomo_writer:
+            self.slomo_writer = video_writer(
+                os.path.join(self.video_path, "slomo.avi"),
+                ori_dim[1],
+                ori_dim[0]
+            )
 
         frameCounter = 1
-
+        # torch.cuda.empty_cache()
         with torch.no_grad():
-            for _, (frame0, frame1) in enumerate(tqdm(video_frame_loader), 0):
+            # logging.debug("using " + str(output_folder) + " to store interpolated frames")
+            # for _, (frame0, frame1) in enumerate(tqdm(video_frame_loader, desc='slomo-interp',unit='fr'), 0):
+            for _, (frame0, frame1) in enumerate(video_frame_loader, 0):
 
                 I0 = frame0.to(self.device)
                 I1 = frame1.to(self.device)
 
-                flowOut = flow_estimator(torch.cat((I0, I1), dim=1))
+                flowOut = self.flow_estimator(torch.cat((I0, I1), dim=1))
                 F_0_1 = flowOut[:, :2, :, :]
                 F_1_0 = flowOut[:, 2:, :, :]
 
@@ -212,10 +215,10 @@ class SuperSloMo(object):
                     F_t_0 = fCoeff[0] * F_0_1 + fCoeff[1] * F_1_0
                     F_t_1 = fCoeff[2] * F_0_1 + fCoeff[3] * F_1_0
 
-                    g_I0_F_t_0 = warpper(I0, F_t_0)
-                    g_I1_F_t_1 = warpper(I1, F_t_1)
+                    g_I0_F_t_0 = self.warper(I0, F_t_0)
+                    g_I1_F_t_1 = self.warper(I1, F_t_1)
 
-                    intrpOut = interpolator(
+                    intrpOut = self.interpolator(
                         torch.cat(
                             (I0, I1, F_0_1, F_1_0,
                              F_t_1, F_t_0, g_I1_F_t_1,
@@ -226,8 +229,8 @@ class SuperSloMo(object):
                     V_t_0 = torch.sigmoid(intrpOut[:, 4:5, :, :])
                     V_t_1 = 1 - V_t_0
 
-                    g_I0_F_t_0_f = warpper(I0, F_t_0_f)
-                    g_I1_F_t_1_f = warpper(I1, F_t_1_f)
+                    g_I0_F_t_0_f = self.warper(I0, F_t_0_f)
+                    g_I1_F_t_1_f = self.warper(I1, F_t_1_f)
 
                     wCoeff = [1 - t, t]
 
@@ -242,7 +245,7 @@ class SuperSloMo(object):
                         img_resize = img.resize(ori_dim, Image.BILINEAR)
 
                         save_path = os.path.join(
-                            self.output_path,
+                            output_folder,
                             str(frameCounter + self.sf * batchIndex) + ".png")
                         img_resize.save(save_path)
                     frameCounter += 1
@@ -250,25 +253,13 @@ class SuperSloMo(object):
                 # Set counter accounting for batching of frames
                 frameCounter += self.sf * (self.batch_size - 1)
 
-        if self.video_path is not None:
-            ori_writer = video_writer(
-                os.path.join(self.video_path, "original.avi"),
-                ori_dim[1],
-                ori_dim[0]
-            )
-
-            slomo_writer = video_writer(
-                os.path.join(self.video_path, "slomo.avi"),
-                ori_dim[1],
-                ori_dim[0]
-            )
 
             # write input frames into video
-            for frame in images:
+            for frame in images: #tqdm(images, desc='slomo--write-orig-vid',unit='fr'):
                 if self.rotate:
                     frame = np.rot90(frame, k=2)
                 for _ in range(self.sf):
-                    ori_writer.write(
+                    self.ori_writer.write(
                         cv2.cvtColor(
                             frame,
                             cv2.COLOR_GRAY2BGR
@@ -277,13 +268,13 @@ class SuperSloMo(object):
                 if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
                     break
 
-            frame_paths = self.__all_images(self.output_path)
+            frame_paths = self.__all_images(output_folder)
             # write slomo frames into video
-            for path in frame_paths:
+            for path in frame_paths: #tqdm(frame_paths,desc='slomo-write-slomo-vid',unit='fr'):
                 frame = self.__read_image(path)
                 if self.rotate:
                     frame = np.rot90(frame, k=2)
-                slomo_writer.write(
+                self.slomo_writer.write(
                     cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
                 )
                 if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
@@ -309,7 +300,7 @@ class SuperSloMo(object):
                               " 'png' format."))
         images_sorted = sorted(
                 images,
-                key=lambda line: int(line.split('/')[-1].split('.')[0]))
+                key=lambda line: int(line.split(os.sep)[-1].split('.')[0])) # only works for linux separators with /, use os.sep according to https://stackoverflow.com/questions/16010992/how-to-use-directory-separator-in-both-linux-and-windows-in-python
         return images_sorted
 
     @staticmethod

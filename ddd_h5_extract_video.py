@@ -13,8 +13,8 @@ import queue as Queue
 import time
 # import pdb
 
-from utils.view import HDF5Stream, MergedStream
-from utils.caer import unpack_data
+from v2e_utils import HDF5Stream, MergedStream
+from v2e_utils import unpack_data
 
 from src.slomo import video_writer
 #TODO add usage extra info
