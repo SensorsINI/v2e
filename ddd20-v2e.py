@@ -1,8 +1,6 @@
-""" Render event frames from DVS record file in DDD17+ dataset.
+""" Render event frames from DVS recorded file in DDD20 dataset.
 
-@author: Zhe He
-@contact: zhehe@student.ethz.ch
-@latest update: 2019-08-05
+@author: Zhe He, Yuhuang Hu, Tobi Delbruk
 """
 
 import numpy as np
@@ -19,12 +17,10 @@ import logging
 from tqdm import tqdm
 from ddd20_utils import ddd_h5_reader
 
-#TODO rename to ddd20-v2e.py
-# todo add live preview
-
 logging.basicConfig()
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
+logger=logging.getLogger(__name__)
 
 # TODO fix README
 parser = argparse.ArgumentParser()
@@ -87,7 +83,7 @@ if __name__ == "__main__":
 
     # with open('a', 'w') as a, open('b', 'w') as b:
     #     do_something()
-    logging.info('opening output files')
+    logger.info('opening output files')
     renderFromImages = VideoSequenceFiles2EventsRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres,
                                                          video_path=v2e_avi_path, event_path=v2e_event_path,
                                                          rotate=args.rotate)
@@ -95,7 +91,7 @@ if __name__ == "__main__":
     renderFromEvents = Events2VideoRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, video_path=v2e_avi_path,
                                             event_path=v2e_event_path, rotate=args.rotate)
 
-    logging.info("using temporary frame image directory tmp_dir: " + str(tmpdir))
+    logger.info("using temporary frame image directory tmp_dir: " + str(tmpdir))
 
     s = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=args.output_folder,
                    rotate=True)
@@ -105,7 +101,7 @@ if __name__ == "__main__":
     davisData= DDD20SimpleReader(args.input);
     startPacket=davisData.search(timeS=args_start_time);
     if not startPacket: raise Exception('cannot find start time ' + str(args_start_time) + ' within file')
-    logging.info('iterating over input file contents')
+    logger.info('iterating over input file contents')
     numFrames=0
     numDvsEvents=0
     # numOnEvents=0
@@ -117,12 +113,12 @@ if __name__ == "__main__":
         packet=davisData.readPacket(i)
         if not packet: continue # empty or could not parse this one
         if args_stop_time >0 and packet['timestamp']>davisData.startTimeS+ args_stop_time:
-            logging.info('\n reached stop time {}'.format(args_stop_time))
+            logger.info('\n reached stop time {}'.format(args_stop_time))
             break
         if packet['etype']== ddd_h5_reader.DDD20SimpleReader.ETYPE_DVS:
             numDvsEvents+=packet['enumber']
             events=packet['data']
-            logging.info('rendering real DVS events AVI and numpy data file')
+            logger.info('rendering real DVS events AVI and numpy data file')
 
             renderFromEvents.render(height, width)
 
@@ -139,17 +135,17 @@ if __name__ == "__main__":
                     1 / args.avi_frame_rate
                     # 1 / (args.slowdown_factor * frames.shape[0] / (frames["ts"][-1] - frames["ts"][0]))
                 )
-        # logging.info('{} frames, {} dvs events'.format(numFrames,numDvsEvents))
+        # logger.info('{} frames, {} dvs events'.format(numFrames,numDvsEvents))
     # quit()
 
-                logging.info('interpolating frame pair with SuperSloMo')
+                logger.info('interpolating frame pair with SuperSloMo')
                 with TemporaryDirectory() as tmpdir:
                     s.interpolate(images=frames["frame"],output_folder=tmpdir)
                     interpolated_ts = s.get_ts(frames["ts"])
                     height, width = frames["frame"].shape[1:]
-                    logging.info('rendering v2e synthetic DVS events from slow-motion video to AVI and numpy data file')
+                    logger.info('rendering v2e synthetic DVS events from slow-motion video to AVI and numpy data file')
                     renderFromImages.render(height=height,width=width,interpolated_ts=interpolated_ts,frame_ts=interpolated_ts,)
     renderFromEvents.close()
     renderFromImages.close()
-    logging.info("done; see output folder " + str(args.output_folder))
+    logger.info("done; see output folder " + str(args.output_folder))
     quit()

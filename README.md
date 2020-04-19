@@ -41,7 +41,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-The program is designed to serve multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for extracting DVS events from APS frames.
+The program is designed to serve multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for extracting DVS self from APS frames.
 
 **NOTE** We recommend running v2e on a CUDA GPU or it will be very slow.
 
@@ -102,8 +102,8 @@ original.avi  slomo.avi  video_dvs.avi  video_aps.avi events_dvs.npy events_aps.
 * _slomo.avi_: slow motion video, and the frame rate is 30 FPS.
 * _video_dvs.avi_: DVS frames from ddd17+ dataset, played at normal frame rate.
 * _video_aps.avi_: Frames interpolated from the APS frames, played at normal frame rate.
-* _events_dvs.npy_: numpy data file with real DVS events
-* _events_aps.npy_: numpy data file with synthetic DVS events
+* _events_dvs.npy_: numpy data file with real DVS self
+* _events_aps.npy_: numpy data file with synthetic DVS self
 
 
 ### Plot the Events
@@ -123,7 +123,7 @@ python plot.py \
 
 '--rotate' is very **IMPORTANT**, because some files in the DDD20 dataset are recorded upside down. More information regarding this can be found in the documentation of DDD20 dataset.
 
-One example is shown below, the left side is the ground-truth DVS frames, and the figure on the right side shows the histogram plot of the generated events within the region denoted by the black box. Histograms of the ground-truth events and our generated events are plotted in the same figure. It can be seen that the distribution of generated events is quite similar to the distribution of the real events.
+One example is shown below, the left side is the ground-truth DVS frames, and the figure on the right side shows the histogram plot of the generated self within the region denoted by the black box. Histograms of the ground-truth self and our generated self are plotted in the same figure. It can be seen that the distribution of generated self is quite similar to the distribution of the real self.
 
 <p float="left">
   <img src="media/counting.gif" width="320" class="center" />
@@ -143,7 +143,7 @@ python renderer_sweep.py \
 --sf [slow motion factor]
 ```
 
-The program will take the DVS recording data, which starts at time 'start' and ends at time 'end', to calculate the best threshold values for positive and negative events separately.
+The program will take the DVS recording data, which starts at time 'start' and ends at time 'end', to calculate the best threshold values for positive and negative self separately.
 
 In order to get the best approximations, the input video needs to satisfy the requirements below,
 

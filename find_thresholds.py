@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 
 from src.renderer import VideoSequenceFiles2EventsRenderer, Events2VideoRenderer
 from src.slomo import SuperSloMo
-from src.dddh5reader import DDD20ReaderMultiProcessing
+from src.ddd20_utils.ddd_h5_reader import DDD20ReaderMultiProcessing
 
 # TODO rename to find_thresholds.py
 

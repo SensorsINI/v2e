@@ -2,8 +2,13 @@ import numpy as np
 import cv2
 import glob
 import os
+import logging
 
-VIDEO_FPS = 30.0 # frame rate specified for output video AVI file
+OUTPUT_VIDEO_FPS = 30.0 # playback frame rate specified for output video AVI file
+# VIDEO_CODEC_FOURCC='RGBA' # uncompressed, >10MB for a few seconds of video
+OUTPUT_VIDEO_CODEC_FOURCC= 'XVID' # good codec, basically mp4 with simplest compression, packed in AVI, only 15kB for a few seconds
+
+logger=logging.getLogger(__name__)
 
 def video_writer(output_path, height, width):
     """ Return a video writer.
@@ -22,12 +27,13 @@ def video_writer(output_path, height, width):
     an instance of cv2.VideoWriter.
     """
 
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    fourcc = cv2.VideoWriter_fourcc(*OUTPUT_VIDEO_CODEC_FOURCC)
     out = cv2.VideoWriter(
                 output_path,
                 fourcc,
-                VIDEO_FPS,
+                OUTPUT_VIDEO_FPS,
                 (width, height))
+    logger.debug('opened {} with  {} https://www.fourcc.org/ codec, {}fps, and ({}x{}) size'.format(output_path, OUTPUT_VIDEO_CODEC_FOURCC, OUTPUT_VIDEO_FPS, width, height))
     return out
 
 
@@ -56,7 +62,7 @@ def all_images(data_path:str):
 
 
 def read_image(path: str) -> np.ndarray:
-    """Read image and returns it as np.ndarray float scaled 0-255.
+    """Read image and returns it as grayscale np.ndarray float scaled 0-255.
 
     Parameters
     ----------

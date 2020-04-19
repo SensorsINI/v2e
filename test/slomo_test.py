@@ -14,10 +14,10 @@ if __name__ == "__main__":
     sys.path.append("../utils/")
 
     from slomo import SuperSloMo
-    from reader import Reader
+    from ddd20_utils.ddd_h5_reader import Reader
 
     images = np.load("../data/frames.npy")
-    checkpoint = "../data/SuperSloMo38.ckpt"
+    checkpoint = "../data/SuperSloMo39.ckpt"
     slow_factor = 5
     output_path = "../data/tmpSloMo/"
     super_slomo = SuperSloMo(

@@ -1,8 +1,6 @@
 import numpy as np
 import cv2
 import os
-import glob
-import h5py
 import atexit
 import logging
 from tqdm import tqdm
@@ -12,6 +10,7 @@ from engineering_notation import EngNumber  # only from pip
 from src.emulator import EventEmulator
 from src.v2e_utils import video_writer,all_images,read_image
 
+logger=logging.getLogger(__name__)
 
 class EventRenderer(object):
     """
@@ -21,58 +20,54 @@ class EventRenderer(object):
     @author: Zhe He
     @contact: hezhehz@live.cn
     """
-    rotate: bool
 
     def __init__(
             self,
-            video_path: str,
             pos_thres=0.2,
             neg_thres=0.2,
             sigma_thres=0.03,
-            event_path=None,
             rotate=False,
+            output_path:str=None,
+            dvs_vid:str=None
     ):
         """ Init.
 
         Parameters
         ----------
-        video_path: str, path of output video. Example: ../../XX.avi.
+        output_path: str, path of output video. Example: ../../XX.avi.
         event_path: str or None, str if the events need to be saved \
             else None.
         rotate: bool, True to rotate the output frames 90 degrees.
         """
-        self.video_path = video_path
+        self.output_path = output_path
         self.rotate = rotate
-        self.event_path = event_path
         self.width = None
         self.height = None  # must be set by specific renderers, which might only know it once they have data
-        self.event_file = None
-        self.video_output_file = None
+        self.video_output_file = dvs_vid
         self.emulator = None
         # EventEmulator(base_frame=None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres)  # base frame initialized on first use
-
+        self.numFramesWritten=0
         atexit.register(self.cleanup)
 
     def cleanup(self):
-        logging.info("Closing video and event dataset files...")
-        if self.video_output_file: self.video_output_file.release()
-        if self.event_file: self.event_file.close()
+        if self.video_output_file:
+            logger.info("Closing DVS video output file after writing {} frames".format(self.numFramesWritten))
+            self.video_output_file.release()
+
 
     def _check_outputs_open(self):
         '''checks that output video and event datasets files are open'''
         if not self.height or not self.width:
             raise Exception('height and width not set for output video')
 
-        if not self.video_path:
-            logging.warning('video_path not set')
+        if self.output_path is None and self.video_output_file is str:
+            logger.warning('output_path is None; will not write DVS video')
 
-        if self.video_path:
-            self.video_output_file = video_writer(os.path.join(self.video_path, "v2e-dvs.avi"), self.height, self.width)
-        if self.event_path:
-            logging.info('opening event output dataset file ' + self.event_path)
-            self.event_file = h5py.File(os.path.join(self.event_path,"v2e-events.h5"), "w")
+        if self.output_path and type(self.video_output_file) is str:
+            logger.info('opening DVS video output file ' + self.output_path)
+            self.video_output_file = video_writer(os.path.join(self.output_path, self.video_output_file), self.height, self.width)
 
-    def renderEventsToFrames(self, event_arr: np.ndarray, height: int, width: int, frame_ts: np.array, full_scale_count=3):
+    def renderEventsToFrames(self, event_arr: np.ndarray, height: int, width: int, frame_ts: np.array, full_scale_count=3)->None:
         """ Incrementally render event frames, where events come from overridden method _get_events().
         Frames are appended to the video output file.
 
@@ -85,7 +80,7 @@ class EventRenderer(object):
         full_scale_count: int, count of DVS ON and OFF events per pixel for full white and black
         Returns
         -------
-        rendered_frames: np.ndarray, rendered event frames.
+        None
         """
         self.width = width
         self.height = height
@@ -94,15 +89,11 @@ class EventRenderer(object):
         self._check_outputs_open()
 
         if event_arr is None:
-            logging.info('event_arr is None, doing nothing')
+            logger.info('event_arr is None, doing nothing')
             return None
 
-        if self.event_path:
-            np.save(self.event_path, event_arr)
-            logging.info("events saved to " + str(self.event_path))
-
         histrange = [(0, v) for v in (self.height, self.width)]
-        rendered_frames = list()
+        # rendered_frames = list()
 
         for ts_idx in range(self.frame_ts.shape[0] - 1):
         # for ts_idx in tqdm(range(self.frame_ts.shape[0] - 1),
@@ -134,20 +125,20 @@ class EventRenderer(object):
                     (img_on - img_off), -full_scale_count, full_scale_count)
             else:
                 integrated_img = (img_on - img_off)
-            rendered_frames.append(integrated_img)
+            # rendered_frames.append(integrated_img)
             img = (integrated_img + full_scale_count) / float(full_scale_count * 2)
 
             if self.rotate:
                 img = np.rot90(img, k=2)
 
-            self.video_output_file.write(
-                cv2.cvtColor(
-                    (img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR))
+            if self.video_output_file:
+                self.video_output_file.write(cv2.cvtColor((img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR))
+                self.numFramesWritten+=1
             if cv2.waitKey(int(1000 / 30)) & 0xFF == ord('q'):
                 break
 
-        rendered_frames = np.vstack(rendered_frames)
-        return rendered_frames
+        # rendered_frames = np.vstack(rendered_frames) # makes a giant 2D array with all frames stacked vertically to a giant vertical image
+        # return rendered_frames
 
     def renderVideoFromMemory(self, image_arr: np.ndarray, height: int, width: int, frame_ts: np.array, interpolated_ts: np.array, full_scale_count: int = 3):
         if not image_arr.shape[0] == frame_ts.shape[0]:
@@ -162,7 +153,7 @@ class EventRenderer(object):
         base_frame = read_image(self.all_images[0])  # todo inits emulator every time, not stateful, should be stateful to just take next sequence of images
         self.height = base_frame.shape[0]
         self.width = base_frame.shape[1]
-        logging.info('(height,width)=' + str((self.height, self.width)))
+        logger.info('(height,width)=' + str((self.height, self.width)))
 
         if self.emulator is None:
             self.emulator = EventEmulator(base_frame, pos_thres=self.pos_thres, neg_thres=self.neg_thres, sigma_thres=self.sigma_thres)
@@ -184,7 +175,7 @@ class EventRenderer(object):
             if tmp_events is not None:
                 event_list.append(tmp_events)
         event_arr = np.vstack(event_list)
-        logging.info("Generated {} events".format(EngNumber(event_arr.shape[0])))
+        logger.info("Generated {} events".format(EngNumber(event_arr.shape[0])))
 
         return event_arr
 
@@ -232,4 +223,4 @@ class EventRenderer(object):
 
                 num_events += tmp_events.shape[0]
 
-        logging.info("Generated {} events".format(EngNumber(num_events)))
+        logger.info("Generated {} events".format(EngNumber(num_events)))

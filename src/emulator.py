@@ -12,8 +12,14 @@ import os
 import cv2
 import numpy as np
 import logging
-from engineering_notation import EngNumber # only from pip
-from src.v2e_utils import all_images, read_image
+import h5py
+from engineering_notation import EngNumber  # only from pip
+from src.v2e_utils import all_images, read_image, video_writer
+from src.output.aedat2 import AEDat2Output
+# import rosbag # not yet for python 3
+
+logger = logging.getLogger(__name__)
+
 
 def lin_log(x, threshold=20):
     """
@@ -41,15 +47,21 @@ class EventEmulator(object):
     - author: Zhe He
     - contact: zhehe@student.ethz.ch
     """
+
     # todo add event count statistics for ON and OFF events
 
     def __init__(
-        self,
-        base_frame: np.ndarray,
-        pos_thres=0.21,
-        neg_thres=0.17,
-        sigma_thres=0.03,
-        seed=42 # the answer to everything
+            self,
+            base_frame: np.ndarray,
+            pos_thres=0.21,
+            neg_thres=0.17,
+            sigma_thres=0.03,
+            seed=42,
+            output_folder:str=None,
+            dvs_h5:str=None,
+            dvs_aedat2:str=None,
+            dvs_text:str=None,
+            # dvs_rosbag=None
     ):
         """
         Parameters
@@ -64,22 +76,50 @@ class EventEmulator(object):
             std deviation of threshold in log intensity.
         seed: int, default=0
             seed for random threshold variations, fix it to nonzero value to get same mismatch every time
+        dvs_aedat2, dvs_h5, dvs_text: str
+            names of output data files or None
+
         """
 
-        logging.info("ON/OFF log_e temporal contrast thresholds: {} / {} +/- {}".format(pos_thres, neg_thres,sigma_thres))
-        self.base_frame=None
-        self.sigma_thres=sigma_thres
-        self.pos_thres=pos_thres
-        self.neg_thres=neg_thres # initialized to scalars
-        self.output_width=None
-        self.output_height=None # set on first frame
+        logger.info("ON/OFF log_e temporal contrast thresholds: {} / {} +/- {}".format(pos_thres, neg_thres, sigma_thres))
+        self.base_frame = None
+        self.sigma_thres = sigma_thres
+        self.pos_thres = pos_thres
+        self.neg_thres = neg_thres  # initialized to scalars
+        self.output_width = None
+        self.output_height = None  # set on first frame
         np.random.seed(seed)
+
+        self.output_folder=output_folder
+        self.dvs_h5=dvs_h5
+        self.dvs_aedat2=dvs_aedat2
+        self.dvs_text=dvs_text
+        # self.dvs_rosbag=dvs_rosbag
+
+        if self.output_folder:
+            if dvs_h5:
+                path=os.path.join(self.output_folder, dvs_h5)
+                logger.info('opening event output dataset file ' + path)
+                self.dvs_h5 = h5py.File(path, "w")
+                self.dvs_h5_dataset = self.dvs_h5.create_dataset(
+                    name="event",
+                    shape=(0, 4),
+                    maxshape=(None, 4),
+                    dtype="uint32")
+            if dvs_aedat2:
+                path=os.path.join(self.output_folder,dvs_aedat2)
+                logger.info('opening AEDAT-2.0 output file '+path)
+                self.dvs_aedat2=AEDat2Output(path)
+            # if dvs_text: # todo implement
+            #     path=os.path.join(self.output_folder,dvs_text)
+            #     logger.info('opening text DVS output file '+path)
+            #     self.dvs_aedat2=AEDat2Output(path)
 
         if not base_frame is None:
             self._init(base_frame)
 
-    def _init(self,baseFrame):
-        logging.info('initializing random temporal contrast thresholds from from base frame')
+    def _init(self, baseFrame):
+        logger.info('initializing random temporal contrast thresholds from from base frame')
         self.base_frame = lin_log(baseFrame)  # base_frame are memorized lin_log pixel values
         # take the variance of threshold into account.
         self.pos_thres = np.random.normal(self.pos_thres, self.sigma_thres, self.base_frame.shape)
@@ -91,9 +131,9 @@ class EventEmulator(object):
     def reset(self):
         '''resets so that next use will reinitialize the base frame
         '''
-        self.base_frame=None
+        self.base_frame = None
 
-    def compute_events(self, new_frame:np.ndarray, t_start:float, t_end:float)->np.ndarray:
+    def compute_events(self, new_frame: np.ndarray, t_start: float, t_end: float) -> np.ndarray:
         """Compute events in new frame.
 
         Parameters
@@ -120,19 +160,19 @@ class EventEmulator(object):
             return None
 
         log_frame = lin_log(new_frame)
-        diff_frame = log_frame - self.base_frame # log intensity (brightness) change from memorized values
+        diff_frame = log_frame - self.base_frame  # log intensity (brightness) change from memorized values
 
-        pos_frame = np.zeros_like(diff_frame) # initialize
+        pos_frame = np.zeros_like(diff_frame)  # initialize
         neg_frame = np.zeros_like(diff_frame)
-        pos_frame[diff_frame > 0] = diff_frame[diff_frame > 0] # pixels with ON changes
+        pos_frame[diff_frame > 0] = diff_frame[diff_frame > 0]  # pixels with ON changes
         neg_frame[diff_frame < 0] = np.abs(diff_frame[diff_frame < 0])
 
-        pos_evts_frame = pos_frame // self.pos_thres # compute quantized numbers of ON events for each pixel
-        pos_iters = int((pos_frame // self.pos_thres).max()) # compute number of times to pass over array to compute separated ON events
-        neg_evts_frame = neg_frame // self.neg_thres # same for OFF events
+        pos_evts_frame = pos_frame // self.pos_thres  # compute quantized numbers of ON events for each pixel
+        pos_iters = int((pos_frame // self.pos_thres).max())  # compute number of times to pass over array to compute separated ON events
+        neg_evts_frame = neg_frame // self.neg_thres  # same for OFF events
         neg_iters = int((neg_frame // self.neg_thres).max())
 
-        num_iters = max(pos_iters, neg_iters) # need to iterative this many times
+        num_iters = max(pos_iters, neg_iters)  # need to iterative this many times
 
         events = []
 
@@ -188,20 +228,43 @@ class EventEmulator(object):
             if i == 0:
                 if num_pos_events > 0:
                     self.base_frame[pos_cord] += \
-                        pos_evts_frame[pos_cord]*self.pos_thres[pos_cord] # add to memorized brightness values just the events we emitted. don't add the remainder. the next aps frame might have sufficient value to trigger another event or it might not, but we are correct in not storing the current frame brightness
+                        pos_evts_frame[pos_cord] * self.pos_thres[
+                            pos_cord]  # add to memorized brightness values just the events we emitted. don't add the remainder. the next aps frame might have sufficient value to trigger another event or it might not, but we are correct in not storing the current frame brightness
                 if num_neg_events > 0:
-                   self.base_frame[neg_cord] -= \
-                        neg_evts_frame[neg_cord]*self.neg_thres[neg_cord] # neg_thres is >0
+                    self.base_frame[neg_cord] -= \
+                        neg_evts_frame[neg_cord] * self.neg_thres[neg_cord]  # neg_thres is >0
 
             if num_events > 0:
                 events.append(events_tmp)
 
         if len(events) > 0:
             events = np.vstack(events)
+            if self.dvs_h5 is not None:
+                pass
+                # # convert data to uint32 (microsecs) format
+                # tmp_events[:, 0] = tmp_events[:, 0] * 1e6
+                # tmp_events[tmp_events[:, 3] == -1, 3] = 0
+                # tmp_events = tmp_events.astype(np.uint32)
+                #
+                # # save events
+                # self.dvs_h5_dataset.resize(
+                #     event_dataset.shape[0] + tmp_events.shape[0],
+                #     axis=0)
+                #
+                # event_dataset[-tmp_events.shape[0]:] = tmp_events
+                # self.dvs_h5.flush()
+            if self.dvs_aedat2 is not None:
+                self.dvs_aedat2.appendEvents(events)
+            if self.dvs_text is not None:
+                pass
+                # self.dvs_aedat2.appendEvents(events) #implement
+
+        if len(events) > 0:
             return events
         else:
             return None
 
+#############################################################################################################
 
 class EventFrameRenderer(object):
     """ Deprecated
@@ -237,20 +300,18 @@ class EventFrameRenderer(object):
         self.pos_thres = pos_thres
         self.neg_thres = neg_thres
 
-
-
     def _get_events(self):
         """Get all events.
         """
         images = all_images(self.data_path)
         num_frames = len(images)
         input_ts = np.linspace(
-                0,
-                num_frames / self.input_fps,
-                num_frames,
-                dtype=np.float)
+            0,
+            num_frames / self.input_fps,
+            num_frames,
+            dtype=np.float)
         base_frame = read_image(images[0])
-        logging.info('base frame shape: {}'.format(base_frame.shape))
+        logger.info('base frame shape: {}'.format(base_frame.shape))
         height = base_frame.shape[0]
         width = base_frame.shape[1]
         emulator = EventEmulator(
@@ -285,10 +346,10 @@ class EventFrameRenderer(object):
                 pos += tmp_events.shape[0]
 
             if (idx + 1) % 20 == 0:
-                logging.info("Image2Events processed {} frames".format(EngNumber(idx + 1)))
+                logger.info("Image2Events processed {} frames".format(EngNumber(idx + 1)))
 
         event_arr = np.vstack(event_list)
-        logging.info("generated {} events".format(EngNumber(event_arr.shape[0]))) # TODO engineering format, events/sec
+        logger.info("generated {} events".format(EngNumber(event_arr.shape[0])))  # TODO engineering format, events/sec
 
         return event_arr, time_list, pos_list, num_frames, height, width
 
@@ -298,19 +359,13 @@ class EventFrameRenderer(object):
          num_frames, height, width) = self._get_events()
 
         output_ts = np.linspace(
-                0,
-                num_frames / self.input_fps,
-                int(num_frames / self.input_fps * self.output_fps),
-                dtype=np.float)
+            0,
+            num_frames / self.input_fps,
+            int(num_frames / self.input_fps * self.output_fps),
+            dtype=np.float)
         clip_value = 2
         histrange = [(0, v) for v in (height, width)]
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        out = cv2.VideoWriter(
-                  os.path.join(self.output_path, 'output.avi'),
-                  fourcc,
-                  30.0,
-                  (width, height))
-
+        out = video_writer(os.path.join(self.output_path, 'output.avi'), width=width, height=height)
         for ts_idx in range(output_ts.shape[0] - 1):
             # assume time_list is sorted.
             start = np.searchsorted(time_list,
@@ -328,22 +383,22 @@ class EventFrameRenderer(object):
             pol_on = (events[:, 3] == 1)
             pol_off = np.logical_not(pol_on)
             img_on, _, _ = np.histogram2d(
-                    events[pol_on, 2], events[pol_on, 1],
-                    bins=(height, width), range=histrange)
+                events[pol_on, 2], events[pol_on, 1],
+                bins=(height, width), range=histrange)
             img_off, _, _ = np.histogram2d(
-                    events[pol_off, 2], events[pol_off, 1],
-                    bins=(height, width), range=histrange)
+                events[pol_off, 2], events[pol_off, 1],
+                bins=(height, width), range=histrange)
             if clip_value is not None:
                 integrated_img = np.clip(
-                    (img_on-img_off), -clip_value, clip_value)
+                    (img_on - img_off), -clip_value, clip_value)
             else:
-                integrated_img = (img_on-img_off)
+                integrated_img = (img_on - img_off)
             img = (integrated_img + clip_value) / float(clip_value * 2)
             out.write(
                 cv2.cvtColor(
                     (img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR))
             if ts_idx % 20 == 0:
-                logging.info('Rendered {} frames'.format(ts_idx))
-            if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
+                logger.info('Rendered {} frames'.format(ts_idx))
+            if cv2.waitKey(int(1000 / 30)) & 0xFF == ord('q'):
                 break
         out.release()

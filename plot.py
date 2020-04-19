@@ -3,6 +3,9 @@ import argparse
 import os
 import matplotlib
 import cv2
+
+from v2e_utils import video_writer
+
 matplotlib.use('PS')
 
 from matplotlib import pyplot as plt
@@ -111,12 +114,7 @@ if __name__ == "__main__":
     fps = cap.get(cv2.CAP_PROP_FPS)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(
-                os.path.join(args.path, "counting.avi"),
-                fourcc,
-                fps,
-                (width, height))
+    out=video_writer(os.path.join(args.path, "counting.avi"),width=width,height=height)
 
     print("width: {} \t height: {}".format(width, height))
 
