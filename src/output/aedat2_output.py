@@ -28,7 +28,7 @@ class AEDat2Output:
             self.sizex = 346
             self.sizey = 260
             self.flipy = True  # v2e uses computer vision matrix printing convention of UL pixel being 0,0, but jAER uses original graphics and graphing convention that 0,0 is LL
-            self.flipx = False
+            self.flipx = True # not 100% sure why this is needed. Observed for tennis example
         else:
             raise Exception('CAMERA type not found, add your camera to {}'.format(__name__))
 

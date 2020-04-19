@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Python code for extracting frames from video file and synthesizing fake DVS
 events from this video after SuperSloMo has generated interpolated frames from the original video frames.
@@ -32,7 +33,6 @@ logger=logging.getLogger(__name__)
 parser = argparse.ArgumentParser(description='v2e: generate simulated DVS events from video.',
                                  epilog='Run with no --input to open file dialog', allow_abbrev=True,
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-argcomplete.autocomplete(parser)
 # https://kislyuk.github.io/argcomplete/#global-completion
 # Shellcode (only necessary if global completion is not activated - see Global completion below), to be put in e.g. .bashrc:
 # eval "$(register-python-argcomplete v2e.py)"
@@ -62,6 +62,7 @@ parser.add_argument("--dvs_aedat2", type=str, default=None, help="output DVS eve
 parser.add_argument("--dvs_text", type=str, default=None, help="output DVS events as text file with one event per line [timestamp (float s), x, y, polarity (0,1)]")
 parser.add_argument("--vid_orig", type=str, default="video_orig.avi", help="output src video at same rate as slomo video (with duplicated frames)")
 parser.add_argument("--vid_slomo", type=str, default="video_slomo.avi", help="output slomo of src video slowed down by slowdown_factor")
+argcomplete.autocomplete(parser)
 args = parser.parse_args()
 
 slomo = 'arguments:\n'
