@@ -15,7 +15,8 @@ import logging
 import h5py
 from engineering_notation import EngNumber  # only from pip
 from src.v2e_utils import all_images, read_image, video_writer
-from src.output.aedat2 import AEDat2Output
+from src.output.aedat2_output import AEDat2Output
+from src.output.ae_text_output import DVSTextOutput
 # import rosbag # not yet for python 3
 
 logger = logging.getLogger(__name__)
@@ -110,10 +111,10 @@ class EventEmulator(object):
                 path=os.path.join(self.output_folder,dvs_aedat2)
                 logger.info('opening AEDAT-2.0 output file '+path)
                 self.dvs_aedat2=AEDat2Output(path)
-            # if dvs_text: # todo implement
-            #     path=os.path.join(self.output_folder,dvs_text)
-            #     logger.info('opening text DVS output file '+path)
-            #     self.dvs_aedat2=AEDat2Output(path)
+            if dvs_text: # todo implement
+                path=os.path.join(self.output_folder,dvs_text)
+                logger.info('opening text DVS output file '+path)
+                self.dvs_text=DVSTextOutput(path)
 
         if not base_frame is None:
             self._init(base_frame)
@@ -256,8 +257,7 @@ class EventEmulator(object):
             if self.dvs_aedat2 is not None:
                 self.dvs_aedat2.appendEvents(events)
             if self.dvs_text is not None:
-                pass
-                # self.dvs_aedat2.appendEvents(events) #implement
+                self.dvs_text.appendEvents(events)
 
         if len(events) > 0:
             return events

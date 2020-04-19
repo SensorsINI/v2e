@@ -185,7 +185,7 @@ if __name__ == "__main__":
                      0.0722 * frame[:, :, 2])
         if output_height and output_width:
             dim = (output_width, output_height)
-            frame = cv2.resize(frame, dim)  # todo check that default linear interpolation is OK
+            frame = cv2.resize(frame, dim, interpolation = cv2.INTER_AREA)  # todo check that this scales to full output size
         frame0 = frame1  # new first frame is old 2nd frame
         frame1 = frame.astype(np.uint8)  # new 2nd frame is latest input
         ts0 = ts1

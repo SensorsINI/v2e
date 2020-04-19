@@ -55,7 +55,7 @@ class AEDat2Output:
         time = '# Creation time: System.currentTimeMillis() {}\r\n'.format(int(time.time() * 1000.))
         user = '# User name: {}\r\n'.format(getpass.getuser())
         header = ('#!AER-DAT2.0\r\n',
-                  '# This is a raw AE data file created by AEDat2Output in v2e (see https://github.com/SensorsINI/v2e)\r\n',
+                  '# This is a raw AE data file created by AEDat2Output in v2e (see https://github.com/SensorsINI/v2e) as specified at https://inivation.com/support/software/fileformat/#aedat-20\r\n',
                   '# Data format is int32 address, int32 timestamp (8 bytes total), repeated for each event\r\n',
                   '# Timestamps tick is 1 us\r\n',
                   date, time,
