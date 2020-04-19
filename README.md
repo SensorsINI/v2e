@@ -3,9 +3,9 @@
 Python torch + opencv code for converting APS video frames with low frame rate into DVS event camera frames with high frame rate.
 
 ## Contact
-Zhe He (hezhehz@live.cn)
-Yuhuang Hu (yuhuang.hu@ini.uzh.ch)
 Tobi Delbruck (tobi@ini.uzh.ch)
+Yuhuang Hu (yuhuang.hu@ini.uzh.ch)
+Zhe He (hezhehz@live.cn)
 
 ## Environment
 
@@ -13,25 +13,16 @@ Tobi Delbruck (tobi@ini.uzh.ch)
 python==3.7.3
 ```
 
-We highly recommend running the code in virtual environment. Miniconda is always your best friend. :)
+We highly recommend running the code in virtual environment. Conda is always your best friend. :)
 
 ## Install Dependencies
+
 
 ```bash
 pip install -r requirements.txt
 ```
 
-The packages listed below will be installed.
-```bash
-h5py==2.9.0
-numpy==1.16.2
-opencv-python==4.1.0.25
-Pillow==5.4.1
-torch==1.1.0
-torchvision==0.2.1
-tqdm==4.31.1
-```
-For conda users, you can first make an env with pip in it, then install with pip. The torch and opencv-python packages are not available in conda.
+For conda users, you can first make an env with pip in it, then install with pip. The torch and opencv-python packages are not available in conda.  Make sure this pip is first in your PATH.
 
 ```bash
 conda create -n pt-v2e python=3.7 pip
@@ -41,7 +32,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-The program is designed to serve multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for extracting DVS self from APS frames.
+The program is designed to serve multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for generating DVS events from conventional video and from specific datasets.
 
 **NOTE** We recommend running v2e on a CUDA GPU or it will be very slow.
 
@@ -64,8 +55,8 @@ mv rec1501902136.hdf5 ./input
 
 ## Download Checkpoint
 
-We used the [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects/superslomo/) framework to interpolate the APS frames. 
-However, since APS frames only record light intensity, the model needs to be trained on grayscale images. 
+We use the excellent [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects/superslomo/) framework to interpolate the APS frames. 
+However, since APS frames only record light intensity, we  retrained it on grayscale images. 
 You can download our pre-trained model from Google Drive 
 [[link]](https://drive.google.com/file/d/17QSN207h05S_b2ndXjLrqPbBTnYIl0Vb/view?usp=sharing) (151 MB).
 
@@ -77,20 +68,71 @@ mv SuperSloMo39.ckpt ./input
 ## Render DVS frames from DDD17+ dataset recording.
 
 ```bash
-python v2e_h5.py \
---pos_thres [positive threshold] \
---neg_thres [negative threshold] \
---start [start] \
---stop [end] \
---fname [path to the .hdf5 DVS recording file]] \
---checkpoint [the .ckpt checkpoint of the slow motion network]] \
---sf [slow motion factor]
---frame_rate [frame rate of rendered video] \
---path [path to store output files]
+(pt-v2e) H:\Dropbox (Personal)\GitHub\SensorsINI\v2e>python v2e.py -h
+usage: v2e.py [-h] [--input INPUT] [--pos_thres POS_THRES]
+              [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
+              [--slowdown_factor SLOWDOWN_FACTOR]
+              [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
+              [--slomo_model SLOMO_MODEL] --output_folder OUTPUT_FOLDER
+              [--frame_rate FRAME_RATE] [--dvs_vid DVS_VID] [--dvs_h5 DVS_H5]
+              [--dvs_aedat2 DVS_AEDAT2] [--dvs_text DVS_TEXT]
+              [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO]
+
+v2e: generate simulated DVS events from video.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --input INPUT         input video file; leave empty for file chooser dialog
+                        (default: None)
+  --pos_thres POS_THRES
+                        threshold in log_e intensity change to trigger a
+                        positive event (default: 0.21)
+  --neg_thres NEG_THRES
+                        threshold in log_e intensity change to trigger a
+                        negative event (default: 0.17)
+  --sigma_thres SIGMA_THRES
+                        1-std deviation threshold variation in log_e intensity
+                        change (default: 0.03)
+  --slowdown_factor SLOWDOWN_FACTOR
+                        slow motion factor; if the input video has frame rate
+                        fps, then the DVS events will have time resolution of
+                        1/(fps*slowdown_factor) (default: 10)
+  --output_height OUTPUT_HEIGHT
+                        height of output DVS data in pixels. If None, same as
+                        input video. (default: None)
+  --output_width OUTPUT_WIDTH
+                        width of output DVS data in pixels. If None, same as
+                        input video. (default: None)
+  --slomo_model SLOMO_MODEL
+                        path of slomo_model checkpoint (default:
+                        input/SuperSloMo39.ckpt)
+  --output_folder OUTPUT_FOLDER
+                        folder to store outputs (default: None)
+  --frame_rate FRAME_RATE
+                        equivalent frame rate of --dvs_vid output video; the
+                        events will be accummulated as this sample rate; DVS
+                        frames will be accumulated for duration 1/frame_rate
+                        (default: 300)
+  --dvs_vid DVS_VID     output DVS events as AVI video at frame_rate (default:
+                        dvs-video.avi)
+  --dvs_h5 DVS_H5       output DVS events as hdf5 event database (default:
+                        None)
+  --dvs_aedat2 DVS_AEDAT2
+                        output DVS events as AEDAT-2.0 event file for jAER
+                        (default: None)
+  --dvs_text DVS_TEXT   output DVS events as text file with one event per line
+                        timestamp (s), x, y, polarity (-1,1) (default: None)
+  --vid_orig VID_ORIG   output src video at same rate as slomo video (default:
+                        video_orig.avi)
+  --vid_slomo VID_SLOMO
+                        output slomo src video with frame_rate (default:
+                        video_slomo.avi)
+
+Run with no --input to open file dialog
 ```
 For example:
 ```bash
-python v2e_h5.py --input input/rec1501902136.hdf5 --slomo_model input/SuperSloMo39.ckpt --sf 20 --start 10 --stop 11 --output_path output --pos_thres=.2 --neg_thres=.2
+python v2e.py --input input/v_SoccerJuggling_g23_c01.avi --slomo_model=input/SuperSloMo39.ckpt --slowdown_factor=20 --output_folder=output --pos_thres=.15 --neg_thres=.15 --sigma_thres=0.01 --frame_rate=400 --dvs_aedat2 v2e-test-long.aedat --output_width=346 --output_height=260
 ```
 Run the command above, and the following files will be created in a folder called _output_.
 
@@ -99,11 +141,10 @@ original.avi  slomo.avi  video_dvs.avi  video_aps.avi events_dvs.npy events_aps.
 ```
 
 * _original.avi_: original video slowed down without interpolating the frames, with frame rate 30 FPS.
-* _slomo.avi_: slow motion video, and the frame rate is 30 FPS.
-* _video_dvs.avi_: DVS frames from ddd17+ dataset, played at normal frame rate.
-* _video_aps.avi_: Frames interpolated from the APS frames, played at normal frame rate.
-* _events_dvs.npy_: numpy data file with real DVS self
-* _events_aps.npy_: numpy data file with synthetic DVS self
+* _original.avi_: input video, but converted to luma and resized to output (width,height) and with repeated frames to allow comparison to slomo.avi.
+* _slomo.avi_: slow motion video (with playback rate 30Hz) but slowed down by slowdown_factor.
+* _dvs-video.avi_: DVS video (with playback rate 30Hz) but with frame rate (DVS timestamp resolution) set by source video frame rate times slowdown_factor.
+* _v2e-test-long.aedat_: AEDAT-2.0 file for playback and algorithm experiments in jAER
 
 
 ### Plot the Events
@@ -121,7 +162,7 @@ python plot.py \
 
 '--path' is the folder which contains the output files generated by executing 'v2e_h5.py'.
 
-'--rotate' is very **IMPORTANT**, because some files in the DDD20 dataset are recorded upside down. More information regarding this can be found in the documentation of DDD20 dataset.
+'--rotate' is **IMPORTANT**, because some files in the DDD20 dataset are recorded upside down. More information regarding this can be found in the documentation of DDD20 dataset.
 
 One example is shown below, the left side is the ground-truth DVS frames, and the figure on the right side shows the histogram plot of the generated self within the region denoted by the black box. Histograms of the ground-truth self and our generated self are plotted in the same figure. It can be seen that the distribution of generated self is quite similar to the distribution of the real self.
 
