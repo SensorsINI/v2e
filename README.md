@@ -1,11 +1,11 @@
 # v2e [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Python torch + opencv code for converting APS video frames with low frame rate into DVS event camera frames with high frame rate.
+Python torch + opencv code to go from conventional stroboscopic video frames with low frame rate into synthetic DVS event streams with much higher effective timing precision.
 
 ## Contact
-Tobi Delbruck (tobi@ini.uzh.ch)
 Yuhuang Hu (yuhuang.hu@ini.uzh.ch)
 Zhe He (hezhehz@live.cn)
+Tobi Delbruck (tobi@ini.uzh.ch)
 
 ## Environment
 
@@ -36,23 +36,6 @@ The program is designed to serve multiple purposes. Please read to code if you w
 
 **NOTE** We recommend running v2e on a CUDA GPU or it will be very slow.
 
-## Dataset
-
-v2e can convert recordings from [DDD17](https://docs.google.com/document/d/1HM0CSmjO8nOpUeTvmPjopcBcVCk7KXvLUuiZFS6TWSg/pub) which is the first public end-to-end training dataset 
-of automotive driving using a DAVIS event + frame camera. It lets you compare the real DVS data with the conversion. 
-This dataset is maintained by the Sensors Research Group of Institute of Neuroinformatics. 
-Please go to the datasets website [[link]](http://sensors.ini.uzh.ch/databases.html) of Sensors Group  for details about downloading _DDD17_.
-
-For your convenience, we put one recording from _DDD20_ (our newer DDD dataset) of 800s of
-Los Angeles street driving. 
-The file is _aug04/rec1501902136.hdf5_ [[link]](https://drive.google.com/open?id=1KIaHsn72ZpVBZR6SGeFcd2lILyZoD2-5)
-  in Google Drive for you to try it with v2e (***Warning:*** 2GB 7z compressed, 5.4 GB uncompressed).
-
-```bash
-mkdir -p input
-mv rec1501902136.hdf5 ./input
-```
-
 ## Download Checkpoint
 
 We use the excellent [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects/superslomo/) framework to interpolate the APS frames. 
@@ -65,7 +48,7 @@ mkdir -p input
 mv SuperSloMo39.ckpt ./input
 ```
 
-## Render DVS frames from DDD17+ dataset recording.
+## Render emulated DVS events from conventional video.
 
 ```bash
 (pt-v2e) H:\Dropbox (Personal)\GitHub\SensorsINI\v2e>python v2e.py -h
@@ -130,21 +113,38 @@ optional arguments:
 
 Run with no --input to open file dialog
 ```
-For example:
+For example: (using OpenCV example video)
 ```bash
 python v2e.py --input input/v_SoccerJuggling_g23_c01.avi --slomo_model=input/SuperSloMo39.ckpt --slowdown_factor=20 --output_folder=output --pos_thres=.15 --neg_thres=.15 --sigma_thres=0.01 --frame_rate=400 --dvs_aedat2 v2e-test-long.aedat --output_width=346 --output_height=260
 ```
 Run the command above, and the following files will be created in a folder called _output_.
 
 ```bash
-original.avi  slomo.avi  video_dvs.avi  video_aps.avi events_dvs.npy events_aps.npy
+original.avi  slomo.avi  dvs-video.avi  v2e-test-long.aedat 
 ```
 
-* _original.avi_: original video slowed down without interpolating the frames, with frame rate 30 FPS.
-* _original.avi_: input video, but converted to luma and resized to output (width,height) and with repeated frames to allow comparison to slomo.avi.
+* _original.avi_: input video, but converted to luma and resized to output (width,height) and with repeated frames to allow comparison to _slomo.avi_.
 * _slomo.avi_: slow motion video (with playback rate 30Hz) but slowed down by slowdown_factor.
 * _dvs-video.avi_: DVS video (with playback rate 30Hz) but with frame rate (DVS timestamp resolution) set by source video frame rate times slowdown_factor.
 * _v2e-test-long.aedat_: AEDAT-2.0 file for playback and algorithm experiments in jAER
+
+## DAVIS camera conversion Dataset
+
+v2e can convert recordings from [DDD17](https://docs.google.com/document/d/1HM0CSmjO8nOpUeTvmPjopcBcVCk7KXvLUuiZFS6TWSg/pub) which is the first public end-to-end training dataset 
+of automotive driving using a DAVIS event + frame camera. It lets you compare the real DVS data with the conversion. 
+This dataset is maintained by the Sensors Research Group of Institute of Neuroinformatics. 
+Please go to the datasets website [[link]](http://sensors.ini.uzh.ch/databases.html) of Sensors Group  for details about downloading _DDD17_.
+
+For your convenience, we put one recording from _DDD20_ (our newer DDD dataset) of 800s of
+Los Angeles street driving. 
+The file is _aug04/rec1501902136.hdf5_ [[link]](https://drive.google.com/open?id=1KIaHsn72ZpVBZR6SGeFcd2lILyZoD2-5)
+  in Google Drive for you to try it with v2e (***Warning:*** 2GB 7z compressed, 5.4 GB uncompressed).
+
+```bash
+mkdir -p input
+mv rec1501902136.hdf5 ./input
+```
+
 
 
 ### Plot the Events
@@ -186,12 +186,14 @@ python renderer_sweep.py \
 
 The program will take the DVS recording data, which starts at time 'start' and ends at time 'end', to calculate the best threshold values for positive and negative self separately.
 
-In order to get the best approximations, the input video needs to satisfy the requirements below,
+For the best frame interpolation by SuperSloMo, the input video needs to satisfy the requirements below,
 
 - Daytime
 - Cloudy
 - No rain
 - High frame rate
+
+If the video is underexposed, overexposed, has motion blur or aliasing, then the emulated DVS events will have poor realism.
 
 ### Default Thresholds ####
 _pos_thres_: 0.25
