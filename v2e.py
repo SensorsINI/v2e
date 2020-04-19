@@ -37,6 +37,8 @@ argcomplete.autocomplete(parser)
 # Shellcode (only necessary if global completion is not activated - see Global completion below), to be put in e.g. .bashrc:
 # eval "$(register-python-argcomplete v2e.py)"
 parser.add_argument("--input", type=str, help="input video file; leave empty for file chooser dialog")
+parser.add_argument("--start_time", type=float, default=None, help="start at this time in seconds in video")
+parser.add_argument("--stop_time", type=float, default=None, help="stop at this time in seconds in video")
 parser.add_argument("--pos_thres", type=float, default=0.21,
                     help="threshold in log_e intensity change to trigger a positive event")
 parser.add_argument("--neg_thres", type=float, default=0.17,
@@ -57,9 +59,9 @@ parser.add_argument("--dvs_vid", type=str, default="dvs-video.avi", help="output
 parser.add_argument("--dvs_h5", type=str, default=None, help="output DVS events as hdf5 event database")
 # parser.add_argument("--dvs_np", type=str, default=None, help="output DVS events as numpy event file")
 parser.add_argument("--dvs_aedat2", type=str, default=None, help="output DVS events as AEDAT-2.0 event file for jAER")
-parser.add_argument("--dvs_text", type=str, default=None, help="output DVS events as text file with one event per line timestamp (s), x, y, polarity (-1,1)")
-parser.add_argument("--vid_orig", type=str, default="video_orig.avi", help="output src video at same rate as slomo video")
-parser.add_argument("--vid_slomo", type=str, default="video_slomo.avi", help="output slomo src video with frame_rate")
+parser.add_argument("--dvs_text", type=str, default=None, help="output DVS events as text file with one event per line [timestamp (float s), x, y, polarity (0,1)]")
+parser.add_argument("--vid_orig", type=str, default="video_orig.avi", help="output src video at same rate as slomo video (with duplicated frames)")
+parser.add_argument("--vid_slomo", type=str, default="video_slomo.avi", help="output slomo of src video slowed down by slowdown_factor")
 args = parser.parse_args()
 
 slomo = 'arguments:\n'
@@ -102,6 +104,8 @@ if __name__ == "__main__":
         logger.error('set neither or both of output_width and output_height')
         quit()
 
+    start_time=args.start_time
+    stop_time=args.stop_time
     slowdown_factor = args.slowdown_factor
     pos_thres = args.pos_thres
     neg_thres = args.neg_thres
@@ -115,7 +119,7 @@ if __name__ == "__main__":
     vid_slomo = args.vid_slomo
 
     import time
-    start_time = time.time()
+    time_run_started = time.time()
 
     logger.info("opening video input " + input_file)
     cap = cv2.VideoCapture(input_file)
@@ -159,8 +163,10 @@ if __name__ == "__main__":
     ts0 = 0
     ts1 = srcFrameIntervalS  # timestamps of src frames
     num_frames = 0
-    logger.info('reading frames from video input')
-    for frameNumber in tqdm(range(srcNumFrames),unit='fr',desc='v2e'):
+    start_frame=int(srcNumFrames*(start_time/srcDuration)) if start_time else 0
+    stop_frame=int(srcNumFrames*(stop_time/srcDuration)) if stop_time else srcNumFrames
+    logger.info('processing frames {} to {} from video input'.format(start_frame,stop_frame))
+    for frameNumber in tqdm(range(start_frame,stop_frame),unit='fr',desc='v2e'):
     # while (cap.isOpened()):
         if cap.isOpened():
             ret, frame = cap.read()
@@ -198,7 +204,7 @@ if __name__ == "__main__":
             interpFramesFilenames = all_images(interpFramesFolder)  # read back to memory todo this is dumb
             n = len(interpFramesFilenames)  # number of interpolated frames
             interpTimes = np.linspace(start=ts0, stop=ts1, num=n,
-                                      endpoint=True)  # slowdown_factor intermediate timestamps
+                                      endpoint=True)  # slowdown_factor intermediate timestamps # todo some bug here with missing events
             events = np.empty((0, 4), float)
             for i in range(n - 1):  # for each frame up to last
                 fr = read_image(interpFramesFilenames[i])
@@ -219,7 +225,7 @@ if __name__ == "__main__":
     if num_frames == 0:
         logger.error('no frames read from file')
         quit()
-    totalTime=(time.time() - start_time)
+    totalTime=(time.time() - time_run_started)
     framePerS=num_frames/totalTime
     sPerFrame=1/framePerS
     throughputStr=(str(EngNumber(framePerS))+'fr/s') if framePerS>1 else (str(EngNumber(sPerFrame))+'s/fr')
