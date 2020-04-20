@@ -167,8 +167,9 @@ if __name__ == "__main__":
     start_frame=int(srcNumFrames * (start_time / srcTotalDuration)) if start_time else 0
     stop_frame=int(srcNumFrames * (stop_time / srcTotalDuration)) if stop_time else srcNumFrames
     srcNumFramesToBeProccessed=stop_frame-start_frame+1
+    srcDurationToBeProcessed=srcNumFramesToBeProccessed/srcFps
     destFps=args.frame_rate if args.frame_rate else srcFps
-    destNumFrames= np.math.floor(destFps * srcTotalDuration) # todo math not correct when start and stop times supplied
+    destNumFrames= np.math.floor(destFps * srcDurationToBeProcessed)
     destDuration=destNumFrames/destFps
     destPlaybackDuration=destNumFrames/OUTPUT_VIDEO_FPS
     logger.info('\n\n{} has {} frames with duration {}s, '
@@ -255,5 +256,7 @@ if __name__ == "__main__":
                  EngNumber(totalTime),
                  throughputStr,
                  output_folder))
+    logger.info('generated total {} events ({} on, {} off)'.format(EngNumber(emulator.num_events_total),EngNumber(emulator.num_events_on),EngNumber(emulator.num_events_off)))
+    logger.info('avg event rate {}Hz ({}Hz on, {}Hz off)'.format(EngNumber(emulator.num_events_total/srcDurationToBeProcessed),EngNumber(emulator.num_events_on/srcDurationToBeProcessed),EngNumber(emulator.num_events_off/srcDurationToBeProcessed)))
     quit()
 

@@ -97,6 +97,9 @@ class EventEmulator(object):
         self.dvs_h5=dvs_h5
         self.dvs_aedat2=dvs_aedat2
         self.dvs_text=dvs_text
+        self.num_events_total=0
+        self.num_events_on=0
+        self.num_events_off=0
         # self.dvs_rosbag=dvs_rosbag
 
         if self.output_folder:
@@ -137,6 +140,9 @@ class EventEmulator(object):
     def reset(self):
         '''resets so that next use will reinitialize the base frame
         '''
+        self.num_events_total = 0
+        self.num_events_on = 0
+        self.num_events_off = 0
         self.base_frame = None
 
     def compute_events(self, new_frame: np.ndarray, t_start: float, t_end: float) -> np.ndarray:
@@ -200,6 +206,10 @@ class EventEmulator(object):
             neg_event_xy = np.where(neg_cord)
             num_neg_events = neg_event_xy[0].shape[0]
             num_events = num_pos_events + num_neg_events
+
+            self.num_events_off+=num_neg_events
+            self.num_events_on+=num_pos_events
+            self.num_events_total+=num_events
 
             # sort out the positive event and negative event
             if num_pos_events > 0:

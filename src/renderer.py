@@ -144,8 +144,6 @@ class EventRenderer(object):
                     cv2.resizeWindow(__name__, 800, 600)
                     self.preview_resized = True
                 cv2.waitKey(30) # 30 hz playback
-            # if cv2.waitKey(int(1000 / 30)) & 0xFF == ord('q'): # todo is this needed?
-            #     break
 
         # rendered_frames = np.vstack(rendered_frames) # makes a giant 2D array with all frames stacked vertically to a giant vertical image
         # return rendered_frames
