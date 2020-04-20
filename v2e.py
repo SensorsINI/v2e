@@ -23,6 +23,7 @@ from engineering_notation import EngNumber  # only from pip
 import tkinter as tk
 from tkinter import filedialog
 from tqdm import tqdm
+import webbrowser
 
 from src.v2e_utils import all_images, read_image, OUTPUT_VIDEO_FPS
 from src.renderer import EventRenderer
@@ -195,7 +196,7 @@ if __name__ == "__main__":
         if not ret:
             break
         num_frames += 1
-        if frame1 is None:
+        if frame1 is None: # first frame, just initialize sizes
             logger.info('input frames have shape {}'.format(frame.shape))
             inputHeight = frame.shape[0]
             inputWidth = frame.shape[1]
@@ -203,8 +204,8 @@ if __name__ == "__main__":
                 output_width = inputWidth
                 output_height = inputHeight
                 logger.warning('output size ({}x{}) was set automatically to input video size\    are you sure you want this? It might be slow.\n    Consider using --output_width and --output_height'.format(output_width,output_height))
-        if frame.shape[2] == 3:
-            if frame1 is None:
+        if frame.shape[2] == 3: # color
+            if frame1 is None: # print info once
                 logger.info('converting input frames from RGB color to luma')
             if output_height and output_width and (frame.shape[0] != output_height or frame.shape[1] != output_width):
                 dim = (output_width, output_height)
@@ -219,16 +220,16 @@ if __name__ == "__main__":
         ts0 = ts1
         ts1 += srcFrameIntervalS  # todo check init here
         if frame0 is None: continue  # didn't get two frames yet
-        # compute times of output integrated frames, using frame rate if supplied, otherwise to match input frame rate
         with TemporaryDirectory() as interpFramesFolder:
             twoFrames = np.stack([frame0, frame1], axis=0)
             slomo.interpolate(twoFrames, interpFramesFolder)  # interpolated frames are stored to tmpfolder as 1.png, 2.png, etc
-            interpFramesFilenames = all_images(interpFramesFolder)  # read back to memory todo this is dumb
+            interpFramesFilenames = all_images(interpFramesFolder)  # read back to memory
             n = len(interpFramesFilenames)  # number of interpolated frames
+            # compute times of output integrated frames, using frame rate if supplied, otherwise to match input frame rate
             interpTimes = np.linspace(start=ts0, stop=ts1, num=n,
                                       endpoint=True)  # slowdown_factor intermediate timestamps # todo some bug here with missing events
             events = np.empty((0, 4), float)
-            for i in range(n - 1):  # for each frame up to last
+            for i in range(n - 1):  # for each interpolated frame up to last
                 fr = read_image(interpFramesFilenames[i])
                 newEvents = emulator.compute_events(fr, interpTimes[i],
                                                     interpTimes[i + 1])  # todo something wrong here with count
@@ -237,11 +238,12 @@ if __name__ == "__main__":
                 start=ts0,
                 stop=ts1,
                 num=int(srcFrameIntervalS * destFps) if destFps else int(srcFrameIntervalS * srcFps),
-                endpoint=False
+                endpoint=True
             ) # output_ts are the timestamps of the DVS video output frames. They come from destFps
             events = np.array(events)  # remove first None element
             eventRenderer.renderEventsToFrames(events, height=output_height, width=output_width,
-                                                             frame_ts=output_ts)
+                                               frame_ts=output_ts)
+
 
     cap.release()
     if num_frames == 0:
@@ -258,5 +260,6 @@ if __name__ == "__main__":
                  output_folder))
     logger.info('generated total {} events ({} on, {} off)'.format(EngNumber(emulator.num_events_total),EngNumber(emulator.num_events_on),EngNumber(emulator.num_events_off)))
     logger.info('avg event rate {}Hz ({}Hz on, {}Hz off)'.format(EngNumber(emulator.num_events_total/srcDurationToBeProcessed),EngNumber(emulator.num_events_on/srcDurationToBeProcessed),EngNumber(emulator.num_events_off/srcDurationToBeProcessed)))
+    webbrowser.open(output_folder)
     quit()
 
