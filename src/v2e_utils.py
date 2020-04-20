@@ -10,6 +10,12 @@ OUTPUT_VIDEO_CODEC_FOURCC= 'XVID' # good codec, basically mp4 with simplest comp
 
 logger=logging.getLogger(__name__)
 
+def checkAddSuffix(path:str,suffix:str):
+    if path.endswith(suffix):
+        return path
+    else:
+        return path+suffix
+
 def video_writer(output_path, height, width):
     """ Return a video writer.
 

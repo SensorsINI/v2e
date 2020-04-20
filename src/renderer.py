@@ -8,7 +8,7 @@ from typing import List
 from engineering_notation import EngNumber  # only from pip
 
 from src.emulator import EventEmulator
-from src.v2e_utils import video_writer,all_images,read_image
+from src.v2e_utils import video_writer,all_images,read_image,checkAddSuffix
 
 logger=logging.getLogger(__name__)
 
@@ -28,7 +28,8 @@ class EventRenderer(object):
             sigma_thres=0.03,
             rotate=False,
             output_path:str=None,
-            dvs_vid:str=None
+            dvs_vid:str=None,
+            preview:bool=False
     ):
         """ Init.
 
@@ -45,7 +46,8 @@ class EventRenderer(object):
         self.height = None  # must be set by specific renderers, which might only know it once they have data
         self.video_output_file = dvs_vid
         self.emulator = None
-        # EventEmulator(base_frame=None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres)  # base frame initialized on first use
+        self.preview=preview
+        self.preview_resized=False
         self.numFramesWritten=0
         atexit.register(self.cleanup)
 
@@ -53,6 +55,7 @@ class EventRenderer(object):
         if self.video_output_file:
             logger.info("Closing DVS video output file after writing {} frames".format(self.numFramesWritten))
             self.video_output_file.release()
+            cv2.destroyAllWindows()
 
 
     def _check_outputs_open(self):
@@ -65,7 +68,7 @@ class EventRenderer(object):
 
         if self.output_path and type(self.video_output_file) is str:
             logger.info('opening DVS video output file ' + self.output_path)
-            self.video_output_file = video_writer(os.path.join(self.output_path, self.video_output_file), self.height, self.width)
+            self.video_output_file = video_writer(os.path.join(checkAddSuffix(self.output_path, self.video_output_file),'.avi'), self.height, self.width)
 
     def renderEventsToFrames(self, event_arr: np.ndarray, height: int, width: int, frame_ts: np.array, full_scale_count=3)->None:
         """ Incrementally render event frames, where events come from overridden method _get_events().
@@ -134,8 +137,15 @@ class EventRenderer(object):
             if self.video_output_file:
                 self.video_output_file.write(cv2.cvtColor((img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR))
                 self.numFramesWritten+=1
-            if cv2.waitKey(int(1000 / 30)) & 0xFF == ord('q'):
-                break
+            if self.preview:
+                cv2.namedWindow(__name__,cv2.WINDOW_NORMAL)
+                cv2.imshow(__name__,img)
+                if not self.preview_resized:
+                    cv2.resizeWindow(__name__, 800, 600)
+                    self.preview_resized = True
+                cv2.waitKey(30) # 30 hz playback
+            # if cv2.waitKey(int(1000 / 30)) & 0xFF == ord('q'): # todo is this needed?
+            #     break
 
         # rendered_frames = np.vstack(rendered_frames) # makes a giant 2D array with all frames stacked vertically to a giant vertical image
         # return rendered_frames

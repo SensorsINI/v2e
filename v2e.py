@@ -7,6 +7,7 @@ events from this video after SuperSloMo has generated interpolated frames from t
 @contact: tobi@ini.uzh.ch, zhehe@student.ethz.ch
 @latest update: Apr 2020
 """
+# todo preview, h5ddd, overwrite silently, add video file suffixes
 
 import argparse
 
@@ -36,7 +37,7 @@ parser = argparse.ArgumentParser(description='v2e: generate simulated DVS events
 # https://kislyuk.github.io/argcomplete/#global-completion
 # Shellcode (only necessary if global completion is not activated - see Global completion below), to be put in e.g. .bashrc:
 # eval "$(register-python-argcomplete v2e.py)"
-parser.add_argument("--input", type=str, help="input video file; leave empty for file chooser dialog")
+parser.add_argument("-i","--input", type=str, help="input video file; leave empty for file chooser dialog")
 parser.add_argument("--start_time", type=float, default=None, help="start at this time in seconds in video")
 parser.add_argument("--stop_time", type=float, default=None, help="stop at this time in seconds in video")
 parser.add_argument("--pos_thres", type=float, default=0.21,
@@ -52,7 +53,7 @@ parser.add_argument("--output_height", type=int, default=None,
 parser.add_argument("--output_width", type=int, default=None,
                     help="width of output DVS data in pixels. If None, same as input video.")
 parser.add_argument("--slomo_model", type=str, default="input/SuperSloMo39.ckpt", help="path of slomo_model checkpoint")
-parser.add_argument("--output_folder", type=str, required=True, help="folder to store outputs")
+parser.add_argument("-o", "--output_folder", type=str, required=True, help="folder to store outputs")
 parser.add_argument("--frame_rate", type=int, default=300,
                     help="equivalent frame rate of --dvs_vid output video; the events will be accummulated as this sample rate; DVS frames will be accumulated for duration 1/frame_rate")
 parser.add_argument("--dvs_vid", type=str, default="dvs-video.avi", help="output DVS events as AVI video at frame_rate")
@@ -62,6 +63,8 @@ parser.add_argument("--dvs_aedat2", type=str, default=None, help="output DVS eve
 parser.add_argument("--dvs_text", type=str, default=None, help="output DVS events as text file with one event per line [timestamp (float s), x, y, polarity (0,1)]")
 parser.add_argument("--vid_orig", type=str, default="video_orig.avi", help="output src video at same rate as slomo video (with duplicated frames)")
 parser.add_argument("--vid_slomo", type=str, default="video_slomo.avi", help="output slomo of src video slowed down by slowdown_factor")
+parser.add_argument("-p","--preview", action="store_true", help="show preview in graphics window")
+parser.add_argument("--overwrite", action="store_true", help="overwrites files in existing folder (checks existance of non-empty output_folder)")
 argcomplete.autocomplete(parser)
 args = parser.parse_args()
 
@@ -82,7 +85,13 @@ def inputFileDialog():
     return filepath
 
 if __name__ == "__main__":
+    overwrite=args.overwrite
     output_folder=args.output_folder
+    f=not overwrite and os.path.exists(output_folder) and os.listdir(output_folder)
+    if f:
+        logger.error('output folder {} already exists\n it holds files {}\n - use --overwrite'.format(os.path.abspath(output_folder),f))
+        quit()
+
     if not os.path.exists(output_folder):
         logger.info('making output folder {}'.format(output_folder))
         os.mkdir(output_folder)
@@ -118,6 +127,7 @@ if __name__ == "__main__":
     dvs_text = args.dvs_text
     vid_orig = args.vid_orig
     vid_slomo = args.vid_slomo
+    preview=args.preview
 
     import time
     time_run_started = time.time()
@@ -141,12 +151,12 @@ if __name__ == "__main__":
     destDuration=destNumFrames/destFps
     destPlaybackDuration=destNumFrames/OUTPUT_VIDEO_FPS
 
-    logger.info('\n{} has {} frames with duration {}s, '
+    logger.info('\n\n{} has {} frames with duration {}s, '
                  '\nsource video is {}fps (frame interval {}s),'
                  '\n slomo will have {}fps,'
                  '\n events will have timestamp resolution {}s,'
                  '\n v2e DVS video will have {}fps (accumulation time {}), '
-                 '\n DVS video will have {} frames with duration {}s and playback duration {}s'
+                 '\n DVS video will have {} frames with duration {}s and playback duration {}s\n'
                  .format(input_file,srcNumFrames, EngNumber(srcDuration),
                          EngNumber(srcFps), EngNumber(srcFrameIntervalS),
                          EngNumber(srcFps * slowdown_factor),
@@ -154,9 +164,9 @@ if __name__ == "__main__":
                          EngNumber(destFps),EngNumber(1/destFps),
                          destNumFrames, EngNumber(destDuration), EngNumber(destPlaybackDuration))
                  )
-    slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo)
+    slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview)
     eventRenderer = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres,
-                                  output_path=output_folder,dvs_vid=dvs_vid)
+                                  output_path=output_folder,dvs_vid=dvs_vid,preview=preview)
     emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
 
     frame0 = None

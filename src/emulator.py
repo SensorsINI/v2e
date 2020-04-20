@@ -14,7 +14,7 @@ import numpy as np
 import logging
 import h5py
 from engineering_notation import EngNumber  # only from pip
-from src.v2e_utils import all_images, read_image, video_writer
+from src.v2e_utils import all_images, read_image, video_writer, checkAddSuffix
 from src.output.aedat2_output import AEDat2Output
 from src.output.ae_text_output import DVSTextOutput
 # import rosbag # not yet for python 3
@@ -100,6 +100,7 @@ class EventEmulator(object):
         if self.output_folder:
             if dvs_h5:
                 path=os.path.join(self.output_folder, dvs_h5)
+                path=checkAddSuffix(path,'.h5')
                 logger.info('opening event output dataset file ' + path)
                 self.dvs_h5 = h5py.File(path, "w")
                 self.dvs_h5_dataset = self.dvs_h5.create_dataset(
@@ -109,9 +110,11 @@ class EventEmulator(object):
                     dtype="uint32")
             if dvs_aedat2:
                 path=os.path.join(self.output_folder,dvs_aedat2)
+                path=checkAddSuffix(path,'.aedat')
                 logger.info('opening AEDAT-2.0 output file '+path)
                 self.dvs_aedat2=AEDat2Output(path)
-            if dvs_text: # todo implement
+            if dvs_text:
+                path=checkAddSuffix(path,'.txt')
                 path=os.path.join(self.output_folder,dvs_text)
                 logger.info('opening text DVS output file '+path)
                 self.dvs_text=DVSTextOutput(path)

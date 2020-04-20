@@ -41,7 +41,8 @@ class SuperSloMo(object):
         video_path=None,
         rotate=False,
         vid_orig = None,
-        vid_slomo = None
+        vid_slomo = None,
+            preview=False
     ):
         """
         init
@@ -75,6 +76,8 @@ class SuperSloMo(object):
         self.sf = slowdown_factor
         self.video_path = video_path
         self.rotate = rotate
+        self.preview=preview
+        self.preview_resized=False
 
         # initialize the Transform instances.
         self.to_tensor, self.to_image = self.__transform()
@@ -94,6 +97,7 @@ class SuperSloMo(object):
         if self.slomo_writer:
             logger.info('closing slomo video AVI after writing {} frames'.format(self.numSlomoVideoFramesWritten))
             self.slomo_writer.release()
+        cv2.destroyAllWindows()
 
     def __transform(self):
         """create the Transform instances.
@@ -266,6 +270,15 @@ class SuperSloMo(object):
                             output_folder,
                             str(frameCounter + self.sf * batchIndex) + ".png")
                         img_resize.save(save_path)
+                        if self.preview:
+                            cv2.namedWindow(__name__, cv2.WINDOW_NORMAL)
+                            gray = np.uint8(img_resize)
+                            cv2.imshow(__name__, gray)
+                            if not self.preview_resized:
+                                cv2.resizeWindow(__name__, 800, 600)
+                                self.preview_resized=True
+                            cv2.waitKey(1)  # wait minimally since interp takes time anyhow
+
                     frameCounter += 1
 
                 # Set counter accounting for batching of frames
@@ -281,15 +294,10 @@ class SuperSloMo(object):
                 if self.rotate:
                     frame = np.rot90(frame, k=2)
                 for _ in range(self.sf):    # duplicate frames to match speed of slomo video
-                    self.ori_writer.write(
-                        cv2.cvtColor(
-                            frame,
-                            cv2.COLOR_GRAY2BGR
-                        )
-                    )
+                    self.ori_writer.write(cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
                     self.numOrigVideoFramesWritten+=1
-                if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
-                    break
+                # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
+                #     break
 
             frame_paths = self.__all_images(output_folder)
             # write slomo frames into video
@@ -297,13 +305,11 @@ class SuperSloMo(object):
             for path in frame_paths: #tqdm(frame_paths,desc='slomo-write-slomo-vid',unit='fr'):
                 frame = self.__read_image(path)
                 if self.rotate:
-                    frame = np.rot90(frame, k=2)
-                self.slomo_writer.write(
-                    cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-                )
+                    frame = np.rot90(frame, k=2) # todo check correct, maybe 180
+                self.slomo_writer.write(cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
                 self.numSlomoVideoFramesWritten+=1
-                if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
-                    break
+                 # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
+                #     break
 
     def __all_images(self, data_path):
         """Return path of all input images. Assume that the ascending order of
