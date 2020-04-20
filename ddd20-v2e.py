@@ -1,6 +1,10 @@
 """ Render event frames from DVS recorded file in DDD20 dataset.
 
-@author: Zhe He, Yuhuang Hu, Tobi Delbruk
+This script is more for validation that runtime use.
+We use it to see if the emulator does a good job in capturing reality of DVS camera,
+by comparing the real DVS events with v2e events from DAVIS APS frames.
+
+@author: Zhe He, Yuhuang Hu, Tobi Delbruck
 """
 
 import numpy as np
@@ -22,7 +26,6 @@ root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 logger=logging.getLogger(__name__)
 
-# TODO fix README
 parser = argparse.ArgumentParser()
 parser.add_argument("--pos_thres", type=float, default=0.2, help="log intensity change threshold to trigger a positive event, as positive quantity, e.g. 0.2")
 parser.add_argument("--neg_thres", type=float, default=-0.2, help="log intensity change threshold to trigger a negative event, as negative quantity, e.g. -.2")

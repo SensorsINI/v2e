@@ -14,6 +14,7 @@ class AEDat2Output:
 
     def __init__(self, filepath: str):
         self.filepath = filepath
+        self.file=None
         # edit below to match your device from https://inivation.com/support/software/fileformat/#aedat-20
         CAMERA = 'Davis346BMono'  # edit for your desired output
         if CAMERA == 'Davis346BMono':
@@ -34,9 +35,13 @@ class AEDat2Output:
 
         self.numEventsWritten = 0
         logging.info('opening AEDAT-2.0 output file {} in binary mode'.format(filepath))
-        self.file = open(filepath, 'wb')
-        self._writeHeader()
-        atexit.register(self.cleanup)
+        try:
+            self.file = open(filepath, 'wb')
+            self._writeHeader()
+            atexit.register(self.cleanup)
+        except OSError as err:
+            logger.error('caught {}:\n  could not open {} for writing; maybe jAER has it open?'.format(err,filepath))
+            quit()
 
     def cleanup(self):
         if self.file:
@@ -67,7 +72,7 @@ class AEDat2Output:
 
     def appendEvents(self, events: np.ndarray):
         if self.file is None:
-            raise Exception('output file closed already')
+            return
 
         if len(events) == 0:
             return

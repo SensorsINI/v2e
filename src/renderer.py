@@ -101,8 +101,8 @@ class EventRenderer(object):
         for ts_idx in range(self.frame_ts.shape[0] - 1):
         # for ts_idx in tqdm(range(self.frame_ts.shape[0] - 1),
         #                    desc="rendering DVS histograms: ", unit='fr'):
-            # assume time_list is sorted.
 
+            # assume time_list is sorted.
             start = np.searchsorted(event_arr[:, 0],
                                     self.frame_ts[ts_idx],
                                     side='left')

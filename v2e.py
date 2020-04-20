@@ -66,7 +66,7 @@ parser.add_argument("--dvs_aedat2", type=str, default=None, help="output DVS eve
 parser.add_argument("--dvs_text", type=str, default=None, help="output DVS events as text file with one event per line [timestamp (float s), x, y, polarity (0,1)]")
 parser.add_argument("--vid_orig", type=str, default="video_orig.avi", help="output src video at same rate as slomo video (with duplicated frames)")
 parser.add_argument("--vid_slomo", type=str, default="video_slomo.avi", help="output slomo of src video slowed down by slowdown_factor")
-parser.add_argument("-p","--preview", action="store_true", help="show preview in graphics window")
+parser.add_argument("-p","--preview", action="store_true", help="show preview in cv2 windows")
 parser.add_argument("--overwrite", action="store_true", help="overwrites files in existing folder (checks existance of non-empty output_folder)")
 argcomplete.autocomplete(parser)
 args = parser.parse_args()
@@ -159,11 +159,6 @@ if __name__ == "__main__":
                                   output_path=output_folder,dvs_vid=dvs_vid,preview=preview)
     emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
 
-    frame0 = None
-    frame1 = None  # rotating buffers for slomo
-    ts0 = 0
-    ts1 = srcFrameIntervalS  # timestamps of src frames
-    num_frames = 0
     srcTotalDuration= (srcNumFrames - 1) * srcFrameIntervalS
     start_frame=int(srcNumFrames * (start_time / srcTotalDuration)) if start_time else 0
     stop_frame=int(srcNumFrames * (stop_time / srcTotalDuration)) if stop_time else srcNumFrames
@@ -186,6 +181,11 @@ if __name__ == "__main__":
                          EngNumber(destFps), EngNumber(1/destFps),
                          destNumFrames, EngNumber(destDuration), EngNumber(destPlaybackDuration))
                  )
+    frame0 = None
+    frame1 = None  # rotating buffers for slomo
+    ts0 = 0
+    ts1 = srcFrameIntervalS  # timestamps of src frames
+    num_frames = 0
     logger.info('processing frames {} to {} from video input'.format(start_frame,stop_frame))
     for frameNumber in tqdm(range(start_frame,stop_frame),unit='fr',desc='v2e'):
     # while (cap.isOpened()):
@@ -217,32 +217,38 @@ if __name__ == "__main__":
                 #          0.0722 * frame[:, :, 2])
         frame0 = frame1  # new first frame is old 2nd frame
         frame1 = frame.astype(np.uint8)  # new 2nd frame is latest input
-        ts0 = ts1
-        ts1 += srcFrameIntervalS  # todo check init here
-        if frame0 is None: continue  # didn't get two frames yet
+        if frame0 is None:
+            continue  # didn't get two frames yet
         with TemporaryDirectory() as interpFramesFolder:
             twoFrames = np.stack([frame0, frame1], axis=0)
             slomo.interpolate(twoFrames, interpFramesFolder)  # interpolated frames are stored to tmpfolder as 1.png, 2.png, etc
             interpFramesFilenames = all_images(interpFramesFolder)  # read back to memory
             n = len(interpFramesFilenames)  # number of interpolated frames
-            # compute times of output integrated frames, using frame rate if supplied, otherwise to match input frame rate
-            interpTimes = np.linspace(start=ts0, stop=ts1, num=n,
-                                      endpoint=True)  # slowdown_factor intermediate timestamps # todo some bug here with missing events
             events = np.empty((0, 4), float)
-            for i in range(n - 1):  # for each interpolated frame up to last
+            # Interpolating the 2 frames f0 to f1 results in n frames f0 fi0 fi1 ... fin-2 f1
+            # The endpoint frames are same as input.
+            # If we pass these to emulator repeatedly,
+            # then the f1 frame from past loop is the same as the f0 frame in the next iteration.
+            # For emulation, we should pass in to the emulator only up to the last interpolated frame,
+            # since the next iteration will pass in the f1 from previous iteration.
+
+            # compute times of output integrated frames
+            interpTimes = np.linspace(start=ts0, stop=ts1, num=n, endpoint=True)
+            for i in range(n -1):  # for each interpolated frame up to last; use n-1 because we get last interpolated frame as first frame next time
                 fr = read_image(interpFramesFilenames[i])
                 newEvents = emulator.compute_events(fr, interpTimes[i],
                                                     interpTimes[i + 1])  # todo something wrong here with count
                 if not newEvents is None: events = np.append(events, newEvents, axis=0)
-            output_ts = np.linspace(
+            dvsFrameTimestamps = np.linspace(
                 start=ts0,
                 stop=ts1,
                 num=int(srcFrameIntervalS * destFps) if destFps else int(srcFrameIntervalS * srcFps),
                 endpoint=True
             ) # output_ts are the timestamps of the DVS video output frames. They come from destFps
             events = np.array(events)  # remove first None element
-            eventRenderer.renderEventsToFrames(events, height=output_height, width=output_width,
-                                               frame_ts=output_ts)
+            eventRenderer.renderEventsToFrames(events, height=output_height, width=output_width, frame_ts=dvsFrameTimestamps)
+            ts0 = ts1
+            ts1 += srcFrameIntervalS
 
 
     cap.release()

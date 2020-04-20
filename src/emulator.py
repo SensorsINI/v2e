@@ -194,7 +194,9 @@ class EventEmulator(object):
             # intermediate timestamps are linearly spaced
             # they start after the t_start to make sure that there is space from previous frame
             # they end at t_end
-            ts = t_start + (t_end - t_start) * (i + 1) / (num_iters + 1)
+            # e.g. t_start=0, t_end=1, num_iters=2, i=0,1
+            # ts=1*1/2, 2*1/2
+            ts = t_start + (t_end - t_start) * (i + 1) / (num_iters)
 
             # for each iteration, compute the ON and OFF event locations for that threshold amount of change
             pos_cord = (pos_frame > self.pos_thres * (i + 1))
