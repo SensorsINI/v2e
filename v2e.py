@@ -7,9 +7,11 @@ events from this video after SuperSloMo has generated interpolated frames from t
 @contact: tobi@ini.uzh.ch, zhehe@student.ethz.ch
 @latest update: Apr 2020
 """
-# todo preview, h5ddd, overwrite silently, add video file suffixes
+# todo  h5ddd, solve bug with gap in events, add batch mode for slomo to speed up
+# todo color logger warnings
 
 import argparse
+from pathlib import Path
 
 import argcomplete
 import cv2
@@ -132,38 +134,25 @@ if __name__ == "__main__":
     import time
     time_run_started = time.time()
 
+    # input file checking
+    if not input_file or not Path(input_file).exists():
+        logger.error('input file {} does not exist'.format(input_file))
+        quit()
+
     logger.info("opening video input " + input_file)
+
     cap = cv2.VideoCapture(input_file)
     srcFps = cap.get(cv2.CAP_PROP_FPS)
     if srcFps == 0:
-        logger.error('source fps is 0')
+        logger.error('source {} fps is 0'.format(input_file))
         quit()
     srcFrameIntervalS = 1. / srcFps
     slomoTimestampResolutionS = srcFrameIntervalS / slowdown_factor
-    srcNumFrames = int(cap.get(
-        cv2.CAP_PROP_FRAME_COUNT))  # https://stackoverflow.com/questions/25359288/how-to-know-total-number-of-frame-in-a-file-with-cv2-in-python
-    if srcNumFrames < 1:
-        logger.warning('num frames in file cannot be determined from cv2.CAP_PROP_FRAME_COUNT')
-    srcDuration=(srcNumFrames-1)*srcFrameIntervalS
+    # https://stackoverflow.com/questions/25359288/how-to-know-total-number-of-frame-in-a-file-with-cv2-in-python
+    srcNumFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    if srcNumFrames < 2:
+        logger.warning('num frames is less than 2, probably cannot be determined from cv2.CAP_PROP_FRAME_COUNT')
 
-    destFps=args.frame_rate if args.frame_rate else srcFps
-    destNumFrames= np.math.floor(destFps * srcDuration)
-    destDuration=destNumFrames/destFps
-    destPlaybackDuration=destNumFrames/OUTPUT_VIDEO_FPS
-
-    logger.info('\n\n{} has {} frames with duration {}s, '
-                 '\nsource video is {}fps (frame interval {}s),'
-                 '\n slomo will have {}fps,'
-                 '\n events will have timestamp resolution {}s,'
-                 '\n v2e DVS video will have {}fps (accumulation time {}), '
-                 '\n DVS video will have {} frames with duration {}s and playback duration {}s\n'
-                 .format(input_file,srcNumFrames, EngNumber(srcDuration),
-                         EngNumber(srcFps), EngNumber(srcFrameIntervalS),
-                         EngNumber(srcFps * slowdown_factor),
-                         EngNumber(slomoTimestampResolutionS),
-                         EngNumber(destFps),EngNumber(1/destFps),
-                         destNumFrames, EngNumber(destDuration), EngNumber(destPlaybackDuration))
-                 )
     slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview)
     eventRenderer = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres,
                                   output_path=output_folder,dvs_vid=dvs_vid,preview=preview)
@@ -174,8 +163,27 @@ if __name__ == "__main__":
     ts0 = 0
     ts1 = srcFrameIntervalS  # timestamps of src frames
     num_frames = 0
-    start_frame=int(srcNumFrames*(start_time/srcDuration)) if start_time else 0
-    stop_frame=int(srcNumFrames*(stop_time/srcDuration)) if stop_time else srcNumFrames
+    srcTotalDuration= (srcNumFrames - 1) * srcFrameIntervalS
+    start_frame=int(srcNumFrames * (start_time / srcTotalDuration)) if start_time else 0
+    stop_frame=int(srcNumFrames * (stop_time / srcTotalDuration)) if stop_time else srcNumFrames
+    srcNumFramesToBeProccessed=stop_frame-start_frame+1
+    destFps=args.frame_rate if args.frame_rate else srcFps
+    destNumFrames= np.math.floor(destFps * srcTotalDuration) # todo math not correct when start and stop times supplied
+    destDuration=destNumFrames/destFps
+    destPlaybackDuration=destNumFrames/OUTPUT_VIDEO_FPS
+    logger.info('\n\n{} has {} frames with duration {}s, '
+                 '\nsource video is {}fps (frame interval {}s),'
+                 '\n slomo will have {}fps,'
+                 '\n events will have timestamp resolution {}s,'
+                 '\n v2e DVS video will have {}fps (accumulation time {}), '
+                 '\n DVS video will have {} frames with duration {}s and playback duration {}s\n'
+                 .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
+                         EngNumber(srcFps), EngNumber(srcFrameIntervalS),
+                         EngNumber(srcFps * slowdown_factor),
+                         EngNumber(slomoTimestampResolutionS),
+                         EngNumber(destFps), EngNumber(1/destFps),
+                         destNumFrames, EngNumber(destDuration), EngNumber(destPlaybackDuration))
+                 )
     logger.info('processing frames {} to {} from video input'.format(start_frame,stop_frame))
     for frameNumber in tqdm(range(start_frame,stop_frame),unit='fr',desc='v2e'):
     # while (cap.isOpened()):
@@ -193,16 +201,18 @@ if __name__ == "__main__":
             if (output_width is None) and (output_height is None):
                 output_width = inputWidth
                 output_height = inputHeight
+                logger.warning('output size ({}x{}) was set automatically to input video size\    are you sure you want this? It might be slow.\n    Consider using --output_width and --output_height'.format(output_width,output_height))
         if frame.shape[2] == 3:
             if frame1 is None:
                 logger.info('converting input frames from RGB color to luma')
+            if output_height and output_width and (frame.shape[0] != output_height or frame.shape[1] != output_width):
+                dim = (output_width, output_height)
+                frame = cv2.resize(frame, dim, interpolation=cv2.INTER_AREA)  # todo check that this scales to full output size
             # convert RGB frame into luminance.
-            frame = (0.2126 * frame[:, :, 0] +
-                     0.7152 * frame[:, :, 1] +
-                     0.0722 * frame[:, :, 2])
-        if output_height and output_width:
-            dim = (output_width, output_height)
-            frame = cv2.resize(frame, dim, interpolation = cv2.INTER_AREA)  # todo check that this scales to full output size
+                frame=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # much faster
+                # frame = (0.2126 * frame[:, :, 0] +
+                #          0.7152 * frame[:, :, 1] +
+                #          0.0722 * frame[:, :, 2])
         frame0 = frame1  # new first frame is old 2nd frame
         frame1 = frame.astype(np.uint8)  # new 2nd frame is latest input
         ts0 = ts1

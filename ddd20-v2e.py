@@ -10,7 +10,7 @@ import os
 from tempfile import TemporaryDirectory
 
 from ddd20_utils.ddd_h5_reader import DDD20SimpleReader
-from src.renderer import VideoSequenceFiles2EventsRenderer, Events2VideoRenderer
+from src.renderer import VideoSequenceFiles2EventsRenderer, Events2VideoRenderer, EventRenderer
 from src.slomo import SuperSloMo
 import warnings
 import logging
@@ -35,8 +35,6 @@ parser.add_argument("--slowdown_factor", type=int, required=True, help="slow mot
 parser.add_argument("--avi_frame_rate", type=int, default=30.0, help="frame rate in Hz of output video AVI file for playback")
 parser.add_argument("--output_folder", type=str, required=True, help="path to store output avi video files, e.g. data")
 parser.add_argument("--rotate", type=bool, default=False, required=False, help="rotate input 90 degrees")
-
-#TODO add usage
 
 args = parser.parse_args()
 
@@ -88,19 +86,18 @@ if __name__ == "__main__":
                                                          video_path=v2e_avi_path, event_path=v2e_event_path,
                                                          rotate=args.rotate)
     # renders frames from DVS events and writes them to video file
-    renderFromEvents = Events2VideoRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, video_path=v2e_avi_path,
+    renderFromEvents = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, video_path=v2e_avi_path,
                                             event_path=v2e_event_path, rotate=args.rotate)
 
-    logger.info("using temporary frame image directory tmp_dir: " + str(tmpdir))
 
-    s = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=args.output_folder,
-                   rotate=True)
+    slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=args.output_folder,
+                       rotate=True)
 
     # generates fake DVS events from real and interpolated APS frames, renders them to frames, writes to video file, and saves events to dataset file
 
     davisData= DDD20SimpleReader(args.input);
     startPacket=davisData.search(timeS=args_start_time);
-    if not startPacket: raise Exception('cannot find start time ' + str(args_start_time) + ' within file')
+    if not startPacket: raise ValueError('cannot find start time ' + str(args_start_time) + ' within file')
     logger.info('iterating over input file contents')
     numFrames=0
     numDvsEvents=0
@@ -120,7 +117,8 @@ if __name__ == "__main__":
             events=packet['data']
             logger.info('rendering real DVS events AVI and numpy data file')
 
-            renderFromEvents.render(height, width)
+            renderFromEvents.renderEventsToFrames(event_arr=events, height, width, frame_ts)
+
 
         elif packet['etype']== ddd_h5_reader.DDD20SimpleReader.ETYPE_APS:
             numFrames+=1
@@ -140,8 +138,8 @@ if __name__ == "__main__":
 
                 logger.info('interpolating frame pair with SuperSloMo')
                 with TemporaryDirectory() as tmpdir:
-                    s.interpolate(images=frames["frame"],output_folder=tmpdir)
-                    interpolated_ts = s.get_ts(frames["ts"])
+                    slomo.interpolate(images=frames["frame"], output_folder=tmpdir)
+                    interpolated_ts = slomo.get_ts(frames["ts"])
                     height, width = frames["frame"].shape[1:]
                     logger.info('rendering v2e synthetic DVS events from slow-motion video to AVI and numpy data file')
                     renderFromImages.render(height=height,width=width,interpolated_ts=interpolated_ts,frame_ts=interpolated_ts,)

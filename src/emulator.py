@@ -49,7 +49,9 @@ class EventEmulator(object):
     - contact: zhehe@student.ethz.ch
     """
 
-    # todo add event count statistics for ON and OFF events
+    # todo add event count statistics for ON and OFF events\
+    # todo add lowpass filter
+    # todo add refractory period
 
     def __init__(
             self,
@@ -159,6 +161,7 @@ class EventEmulator(object):
         if t_start > t_end:
             raise ValueError("t_start must be smaller than t_end")
 
+        # todo handle K frames, not just 1
         if (self.base_frame is None):
             self._init(new_frame)
             return None
@@ -229,11 +232,14 @@ class EventEmulator(object):
                 else:
                     events_tmp = neg_events
 
-            if i == 0:
+            if i == 0: # update the base frame only once, after we know how many events per pixel
+                # add to memorized brightness values just the events we emitted.
+                # don't add the remainder. the next aps frame might have sufficient value
+                # to trigger another event or it might not,
+                # but we are correct in not storing the current frame brightness
                 if num_pos_events > 0:
                     self.base_frame[pos_cord] += \
-                        pos_evts_frame[pos_cord] * self.pos_thres[
-                            pos_cord]  # add to memorized brightness values just the events we emitted. don't add the remainder. the next aps frame might have sufficient value to trigger another event or it might not, but we are correct in not storing the current frame brightness
+                        pos_evts_frame[pos_cord] * self.pos_thres[pos_cord]
                 if num_neg_events > 0:
                     self.base_frame[neg_cord] -= \
                         neg_evts_frame[neg_cord] * self.neg_thres[neg_cord]  # neg_thres is >0
@@ -243,7 +249,7 @@ class EventEmulator(object):
 
         if len(events) > 0:
             events = np.vstack(events)
-            if self.dvs_h5 is not None:
+            if self.dvs_h5 is not None: # todo add h5 output
                 pass
                 # # convert data to uint32 (microsecs) format
                 # tmp_events[:, 0] = tmp_events[:, 0] * 1e6
@@ -282,7 +288,8 @@ class EventFrameRenderer(object):
                  input_fps,
                  output_fps,
                  pos_thres,
-                 neg_thres):
+                 neg_thres,
+                 preview=None):
         """
         Parameters
         ----------
@@ -302,7 +309,8 @@ class EventFrameRenderer(object):
         self.output_fps = output_fps
         self.pos_thres = pos_thres
         self.neg_thres = neg_thres
-
+        self.preview=preview
+        self.preview_resized=False
     def _get_events(self):
         """Get all events.
         """
@@ -397,11 +405,16 @@ class EventFrameRenderer(object):
             else:
                 integrated_img = (img_on - img_off)
             img = (integrated_img + clip_value) / float(clip_value * 2)
-            out.write(
-                cv2.cvtColor(
-                    (img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR))
+            out.write(cv2.cvtColor((img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR))
+            if self.preview:
+                cv2.namedWindow(__name__, cv2.WINDOW_NORMAL)
+                cv2.imshow(__name__, img)
+                if not self.preview_resized:
+                    cv2.resizeWindow(__name__, 800, 600)
+                    self.preview_resized = True
+                cv2.waitKey(30)  # 30 hz playback
             if ts_idx % 20 == 0:
                 logger.info('Rendered {} frames'.format(ts_idx))
-            if cv2.waitKey(int(1000 / 30)) & 0xFF == ord('q'):
-                break
+            # if cv2.waitKey(int(1000 / 30)) & 0xFF == ord('q'):
+            #     break
         out.release()

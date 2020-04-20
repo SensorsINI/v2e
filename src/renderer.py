@@ -61,14 +61,14 @@ class EventRenderer(object):
     def _check_outputs_open(self):
         '''checks that output video and event datasets files are open'''
         if not self.height or not self.width:
-            raise Exception('height and width not set for output video')
+            raise ValueError('height and width not set for output video')
 
         if self.output_path is None and self.video_output_file is str:
             logger.warning('output_path is None; will not write DVS video')
 
         if self.output_path and type(self.video_output_file) is str:
-            logger.info('opening DVS video output file ' + self.output_path)
-            self.video_output_file = video_writer(os.path.join(checkAddSuffix(self.output_path, self.video_output_file),'.avi'), self.height, self.width)
+            logger.info('opening DVS video output file ' + self.video_output_file)
+            self.video_output_file = video_writer(checkAddSuffix(os.path.join(self.output_path, self.video_output_file),'.avi'), self.height, self.width)
 
     def renderEventsToFrames(self, event_arr: np.ndarray, height: int, width: int, frame_ts: np.array, full_scale_count=3)->None:
         """ Incrementally render event frames, where events come from overridden method _get_events().

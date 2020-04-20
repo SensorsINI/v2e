@@ -160,7 +160,7 @@ class SuperSloMo(object):
         interpolator: nn.Module
         """
         if not os.path.isfile(self.checkpoint):
-            raise Exception('SuperSloMo model checkpoint ' + str(self.checkpoint) +' does not exist or is not readable')
+            raise FileNotFoundError('SuperSloMo model checkpoint ' + str(self.checkpoint) +' does not exist or is not readable')
         logger.info('loading SuperSloMo model from ' + str(self.checkpoint))
 
         flow_estimator = model.UNet(2, 4)

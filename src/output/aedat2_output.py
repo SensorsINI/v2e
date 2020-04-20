@@ -30,7 +30,7 @@ class AEDat2Output:
             self.flipy = True  # v2e uses computer vision matrix printing convention of UL pixel being 0,0, but jAER uses original graphics and graphing convention that 0,0 is LL
             self.flipx = True # not 100% sure why this is needed. Observed for tennis example
         else:
-            raise Exception('CAMERA type not found, add your camera to {}'.format(__name__))
+            raise ValueError('CAMERA type not found, add your camera to {}'.format(__name__))
 
         self.numEventsWritten = 0
         logging.info('opening AEDAT-2.0 output file {} in binary mode'.format(filepath))
