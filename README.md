@@ -52,21 +52,28 @@ mv SuperSloMo39.ckpt ./input
 
 ```bash
 (pt-v2e) H:\Dropbox (Personal)\GitHub\SensorsINI\v2e>python v2e.py -h
-usage: v2e.py [-h] [--input INPUT] [--pos_thres POS_THRES]
+usage: v2e.py [-h] [-i INPUT] [--start_time START_TIME]
+              [--stop_time STOP_TIME] [--pos_thres POS_THRES]
               [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
+              [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
               [--slowdown_factor SLOWDOWN_FACTOR]
               [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
-              [--slomo_model SLOMO_MODEL] --output_folder OUTPUT_FOLDER
+              [--slomo_model SLOMO_MODEL] -o OUTPUT_FOLDER
               [--frame_rate FRAME_RATE] [--dvs_vid DVS_VID] [--dvs_h5 DVS_H5]
               [--dvs_aedat2 DVS_AEDAT2] [--dvs_text DVS_TEXT]
-              [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO]
+              [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO] [-p] [--overwrite]
 
 v2e: generate simulated DVS events from video.
 
 optional arguments:
   -h, --help            show this help message and exit
-  --input INPUT         input video file; leave empty for file chooser dialog
+  -i INPUT, --input INPUT
+                        input video file; leave empty for file chooser dialog
                         (default: None)
+  --start_time START_TIME
+                        start at this time in seconds in video (default: None)
+  --stop_time STOP_TIME
+                        stop at this time in seconds in video (default: None)
   --pos_thres POS_THRES
                         threshold in log_e intensity change to trigger a
                         positive event (default: 0.21)
@@ -76,6 +83,15 @@ optional arguments:
   --sigma_thres SIGMA_THRES
                         1-std deviation threshold variation in log_e intensity
                         change (default: 0.03)
+  --cutoff_hz CUTOFF_HZ
+                        photoreceptor first order IIR lowpass cutoff-off 3dB
+                        frequency in Hz - see
+                        https://ieeexplore.ieee.org/document/4444573 (default:
+                        300)
+  --leak_rate_hz LEAK_RATE_HZ
+                        leak event rate per pixel in Hz - see
+                        https://ieeexplore.ieee.org/abstract/document/7962235
+                        (default: 0.05)
   --slowdown_factor SLOWDOWN_FACTOR
                         slow motion factor; if the input video has frame rate
                         fps, then the DVS events will have time resolution of
@@ -89,7 +105,7 @@ optional arguments:
   --slomo_model SLOMO_MODEL
                         path of slomo_model checkpoint (default:
                         input/SuperSloMo39.ckpt)
-  --output_folder OUTPUT_FOLDER
+  -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
                         folder to store outputs (default: None)
   --frame_rate FRAME_RATE
                         equivalent frame rate of --dvs_vid output video; the
@@ -104,14 +120,19 @@ optional arguments:
                         output DVS events as AEDAT-2.0 event file for jAER
                         (default: None)
   --dvs_text DVS_TEXT   output DVS events as text file with one event per line
-                        timestamp (s), x, y, polarity (-1,1) (default: None)
-  --vid_orig VID_ORIG   output src video at same rate as slomo video (default:
-                        video_orig.avi)
+                        [timestamp (float s), x, y, polarity (0,1)] (default:
+                        None)
+  --vid_orig VID_ORIG   output src video at same rate as slomo video (with
+                        duplicated frames) (default: video_orig.avi)
   --vid_slomo VID_SLOMO
-                        output slomo src video with frame_rate (default:
-                        video_slomo.avi)
+                        output slomo of src video slowed down by
+                        slowdown_factor (default: video_slomo.avi)
+  -p, --preview         show preview in cv2 windows (default: False)
+  --overwrite           overwrites files in existing folder (checks existance
+                        of non-empty output_folder) (default: False)
 
 Run with no --input to open file dialog
+
 ```
 For example: (using OpenCV example video)
 ```bash
