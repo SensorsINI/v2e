@@ -26,6 +26,7 @@ class EventRenderer(object):
             pos_thres=0.2,
             neg_thres=0.2,
             sigma_thres=0.03,
+            full_scale_count=3,
             rotate=False,
             output_path:str=None,
             dvs_vid:str=None,
@@ -49,6 +50,7 @@ class EventRenderer(object):
         self.preview=preview
         self.preview_resized=False
         self.numFramesWritten=0
+        self.full_scale_count=full_scale_count
         atexit.register(self.cleanup)
 
     def cleanup(self):
@@ -70,7 +72,7 @@ class EventRenderer(object):
             logger.info('opening DVS video output file ' + self.video_output_file)
             self.video_output_file = video_writer(checkAddSuffix(os.path.join(self.output_path, self.video_output_file),'.avi'), self.height, self.width)
 
-    def renderEventsToFrames(self, event_arr: np.ndarray, height: int, width: int, frame_ts: np.array, full_scale_count=3)->None:
+    def renderEventsToFrames(self, event_arr: np.ndarray, height: int, width: int, frame_ts: np.array)->None:
         """ Incrementally render event frames, where events come from overridden method _get_events().
         Frames are appended to the video output file.
 
@@ -123,13 +125,11 @@ class EventRenderer(object):
             img_off, _, _ = np.histogram2d(
                 events[pol_off, 2], events[pol_off, 1],
                 bins=(self.height, self.width), range=histrange)
-            if full_scale_count is not None:
-                integrated_img = np.clip(
-                    (img_on - img_off), -full_scale_count, full_scale_count)
-            else:
-                integrated_img = (img_on - img_off)
+            integrated_img = np.clip(
+                    (img_on - img_off), -self.full_scale_count, self.full_scale_count)
+            
             # rendered_frames.append(integrated_img)
-            img = (integrated_img + full_scale_count) / float(full_scale_count * 2)
+            img = (integrated_img + self.full_scale_count) / float(self.full_scale_count * 2)
 
             if self.rotate:
                 img = np.rot90(img, k=2)
