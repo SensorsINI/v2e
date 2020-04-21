@@ -32,11 +32,11 @@ def lin_log(x, threshold=20):
     # converting x into np.float32.
     if x.dtype is not np.float32:
         x = x.astype(np.float32)
-
+    f = 1 / (threshold * np.log(threshold))
     y = np.piecewise(
         x,
         [x < threshold, x >= threshold],
-        [lambda x: x / threshold * np.log(threshold),
+        [lambda x: x * f,
          lambda x: np.log(x)]
     )
 
@@ -59,6 +59,8 @@ class EventEmulator(object):
             pos_thres=0.21,
             neg_thres=0.17,
             sigma_thres=0.03,
+            cutoff_hz=0,
+            leak_rate_hz=0.1,
             seed=42,
             output_folder:str=None,
             dvs_h5:str=None,
@@ -77,6 +79,10 @@ class EventEmulator(object):
             nominal threshold of triggering negative event in log intensity.
         sigma_thres: float, default 0.03
             std deviation of threshold in log intensity.
+            cutoff_hz: float,
+            3dB cutoff frequency in Hz of DVS photoreceptor
+            leak_rate_hz: float
+            leak event rate per pixel in Hz, from junction leakage in reset switch
         seed: int, default=0
             seed for random threshold variations, fix it to nonzero value to get same mismatch every time
         dvs_aedat2, dvs_h5, dvs_text: str
@@ -89,9 +95,14 @@ class EventEmulator(object):
         self.sigma_thres = sigma_thres
         self.pos_thres = pos_thres
         self.neg_thres = neg_thres  # initialized to scalars
+        self.cutoff_hz=cutoff_hz
+        self.leak_rate_hz=leak_rate_hz
         self.output_width = None
         self.output_height = None  # set on first frame
         np.random.seed(seed)
+
+        if leak_rate_hz>0:
+            logger.warning('leak events not yet implemented; leak_rate_hz={} will be ignored'.format(leak_rate_hz))
 
         self.output_folder=output_folder
         self.dvs_h5=dvs_h5
@@ -144,6 +155,8 @@ class EventEmulator(object):
         self.num_events_on = 0
         self.num_events_off = 0
         self.base_frame = None
+        self.lasttime=None
+        self.log_frame=None
 
     def compute_events(self, new_frame: np.ndarray, t_start: float, t_end: float) -> np.ndarray:
         """Compute events in new frame.
@@ -168,22 +181,36 @@ class EventEmulator(object):
             raise ValueError("t_start must be smaller than t_end")
 
         # todo handle K frames, not just 1
-        if (self.base_frame is None):
+        if self.base_frame is None:
             self._init(new_frame)
+            self.log_frame = np.copy(self.base_frame)
+            self.lasttime = t_start
             return None
+        # apply log transform and lowpass filter here
+        if self.cutoff_hz<=0:
+            eps=1
+        else:
+            tau=1/(np.pi*2*self.cutoff_hz)
+            dt = t_start - self.lasttime
+            eps= dt / tau
+            if eps>1: eps=1
+        log = lin_log(new_frame)
+        self.log_frame= (1-eps) * self.log_frame + eps * log
+        self.lasttime=t_start
 
-        log_frame = lin_log(new_frame)
-        diff_frame = log_frame - self.base_frame  # log intensity (brightness) change from memorized values
+        diff_frame = self.log_frame - self.base_frame  # log intensity (brightness) change from memorized values
 
         pos_frame = np.zeros_like(diff_frame)  # initialize
         neg_frame = np.zeros_like(diff_frame)
-        pos_frame[diff_frame > 0] = diff_frame[diff_frame > 0]  # pixels with ON changes
-        neg_frame[diff_frame < 0] = np.abs(diff_frame[diff_frame < 0])
+        diff_frame_ = diff_frame > 0
+        pos_frame[diff_frame_] = diff_frame[diff_frame_]  # pixels with ON changes
+        frame_ = diff_frame < 0
+        neg_frame[frame_] = np.abs(diff_frame[frame_])
 
         pos_evts_frame = pos_frame // self.pos_thres  # compute quantized numbers of ON events for each pixel
-        pos_iters = int((pos_frame // self.pos_thres).max())  # compute number of times to pass over array to compute separated ON events
+        pos_iters = int(pos_evts_frame.max())  # compute number of times to pass over array to compute separated ON events
         neg_evts_frame = neg_frame // self.neg_thres  # same for OFF events
-        neg_iters = int((neg_frame // self.neg_thres).max())
+        neg_iters = int(neg_evts_frame.max())
 
         num_iters = max(pos_iters, neg_iters)  # need to iterative this many times
 
@@ -236,13 +263,14 @@ class EventEmulator(object):
 
             if pos_events is not None and neg_events is not None:
                 events_tmp = np.vstack((pos_events, neg_events))
-                # randomly order events to prevent bias to one corner
-                events_tmp = events_tmp.take(np.random.permutation(events_tmp.shape[0]), axis=0)
             else:
                 if pos_events is not None:
                     events_tmp = pos_events
                 else:
                     events_tmp = neg_events
+            # randomly order events to prevent bias to one corner
+            if events_tmp is not None:
+                events_tmp = events_tmp.take(np.random.permutation(events_tmp.shape[0]), axis=0)
 
             if i == 0: # update the base frame only once, after we know how many events per pixel
                 # add to memorized brightness values just the events we emitted.

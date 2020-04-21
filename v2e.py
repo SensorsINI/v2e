@@ -8,7 +8,10 @@ events from this video after SuperSloMo has generated interpolated frames from t
 @latest update: Apr 2020
 """
 # todo  h5ddd, solve bug with gap in events, add batch mode for slomo to speed up
-# todo color logger warnings
+# todo lowpass filter photoceptor
+# todo refractory period for pixel
+# todo leak events
+# todo shot noise jitter
 
 import argparse
 from pathlib import Path
@@ -17,23 +20,27 @@ import argcomplete
 import cv2
 import numpy as np
 import os
-import logging
 from tempfile import TemporaryDirectory
 from engineering_notation import EngNumber  # only from pip
 import tkinter as tk
 from tkinter import filedialog
 from tqdm import tqdm
-import webbrowser
+# import webbrowser
+import src.desktop
 
 from src.v2e_utils import all_images, read_image, OUTPUT_VIDEO_FPS
 from src.renderer import EventRenderer
 from src.slomo import SuperSloMo
 from src.emulator import EventEmulator
-
+import logging
 logging.basicConfig()
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
+# https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output/7995762#7995762
+logging.addLevelName( logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.WARNING))
+logging.addLevelName( logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
 logger=logging.getLogger(__name__)
+
 parser = argparse.ArgumentParser(description='v2e: generate simulated DVS events from video.',
                                  epilog='Run with no --input to open file dialog', allow_abbrev=True,
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -49,6 +56,10 @@ parser.add_argument("--neg_thres", type=float, default=0.17,
                     help="threshold in log_e intensity change to trigger a negative event")
 parser.add_argument("--sigma_thres", type=float, default=0.03,
                     help="1-std deviation threshold variation in log_e intensity change")
+parser.add_argument("--cutoff_hz", type=float, default=300,
+                    help="photoreceptor first order IIR lowpass cutoff-off 3dB frequency in Hz - see https://ieeexplore.ieee.org/document/4444573")
+parser.add_argument("--leak_rate_hz", type=float, default=0.05,
+                    help="leak event rate per pixel in Hz - see https://ieeexplore.ieee.org/abstract/document/7962235")
 parser.add_argument("--slowdown_factor", type=int, default=10,
                     help="slow motion factor; if the input video has frame rate fps, then the DVS events will have time resolution of 1/(fps*slowdown_factor)")
 parser.add_argument("--output_height", type=int, default=None,
@@ -71,10 +82,10 @@ parser.add_argument("--overwrite", action="store_true", help="overwrites files i
 argcomplete.autocomplete(parser)
 args = parser.parse_args()
 
-slomo = 'arguments:\n'
+arglistoutput = 'arguments:\n'
 for arg, value in args._get_kwargs():
-    slomo += "{}:\t{}\n".format(arg, value)
-logger.info(slomo)
+    arglistoutput += "{}:\t{}\n".format(arg, value)
+logger.info(arglistoutput)
 
 
 def inputFileDialog():
@@ -117,12 +128,17 @@ if __name__ == "__main__":
         logger.error('set neither or both of output_width and output_height')
         quit()
 
+    with open(os.path.join(args.output_folder, "info.txt"), "w") as f:
+        f.write(arglistoutput)
+
     start_time=args.start_time
     stop_time=args.stop_time
     slowdown_factor = args.slowdown_factor
     pos_thres = args.pos_thres
     neg_thres = args.neg_thres
     sigma_thres = args.sigma_thres
+    cutoff_hz=args.cutoff_hz
+    leak_rate_hz=args.leak_rate_hz
     dvs_vid = args.dvs_vid
     dvs_h5 = args.dvs_h5
     # dvs_np = args.dvs_np
@@ -154,10 +170,10 @@ if __name__ == "__main__":
     if srcNumFrames < 2:
         logger.warning('num frames is less than 2, probably cannot be determined from cv2.CAP_PROP_FRAME_COUNT')
 
-    slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview)
+    arglistoutput = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview)
     eventRenderer = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres,
                                   output_path=output_folder,dvs_vid=dvs_vid,preview=preview)
-    emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
+    emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
 
     srcTotalDuration= (srcNumFrames - 1) * srcFrameIntervalS
     start_frame=int(srcNumFrames * (start_time / srcTotalDuration)) if start_time else 0
@@ -200,18 +216,21 @@ if __name__ == "__main__":
             logger.info('input frames have shape {}'.format(frame.shape))
             inputHeight = frame.shape[0]
             inputWidth = frame.shape[1]
+            inputChannels= frame.shape[2]
             if (output_width is None) and (output_height is None):
                 output_width = inputWidth
                 output_height = inputHeight
-                logger.warning('output size ({}x{}) was set automatically to input video size\    are you sure you want this? It might be slow.\n    Consider using --output_width and --output_height'.format(output_width,output_height))
-        if frame.shape[2] == 3: # color
+                logger.warning('output size ({}x{}) was set automatically to input video size\n    Are you sure you want this? It might be slow.\n    Consider using --output_width and --output_height'.format(output_width,output_height))
+        if output_height and output_width and (inputHeight != output_height or inputWidth != output_width):
+            dim = (output_width, output_height)
+            (fx, fy) = (float(output_width) / inputWidth, float(output_height) / inputHeight)
+            frame = cv2.resize(src=frame, dsize=dim, fx=fx, fy=fy, interpolation=cv2.INTER_AREA)  # todo check that this scales to full output size. It doesn't; leaves border at top/bottom with noise on edge that creates events
+        if  inputChannels == 3: # color
             if frame1 is None: # print info once
                 logger.info('converting input frames from RGB color to luma')
-            if output_height and output_width and (frame.shape[0] != output_height or frame.shape[1] != output_width):
-                dim = (output_width, output_height)
-                frame = cv2.resize(frame, dim, interpolation=cv2.INTER_AREA)  # todo check that this scales to full output size
+#todo would break resize if input is gray frames
             # convert RGB frame into luminance.
-                frame=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # much faster
+            frame=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # much faster
                 # frame = (0.2126 * frame[:, :, 0] +
                 #          0.7152 * frame[:, :, 1] +
                 #          0.0722 * frame[:, :, 2])
@@ -221,7 +240,7 @@ if __name__ == "__main__":
             continue  # didn't get two frames yet
         with TemporaryDirectory() as interpFramesFolder:
             twoFrames = np.stack([frame0, frame1], axis=0)
-            slomo.interpolate(twoFrames, interpFramesFolder)  # interpolated frames are stored to tmpfolder as 1.png, 2.png, etc
+            arglistoutput.interpolate(twoFrames, interpFramesFolder)  # interpolated frames are stored to tmpfolder as 1.png, 2.png, etc
             interpFramesFilenames = all_images(interpFramesFolder)  # read back to memory
             n = len(interpFramesFilenames)  # number of interpolated frames
             events = np.empty((0, 4), float)
@@ -266,6 +285,9 @@ if __name__ == "__main__":
                  output_folder))
     logger.info('generated total {} events ({} on, {} off)'.format(EngNumber(emulator.num_events_total),EngNumber(emulator.num_events_on),EngNumber(emulator.num_events_off)))
     logger.info('avg event rate {}Hz ({}Hz on, {}Hz off)'.format(EngNumber(emulator.num_events_total/srcDurationToBeProcessed),EngNumber(emulator.num_events_on/srcDurationToBeProcessed),EngNumber(emulator.num_events_off/srcDurationToBeProcessed)))
-    webbrowser.open(output_folder)
+    try:
+        src.desktop.open(output_folder)
+    except:
+        logger.warning('could not open {} in desktop'.format(output_folder))
     quit()
 
