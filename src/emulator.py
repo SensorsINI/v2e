@@ -61,6 +61,7 @@ class EventEmulator(object):
             sigma_thres=0.03,
             cutoff_hz=0,
             leak_rate_hz=0.1,
+            refractory_period_s=0,
             seed=42,
             output_folder:str=None,
             dvs_h5:str=None,
@@ -93,16 +94,21 @@ class EventEmulator(object):
         logger.info("ON/OFF log_e temporal contrast thresholds: {} / {} +/- {}".format(pos_thres, neg_thres, sigma_thres))
         self.base_frame = None
         self.sigma_thres = sigma_thres
-        self.pos_thres = pos_thres
-        self.neg_thres = neg_thres  # initialized to scalars
+        self.pos_thres = pos_thres # initialized to scalar, later overwritten by random value array
+        self.neg_thres = neg_thres  # initialized to scalar, later overwritten by random value array
+        self.pos_thres_nominal = pos_thres
+        self.neg_thres_nominal = neg_thres
         self.cutoff_hz=cutoff_hz
         self.leak_rate_hz=leak_rate_hz
+        self.refractory_period_s=refractory_period_s
         self.output_width = None
         self.output_height = None  # set on first frame
         np.random.seed(seed)
 
-        if leak_rate_hz>0:
-            logger.warning('leak events not yet implemented; leak_rate_hz={} will be ignored'.format(leak_rate_hz))
+        # if leak_rate_hz>0:
+        #     logger.warning('leak events not yet implemented; leak_rate_hz={} will be ignored'.format(leak_rate_hz))
+        if refractory_period_s>0:
+            logger.warning('refractory period not yet implemented; refractory_period_s={} will be ignored'.format(refractory_period_s))
 
         self.output_folder=output_folder
         self.dvs_h5=dvs_h5
@@ -181,22 +187,33 @@ class EventEmulator(object):
             raise ValueError("t_start must be smaller than t_end")
 
         # todo handle K frames, not just 1
+
+        # base_frame: the change detector input, stores memorized brightness values
+        # new_frame: the new intensity frame input
+        # log_frame: the lowpass filtered brightness values
         if self.base_frame is None:
             self._init(new_frame)
             self.log_frame = np.copy(self.base_frame)
             self.lasttime = t_start
             return None
         # apply log transform and lowpass filter here
+        deltaTime = t_start - self.lasttime
         if self.cutoff_hz<=0:
             eps=1
         else:
             tau=1/(np.pi*2*self.cutoff_hz)
-            dt = t_start - self.lasttime
-            eps= dt / tau
+            eps= deltaTime / tau
             if eps>1: eps=1
         log = lin_log(new_frame)
         self.log_frame= (1-eps) * self.log_frame + eps * log
         self.lasttime=t_start
+
+        # switch in diff change amp leaks at some rate equivalent to some hz of ON events
+        # actual leak rate depends on threshold for each pixel
+        # we want nominal rate leak_rate_Hz, so
+        if self.leak_rate_hz>0:
+            deltaLeak=deltaTime*self.leak_rate_hz/self.pos_thres_nominal
+            self.base_frame-=deltaLeak # subract so it increases ON events
 
         diff_frame = self.log_frame - self.base_frame  # log intensity (brightness) change from memorized values
 
