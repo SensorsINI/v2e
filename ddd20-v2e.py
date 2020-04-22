@@ -65,8 +65,8 @@ parser.add_argument("--output_height", type=int, default=260,
                     help="height of output DVS data in pixels. If None, same as input video.")
 parser.add_argument("--output_width", type=int, default=346,
                     help="width of output DVS data in pixels. If None, same as input video.")
-parser.add_argument("--rotate180", action="store_true",
-                    help="rotate all output 180 deg")
+parser.add_argument("--rotate180", type=bool, default=True,
+                    help="rotate all output 180 deg. NOTE by default True for DDD recordings because camera was mounted upside down")
 parser.add_argument("--slomo_model", type=str, default="input/SuperSloMo39.ckpt", help="path of slomo_model checkpoint")
 parser.add_argument("-o", "--output_folder", type=str, required=True, help="folder to store outputs")
 parser.add_argument("--frame_rate", type=int, default=300,
@@ -168,7 +168,7 @@ if __name__ == "__main__":
     dvsVidFake=str(dvs_vid).replace('.avi','-fake.avi')
     eventRendererReal = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres, output_path=output_folder, dvs_vid=dvsVidReal, preview=preview, rotate=rotate180,full_scale_count=dvs_vid_full_scale)
     eventRendererFake = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres, output_path=output_folder, dvs_vid=dvsVidFake, preview=preview, rotate=rotate180,full_scale_count=dvs_vid_full_scale)
-    emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
+    emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text,rotate180=rotate180)
 
 
 

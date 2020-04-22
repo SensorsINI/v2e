@@ -32,7 +32,7 @@ def lin_log(x, threshold=20):
     # converting x into np.float32.
     if x.dtype is not np.float32:
         x = x.astype(np.float32)
-    f = 1 / (threshold * np.log(threshold))
+    f = (1 / (threshold)) * np.log(threshold)
     y = np.piecewise(
         x,
         [x < threshold, x >= threshold],
@@ -67,6 +67,7 @@ class EventEmulator(object):
             dvs_h5:str=None,
             dvs_aedat2:str=None,
             dvs_text:str=None,
+            rotate180:bool=False
             # dvs_rosbag=None
     ):
         """
@@ -92,7 +93,7 @@ class EventEmulator(object):
         """
 
         logger.info("ON/OFF log_e temporal contrast thresholds: {} / {} +/- {}".format(pos_thres, neg_thres, sigma_thres))
-        self.base_frame = None
+        self.baseLogFrame = None
         self.sigma_thres = sigma_thres
         self.pos_thres = pos_thres # initialized to scalar, later overwritten by random value array
         self.neg_thres = neg_thres  # initialized to scalar, later overwritten by random value array
@@ -103,6 +104,7 @@ class EventEmulator(object):
         self.refractory_period_s=refractory_period_s
         self.output_width = None
         self.output_height = None  # set on first frame
+        self.rotate180=rotate180
         np.random.seed(seed)
 
         # if leak_rate_hz>0:
@@ -118,6 +120,7 @@ class EventEmulator(object):
         self.num_events_on=0
         self.num_events_off=0
         # self.dvs_rosbag=dvs_rosbag
+        # self.specpix=None # todo debug
 
         if self.output_folder:
             if dvs_h5:
@@ -134,7 +137,7 @@ class EventEmulator(object):
                 path=os.path.join(self.output_folder,dvs_aedat2)
                 path=checkAddSuffix(path,'.aedat')
                 logger.info('opening AEDAT-2.0 output file '+path)
-                self.dvs_aedat2=AEDat2Output(path)
+                self.dvs_aedat2=AEDat2Output(path,rotate180)
             if dvs_text:
                 path=checkAddSuffix(path,'.txt')
                 path=os.path.join(self.output_folder,dvs_text)
@@ -144,14 +147,15 @@ class EventEmulator(object):
         if not base_frame is None:
             self._init(base_frame)
 
-    def _init(self, baseFrame):
+    def _init(self, firstFrameLinear):
         logger.info('initializing random temporal contrast thresholds from from base frame')
-        self.base_frame = lin_log(baseFrame)  # base_frame are memorized lin_log pixel values
+        self.baseLogFrame = lin_log(firstFrameLinear)  # base_frame are memorized lin_log pixel values
+        self.lpLogFrame = np.copy(self.baseLogFrame)
         # take the variance of threshold into account.
-        self.pos_thres = np.random.normal(self.pos_thres, self.sigma_thres, self.base_frame.shape)
+        self.pos_thres = np.random.normal(self.pos_thres, self.sigma_thres, firstFrameLinear.shape)
         # to avoid the situation where the threshold is too small.
         self.pos_thres[self.pos_thres < 0.01] = 0.01
-        self.neg_thres = np.random.normal(self.neg_thres, self.sigma_thres, self.base_frame.shape)
+        self.neg_thres = np.random.normal(self.neg_thres, self.sigma_thres, firstFrameLinear.shape)
         self.neg_thres[self.neg_thres < 0.01] = 0.01
 
     def reset(self):
@@ -160,9 +164,9 @@ class EventEmulator(object):
         self.num_events_total = 0
         self.num_events_on = 0
         self.num_events_off = 0
-        self.base_frame = None
+        self.baseLogFrame = None
         self.lasttime=None
-        self.log_frame=None
+        self.lpLogFrame=None
 
     def compute_events(self, new_frame: np.ndarray, t_start: float, t_end: float) -> np.ndarray:
         """Compute events in new frame.
@@ -180,7 +184,7 @@ class EventEmulator(object):
         -------
         events: np.ndarray if any events, else None
             [N, 4], each row contains [timestamp, y cordinate,
-            x cordinate, sign of event].
+            x cordinate, sign of event]. # TODO validate that this order of x and y is correctly documented
         """
 
         if t_start > t_end:
@@ -191,9 +195,8 @@ class EventEmulator(object):
         # base_frame: the change detector input, stores memorized brightness values
         # new_frame: the new intensity frame input
         # log_frame: the lowpass filtered brightness values
-        if self.base_frame is None:
+        if self.baseLogFrame is None:
             self._init(new_frame)
-            self.log_frame = np.copy(self.base_frame)
             self.lasttime = t_start
             return None
         # apply log transform and lowpass filter here
@@ -204,8 +207,8 @@ class EventEmulator(object):
             tau=1/(np.pi*2*self.cutoff_hz)
             eps= deltaTime / tau
             if eps>1: eps=1
-        log = lin_log(new_frame)
-        self.log_frame= (1-eps) * self.log_frame + eps * log
+        logNewFrame = lin_log(new_frame)
+        self.lpLogFrame= (1 - eps) * self.lpLogFrame + eps * logNewFrame
         self.lasttime=t_start
 
         # switch in diff change amp leaks at some rate equivalent to some hz of ON events
@@ -213,9 +216,9 @@ class EventEmulator(object):
         # we want nominal rate leak_rate_Hz, so
         if self.leak_rate_hz>0:
             deltaLeak=deltaTime*self.leak_rate_hz/self.pos_thres_nominal
-            self.base_frame-=deltaLeak # subract so it increases ON events
+            self.baseLogFrame-=deltaLeak # subract so it increases ON events
 
-        diff_frame = self.log_frame - self.base_frame  # log intensity (brightness) change from memorized values
+        diff_frame =  self.lpLogFrame - self.baseLogFrame  # log intensity (brightness) change from memorized values
 
         pos_frame = np.zeros_like(diff_frame)  # initialize
         neg_frame = np.zeros_like(diff_frame)
@@ -229,10 +232,18 @@ class EventEmulator(object):
         neg_evts_frame = neg_frame // self.neg_thres  # same for OFF events
         neg_iters = int(neg_evts_frame.max())
 
+        pos_evts_frame.argmax()
         num_iters = max(pos_iters, neg_iters)  # need to iterative this many times
 
         events = []
 
+        # maxpix=np.where(pos_evts_frame==pos_iters)
+        # if len(maxpix)>0:
+        #     if not self.specpix:
+        #         self.specpix=maxpix[0][0],maxpix[1][0]
+        #     print('pix {} has log={:5.2f} base={:5.2f} diff={:5.2f} evts={:5.2f}'.format(
+        #         self.specpix,logNewFrame[self.specpix], self.baseLogFrame[self.specpix], diff_frame[self.specpix],pos_evts_frame[self.specpix]
+        #     ))
         for i in range(num_iters):
 
             # intermediate timestamps are linearly spaced
@@ -295,11 +306,15 @@ class EventEmulator(object):
                 # to trigger another event or it might not,
                 # but we are correct in not storing the current frame brightness
                 if num_pos_events > 0:
-                    self.base_frame[pos_cord] += \
+                    self.baseLogFrame[pos_cord] += \
                         pos_evts_frame[pos_cord] * self.pos_thres[pos_cord]
                 if num_neg_events > 0:
-                    self.base_frame[neg_cord] -= \
+                    self.baseLogFrame[neg_cord] -= \
                         neg_evts_frame[neg_cord] * self.neg_thres[neg_cord]  # neg_thres is >0
+                # p = maxpix[0][0], maxpix[1][0]
+                # print('after update, pix {} has log={:5.2f} base={:5.2f} diff={:5.2f} evts={:5.2f}'.format(
+                #     self.specpix, logNewFrame[self.specpix], self.baseLogFrame[self.specpix], diff_frame[self.specpix], pos_evts_frame[self.specpix]
+                # ))
 
             if num_events > 0:
                 events.append(events_tmp)

@@ -69,7 +69,7 @@ class DVSTextOutput:
             return
         n = events.shape[0]
         t = (events[:, 0]).astype(np.float)
-        x = events[:, 1].astype(np.int32)
+        x = events[:, 1].astype(np.int32) # TODO validate that this element is really x and not y
         if self.flipx: x = (self.sizex - 1) - x  # 0 goes to sizex-1
         y = events[:, 2].astype(np.int32)
         if self.flipy: y = (self.sizey - 1) - y

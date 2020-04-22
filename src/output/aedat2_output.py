@@ -12,9 +12,10 @@ class AEDat2Output:
     outputs AEDAT-2.0 jAER format DVS data from v2e
     '''
 
-    def __init__(self, filepath: str):
+    def __init__(self, filepath: str, rotate180:bool=False):
         self.filepath = filepath
         self.file=None
+        self.rotate180 = rotate180
         # edit below to match your device from https://inivation.com/support/software/fileformat/#aedat-20
         CAMERA = 'Davis346BMono'  # edit for your desired output
         if CAMERA == 'Davis346BMono':
@@ -30,9 +31,13 @@ class AEDat2Output:
             self.sizey = 260
             self.flipy = True  # v2e uses computer vision matrix printing convention of UL pixel being 0,0, but jAER uses original graphics and graphing convention that 0,0 is LL
             self.flipx = True # not 100% sure why this is needed. Observed for tennis example
+             #todo add rotate option to get output right side up from DDD recordings
         else:
             raise ValueError('CAMERA type not found, add your camera to {}'.format(__name__))
 
+        if rotate180:
+            self.flipx=not self.flipx
+            self.flipy=not self.flipy
         self.numEventsWritten = 0
         logging.info('opening AEDAT-2.0 output file {} in binary mode'.format(filepath))
         try:
@@ -77,7 +82,7 @@ class AEDat2Output:
         if len(events) == 0:
             return
         n = events.shape[0]
-        t = (1e6 * events[:, 0]).astype(np.int32)
+        t = (1e6 * events[:, 0]).astype(np.int32)   # to us from seconds
         x = events[:, 1].astype(np.int32)
         if self.flipx: x = (self.sizex - 1) - x  # 0 goes to sizex-1
         y = events[:, 2].astype(np.int32)
