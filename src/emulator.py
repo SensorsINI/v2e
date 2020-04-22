@@ -465,6 +465,8 @@ class EventFrameRenderer(object):
             out.write(cv2.cvtColor((img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR))
             if self.preview:
                 cv2.namedWindow(__name__, cv2.WINDOW_NORMAL)
+                if self.rotate:
+                    np.rot90(img, k=2)
                 cv2.imshow(__name__, img)
                 if not self.preview_resized:
                     cv2.resizeWindow(__name__, 800, 600)

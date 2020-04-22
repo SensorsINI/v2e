@@ -60,7 +60,11 @@ class DDD20SimpleReader(object):
         logging.info('The DAVIS data has the shape '+str(self.davisData.shape))
 
         self.numPackets=self.davisData.shape[0] # start here, this is not actual size
-        firstPacket=self.readPacket(0)
+        self.firstPacketNumber=0
+        firstPacket=self.readPacket(self.firstPacketNumber) # first packet might contain data we can't parse
+        while not firstPacket:
+            self.firstPacketNumber+=1
+            firstPacket = self.readPacket(self.firstPacketNumber)
         self.startTimeS=firstPacket['timestamp']
         # the last packets in file are actually empty (some consequence of how file is written)
         # just go backards until we get a packet with some data
@@ -69,6 +73,7 @@ class DDD20SimpleReader(object):
             self.numPackets-=1
             lastPacket = self.readPacket(self.numPackets-1)
         self.endTimeS=lastPacket['timestamp']
+        self.durationS=self.endTimeS-self.startTimeS
         logging.info('file has '+str(self.numPackets)+' packets with start time='+str(self.startTimeS)+'s and end time='+str(self.endTimeS)+'s')
 
         # logging.info('Sample DAVIS data is the following')
@@ -136,8 +141,8 @@ class DDD20SimpleReader(object):
         packet number
 
         """
-        logging.info('searching for start time {}'.format(timeS))
-        for k in tqdm(range(0,self.numPackets)):
+        logging.info('searching for time {}'.format(timeS))
+        for k in tqdm(range(self.firstPacketNumber,self.numPackets),unit='packet',desc='ddd-h5-search'):
             data=self.readPacket(k)
             if not data: # maybe cannot parse this particular type of packet (e.g. imu6)
                 continue

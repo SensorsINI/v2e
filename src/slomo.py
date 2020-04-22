@@ -78,6 +78,8 @@ class SuperSloMo(object):
         self.rotate = rotate
         self.preview=preview
         self.preview_resized=False
+        self.vid_orig = vid_orig,
+        self.vid_slomo = vid_slomo,
 
         # initialize the Transform instances.
         self.to_tensor, self.to_image = self.__transform()
@@ -271,11 +273,14 @@ class SuperSloMo(object):
                             str(frameCounter + self.sf * batchIndex) + ".png")
                         img_resize.save(save_path)
                         if self.preview:
-                            cv2.namedWindow(__name__, cv2.WINDOW_NORMAL)
+                            name=str(self.vid_slomo)
+                            cv2.namedWindow(name, cv2.WINDOW_NORMAL)
                             gray = np.uint8(img_resize)
-                            cv2.imshow(__name__, gray)
+                            if self.rotate:
+                                rotimg=np.rot90(gray,k=2)
+                            cv2.imshow(name, rotimg)
                             if not self.preview_resized:
-                                cv2.resizeWindow(__name__, 800, 600)
+                                cv2.resizeWindow(name, 800, 600)
                                 self.preview_resized=True
                             cv2.waitKey(1)  # wait minimally since interp takes time anyhow
 
@@ -305,7 +310,7 @@ class SuperSloMo(object):
             for path in frame_paths: #tqdm(frame_paths,desc='slomo-write-slomo-vid',unit='fr'):
                 frame = self.__read_image(path)
                 if self.rotate:
-                    frame = np.rot90(frame, k=2) # todo check correct, maybe 180
+                    frame = np.rot90(frame, k=2)
                 self.slomo_writer.write(cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
                 self.numSlomoVideoFramesWritten+=1
                  # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):

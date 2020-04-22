@@ -66,6 +66,8 @@ parser.add_argument("--output_height", type=int, default=None,
                     help="height of output DVS data in pixels. If None, same as input video.")
 parser.add_argument("--output_width", type=int, default=None,
                     help="width of output DVS data in pixels. If None, same as input video.")
+parser.add_argument("--rotate180", action="store_true",
+                    help="rotate all output 180 deg")
 parser.add_argument("--slomo_model", type=str, default="input/SuperSloMo39.ckpt", help="path of slomo_model checkpoint")
 parser.add_argument("-o", "--output_folder", type=str, required=True, help="folder to store outputs")
 parser.add_argument("--frame_rate", type=int, default=300,
@@ -81,11 +83,6 @@ parser.add_argument("-p","--preview", action="store_true", help="show preview in
 parser.add_argument("--overwrite", action="store_true", help="overwrites files in existing folder (checks existance of non-empty output_folder)")
 argcomplete.autocomplete(parser)
 args = parser.parse_args()
-
-arglistoutput = 'arguments:\n'
-for arg, value in args._get_kwargs():
-    arglistoutput += "{}:\t{}\n".format(arg, value)
-logger.info(arglistoutput)
 
 
 def inputFileDialog():
@@ -128,8 +125,13 @@ if __name__ == "__main__":
         logger.error('set neither or both of output_width and output_height')
         quit()
 
+    arguments_list = 'arguments:\n'
+    for arg, value in args._get_kwargs():
+        arguments_list += "{}:\t{}\n".format(arg, value)
+    logger.info(arguments_list)
+
     with open(os.path.join(args.output_folder, "info.txt"), "w") as f:
-        f.write(arglistoutput)
+        f.write(arguments_list)
 
     start_time=args.start_time
     stop_time=args.stop_time
@@ -147,6 +149,7 @@ if __name__ == "__main__":
     vid_orig = args.vid_orig
     vid_slomo = args.vid_slomo
     preview=args.preview
+    rotate180=args.rotate180
 
     import time
     time_run_started = time.time()
@@ -170,9 +173,9 @@ if __name__ == "__main__":
     if srcNumFrames < 2:
         logger.warning('num frames is less than 2, probably cannot be determined from cv2.CAP_PROP_FRAME_COUNT')
 
-    arglistoutput = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview)
+    slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview,rotate=rotate180)
     eventRenderer = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres,
-                                  output_path=output_folder,dvs_vid=dvs_vid,preview=preview)
+                                  output_path=output_folder,dvs_vid=dvs_vid,preview=preview,rotate=rotate180)
     emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
 
     srcTotalDuration= (srcNumFrames - 1) * srcFrameIntervalS
@@ -180,10 +183,10 @@ if __name__ == "__main__":
     stop_frame=int(srcNumFrames * (stop_time / srcTotalDuration)) if stop_time else srcNumFrames
     srcNumFramesToBeProccessed=stop_frame-start_frame+1
     srcDurationToBeProcessed=srcNumFramesToBeProccessed/srcFps
-    destFps=args.frame_rate if args.frame_rate else srcFps
-    destNumFrames= np.math.floor(destFps * srcDurationToBeProcessed)
-    destDuration=destNumFrames/destFps
-    destPlaybackDuration=destNumFrames/OUTPUT_VIDEO_FPS
+    dvsFps=args.frame_rate if args.frame_rate else srcFps
+    dvsNumFrames= np.math.floor(dvsFps * srcDurationToBeProcessed)
+    dvsDuration= dvsNumFrames / dvsFps
+    dvsPlaybackDuration= dvsNumFrames / OUTPUT_VIDEO_FPS
     logger.info('\n\n{} has {} frames with duration {}s, '
                  '\nsource video is {}fps (frame interval {}s),'
                  '\n slomo will have {}fps,'
@@ -194,8 +197,8 @@ if __name__ == "__main__":
                          EngNumber(srcFps), EngNumber(srcFrameIntervalS),
                          EngNumber(srcFps * slowdown_factor),
                          EngNumber(slomoTimestampResolutionS),
-                         EngNumber(destFps), EngNumber(1/destFps),
-                         destNumFrames, EngNumber(destDuration), EngNumber(destPlaybackDuration))
+                         EngNumber(dvsFps), EngNumber(1 / dvsFps),
+                         dvsNumFrames, EngNumber(dvsDuration), EngNumber(dvsPlaybackDuration))
                  )
     frame0 = None
     frame1 = None  # rotating buffers for slomo
@@ -240,7 +243,7 @@ if __name__ == "__main__":
             continue  # didn't get two frames yet
         with TemporaryDirectory() as interpFramesFolder:
             twoFrames = np.stack([frame0, frame1], axis=0)
-            arglistoutput.interpolate(twoFrames, interpFramesFolder)  # interpolated frames are stored to tmpfolder as 1.png, 2.png, etc
+            slomo.interpolate(twoFrames, interpFramesFolder)  # interpolated frames are stored to tmpfolder as 1.png, 2.png, etc
             interpFramesFilenames = all_images(interpFramesFolder)  # read back to memory
             n = len(interpFramesFilenames)  # number of interpolated frames
             events = np.empty((0, 4), float)
@@ -261,7 +264,7 @@ if __name__ == "__main__":
             dvsFrameTimestamps = np.linspace(
                 start=ts0,
                 stop=ts1,
-                num=int(srcFrameIntervalS * destFps) if destFps else int(srcFrameIntervalS * srcFps),
+                num=int(srcFrameIntervalS * dvsFps) if dvsFps else int(srcFrameIntervalS * srcFps),
                 endpoint=True
             ) # output_ts are the timestamps of the DVS video output frames. They come from destFps
             events = np.array(events)  # remove first None element

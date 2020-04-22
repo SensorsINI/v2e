@@ -142,7 +142,7 @@ class Reader(object):
                 current = ts
 
                 if args.rotate:
-                    frame = np.rot90(frame, k=2)
+                    frame = np.rot90(frame, k=2) # does 180 with k=2
                 writer.write(
                     cv2.cvtColor(
                         frame,

@@ -1,16 +1,19 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="ddd20-v2e" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="v2e test tennis" type="PythonConfigurationType" factoryName="Python" singleton="true">
     <module name="v2e" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
+    <envs>
+      <env name="PYTHONUNBUFFERED" value="1" />
+    </envs>
     <option name="SDK_HOME" value="" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <option name="IS_MODULE_SDK" value="true" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ddd20-v2e.py" />
-    <option name="PARAMETERS" value="--input input/rec1501902136.hdf5 --slomo_model input/SuperSloMo39.ckpt --slowdown_factor 30 --start 5 --stop 7 --output_folder v2e-ddd-test --pos_thres=.2 --neg_thres=.2 --overwrite" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/v2e.py" />
+    <option name="PARAMETERS" value="--input &quot;input/tennis.MOV&quot; --slomo_model=input/SuperSloMo39.ckpt --slowdown_factor=10 --output_folder=output-tennis-backhand --pos_thres=.15 --neg_thres=.15 --sigma_thres=0.05 --frame_rate=300 --dvs_aedat2 v2e-test-long.aedat --output_width=346 --output_height=260 --start_time 2 --stop_time 3" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

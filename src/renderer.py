@@ -45,6 +45,7 @@ class EventRenderer(object):
         self.rotate = rotate
         self.width = None
         self.height = None  # must be set by specific renderers, which might only know it once they have data
+        self.video_output_file_name = dvs_vid
         self.video_output_file = dvs_vid
         self.emulator = None
         self.preview=preview
@@ -54,9 +55,9 @@ class EventRenderer(object):
         atexit.register(self.cleanup)
 
     def cleanup(self):
-        if self.video_output_file:
+        if self.video_output_file and (type(self.video_output_file) is not str):
             logger.info("Closing DVS video output file after writing {} frames".format(self.numFramesWritten))
-            self.video_output_file.release()
+            if type(self.video_output_file) is not str: self.video_output_file.release()
             cv2.destroyAllWindows()
 
 
@@ -80,8 +81,7 @@ class EventRenderer(object):
         ----------
         height: height of output video in pixels
         width: width of output video in pixels
-        frame_ts: np.array, timestamps of output frames, for real events.
-        interpolated_ts: np.array, timestamps of interpolated video, for generated events
+        frame_ts: np.array, timestamps of output frames, for rendering DVS events to histogram frames.
         full_scale_count: int, count of DVS ON and OFF events per pixel for full white and black
         Returns
         -------
@@ -113,9 +113,9 @@ class EventRenderer(object):
                                   side='right')
             # select events, assume that pos_list is sorted
             if ts_idx < len(self.frame_ts) - 1:
-                events = event_arr[start: end]
+                events = event_arr[start: end] # events in this frame
             else:
-                events = event_arr[start:]
+                events = event_arr[start:] # remaining events
 
             pol_on = (events[:, 3] == 1)
             pol_off = np.logical_not(pol_on)
@@ -132,16 +132,17 @@ class EventRenderer(object):
             img = (integrated_img + self.full_scale_count) / float(self.full_scale_count * 2)
 
             if self.rotate:
-                img = np.rot90(img, k=2)
+                img = np.rot90(img, k=2) # does 180 deg with k=2
 
             if self.video_output_file:
                 self.video_output_file.write(cv2.cvtColor((img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR))
                 self.numFramesWritten+=1
             if self.preview:
-                cv2.namedWindow(__name__,cv2.WINDOW_NORMAL)
-                cv2.imshow(__name__,img)
+                name=str(self.video_output_file_name)
+                cv2.namedWindow(name,cv2.WINDOW_NORMAL)
+                cv2.imshow(name,img)
                 if not self.preview_resized:
-                    cv2.resizeWindow(__name__, 800, 600)
+                    cv2.resizeWindow(name, 800, 600)
                     self.preview_resized = True
                 cv2.waitKey(30) # 30 hz playback
 
