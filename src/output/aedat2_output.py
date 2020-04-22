@@ -87,8 +87,16 @@ class AEDat2Output:
         out = np.empty(2 * n, dtype=np.int32)
         out[0::2] = a  # addresses even
         out[1::2] = t  # timestamps odd
+        #make sure we don't write comment char as first event
+        bytes=out.byteswap().tobytes(order='C')
+        if self.numEventsWritten==0:
+            chopped=False
+            while bytes[0:1].decode('utf-8')=='#':
+                logger.warning('first event would write a # comment char, dropping it')
+                bytes=bytes[8:]
+                chopped=True
         # now out is numpy array holding int32 timestamp,address array, i.e. ts0, ad0, ts1, ad1, etc
-        self.file.write(out.byteswap().tobytes(order='C'))  # java is big-endian, so  byteswap to get this
+        self.file.write(bytes)  # java is big-endian, so  byteswap to get this
         self.numEventsWritten += n
         self.file.flush()
         # logger.info('wrote {} events'.format(n))

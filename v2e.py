@@ -73,6 +73,7 @@ parser.add_argument("-o", "--output_folder", type=str, required=True, help="fold
 parser.add_argument("--frame_rate", type=int, default=300,
                     help="equivalent frame rate of --dvs_vid output video; the events will be accummulated as this sample rate; DVS frames will be accumulated for duration 1/frame_rate")
 parser.add_argument("--dvs_vid", type=str, default="dvs-video.avi", help="output DVS events as AVI video at frame_rate")
+parser.add_argument("--dvs_vid_full_scale", type=int, default=3, help="set full scale count for DVS videos to be this many ON or OFF events")
 parser.add_argument("--dvs_h5", type=str, default=None, help="output DVS events as hdf5 event database")
 # parser.add_argument("--dvs_np", type=str, default=None, help="output DVS events as numpy event file")
 parser.add_argument("--dvs_aedat2", type=str, default=None, help="output DVS events as AEDAT-2.0 event file for jAER")
@@ -142,6 +143,7 @@ if __name__ == "__main__":
     cutoff_hz=args.cutoff_hz
     leak_rate_hz=args.leak_rate_hz
     dvs_vid = args.dvs_vid
+    dvs_vid_full_scale = args.dvs_vid_full_scale
     dvs_h5 = args.dvs_h5
     # dvs_np = args.dvs_np
     dvs_aedat2 = args.dvs_aedat2
@@ -175,7 +177,7 @@ if __name__ == "__main__":
 
     slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview,rotate=rotate180)
     eventRenderer = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres,
-                                  output_path=output_folder,dvs_vid=dvs_vid,preview=preview,rotate=rotate180)
+                                  output_path=output_folder,dvs_vid=dvs_vid,preview=preview,rotate=rotate180,full_scale_count=dvs_vid_full_scale)
     emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
 
     srcTotalDuration= (srcNumFrames - 1) * srcFrameIntervalS

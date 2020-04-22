@@ -72,6 +72,7 @@ parser.add_argument("-o", "--output_folder", type=str, required=True, help="fold
 parser.add_argument("--frame_rate", type=int, default=300,
                     help="equivalent frame rate of --dvs_vid output video; the events will be accummulated as this sample rate; DVS frames will be accumulated for duration 1/frame_rate")
 parser.add_argument("--dvs_vid", type=str, default="dvs-video.avi", help="output DVS events as AVI video at frame_rate")
+parser.add_argument("--dvs_vid_full_scale", type=int, default=3, help="set full scale count for DVS videos to be this many ON or OFF events")
 parser.add_argument("--dvs_h5", type=str, default=None, help="output DVS events as hdf5 event database")
 # parser.add_argument("--dvs_np", type=str, default=None, help="output DVS events as numpy event file")
 parser.add_argument("--dvs_aedat2", type=str, default=None, help="output DVS events as AEDAT-2.0 event file for jAER")
@@ -141,6 +142,7 @@ if __name__ == "__main__":
     cutoff_hz=args.cutoff_hz
     leak_rate_hz=args.leak_rate_hz
     dvs_vid = args.dvs_vid
+    dvs_vid_full_scale = args.dvs_vid_full_scale
     dvs_h5 = args.dvs_h5
     # dvs_np = args.dvs_np
     dvs_aedat2 = args.dvs_aedat2
@@ -163,9 +165,9 @@ if __name__ == "__main__":
     logger.info('opening output files')
     slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview,rotate=rotate180)
     dvsVidReal=str(dvs_vid).replace('.avi','-real.avi')
-    dvsVidFake=str(dvs_vid).replace('.avi','-real.avi')
-    eventRendererReal = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres, output_path=output_folder, dvs_vid=dvsVidReal, preview=preview, rotate=rotate180)
-    eventRendererFake = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres, output_path=output_folder, dvs_vid=dvsVidFake, preview=preview, rotate=rotate180)
+    dvsVidFake=str(dvs_vid).replace('.avi','-fake.avi')
+    eventRendererReal = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres, output_path=output_folder, dvs_vid=dvsVidReal, preview=preview, rotate=rotate180,full_scale_count=dvs_vid_full_scale)
+    eventRendererFake = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres, output_path=output_folder, dvs_vid=dvsVidFake, preview=preview, rotate=rotate180,full_scale_count=dvs_vid_full_scale)
     emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
 
 
@@ -188,7 +190,7 @@ if __name__ == "__main__":
     dvsDuration = srcDurationToBeProcessed
     dvsPlaybackDuration = dvsNumFrames / OUTPUT_VIDEO_FPS
     dvsFrameTimestamps = np.linspace(davisData.startTimeS+start_time,
-                                     davisData.startTimeS+srcDurationToBeProcessed, dvsNumFrames)
+                                     davisData.startTimeS+start_time+srcDurationToBeProcessed, dvsNumFrames)
 
     logger.info('iterating over input file contents')
     num_frames=0
@@ -210,18 +212,18 @@ if __name__ == "__main__":
             numDvsEvents+=packet['enumber']
             events=np.array(packet['data'],dtype=float) # get just events [:,[ts,x,y,pol]]
             events[:, 0] = events[:, 0] * 1e-6 # us timestamps
-            #prepend saved events if there are some
+            # prepend saved events if there are some
             events=np.vstack((savedEvents,events))
             # find dvs starting frame index
             ts0=events[0,0]
             ts1=events[-1,0]
             dt=ts1-ts0
-            dvsFrameStartIdx=np.searchsorted(dvsFrameTimestamps, ts0, side='left')
-            dvsFrameEndIdx=np.searchsorted(dvsFrameTimestamps,ts1,side='right')
-            if dvsFrameEndIdx==len(dvsFrameTimestamps):
+            dvsFrameStartIdx=np.searchsorted(dvsFrameTimestamps, ts0, side='left') # find first DVS frame
+            dvsFrameEndIdx=np.searchsorted(dvsFrameTimestamps,ts1,side='left')-1 # and last one, we go back -1 more to make sure that the last DVS frame is not partially filled by this packet
+            if dvsFrameEndIdx==len(dvsFrameTimestamps): # if ts is past last frame, set to last
                 dvsFrameEndIdx-=1
-            endEventIdx = np.searchsorted(events[:, 0], dvsFrameTimestamps[dvsFrameEndIdx], side='right')
-            savedEvents=events[-endEventIdx,:]
+            endEventIdx = np.searchsorted(events[:, 0], dvsFrameTimestamps[dvsFrameEndIdx], side='right') # find last event that fits into the last DVS frame
+            savedEvents=np.copy(events[endEventIdx:,:]) # save all events after this for next batch of DVS frames
             theseEvents=events[:endEventIdx-1,:]
             # this packet spans some time, and we need to render into DVS frames with regular spacing.
             # But render throws all leftover events into the last DVS

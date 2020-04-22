@@ -219,10 +219,10 @@ class EventEmulator(object):
 
         pos_frame = np.zeros_like(diff_frame)  # initialize
         neg_frame = np.zeros_like(diff_frame)
-        diff_frame_ = diff_frame > 0
-        pos_frame[diff_frame_] = diff_frame[diff_frame_]  # pixels with ON changes
-        frame_ = diff_frame < 0
-        neg_frame[frame_] = np.abs(diff_frame[frame_])
+        poxIdxs = diff_frame > 0
+        pos_frame[poxIdxs] = diff_frame[poxIdxs]  # pixels with ON changes
+        negIdxs = diff_frame < 0
+        neg_frame[negIdxs] = np.abs(diff_frame[negIdxs])
 
         pos_evts_frame = pos_frame // self.pos_thres  # compute quantized numbers of ON events for each pixel
         pos_iters = int(pos_evts_frame.max())  # compute number of times to pass over array to compute separated ON events
