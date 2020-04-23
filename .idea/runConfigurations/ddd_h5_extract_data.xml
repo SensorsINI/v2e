@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="v2e test short" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="ddd_h5_extract_data" type="PythonConfigurationType" factoryName="Python">
     <module name="v2e" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -9,8 +9,8 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/v2e.py" />
-    <option name="PARAMETERS" value="--overwrite --input input/tennis.mov --slomo_model=input/SuperSloMo39.ckpt --slowdown_factor=10 --output_folder=output-tennis-short --pos_thres=.1 --neg_thres=.1 --sigma_thres=0.03 --cutoff_hz=10 --leak_rate_hz=.1 --frame_rate=200 --dvs_aedat2 v2e.aedat --dvs_text dvs-events.txt --output_height=260 --output_width=346 --preview --start_time=2 --stop_time=3" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ddd_h5_extract_data.py" />
+    <option name="PARAMETERS" value="--overwrite --output_folder=output-ddd-h5-data --overwrite --rotate180" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

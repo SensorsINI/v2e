@@ -3,12 +3,25 @@ import cv2
 import glob
 import os
 import logging
+import tkinter as tk
+from tkinter import filedialog
 
 OUTPUT_VIDEO_FPS = 30.0 # playback frame rate specified for output video AVI file
 # VIDEO_CODEC_FOURCC='RGBA' # uncompressed, >10MB for a few seconds of video
 OUTPUT_VIDEO_CODEC_FOURCC= 'XVID' # good codec, basically mp4 with simplest compression, packed in AVI, only 15kB for a few seconds
 
 logger=logging.getLogger(__name__)
+
+
+def inputFileDialog():
+    root = tk.Tk()
+    root.tk.call('tk', 'scaling', 4.0)  # doesn't help on hdpi screen
+    root.withdraw()
+    os.chdir('./input')
+    filetypes=[("Video/Data files", ".avi .mp4 .wmv .hdf5"),('Any type','*')]
+    filepath = filedialog.askopenfilename(filetypes=filetypes)
+    os.chdir('..')
+    return filepath
 
 def checkAddSuffix(path:str,suffix:str):
     if path.endswith(suffix):

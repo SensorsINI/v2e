@@ -9,10 +9,8 @@ by comparing the real DVS events with v2e events from DAVIS APS frames.
 import argparse
 import logging
 import os
-import tkinter as tk
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from tkinter import filedialog
 import argcomplete
 import numpy as np
 from engineering_notation import EngNumber
@@ -24,6 +22,7 @@ from output.aedat2_output import AEDat2Output
 from src.renderer import EventEmulator, EventRenderer
 from src.slomo import SuperSloMo
 from v2e_utils import OUTPUT_VIDEO_FPS, all_images, read_image, checkAddSuffix
+from src.v2e_utils import inputFileDialog
 
 logging.basicConfig()
 root = logging.getLogger()
@@ -78,15 +77,6 @@ argcomplete.autocomplete(parser)
 args = parser.parse_args()
 
 
-def inputFileDialog():
-    root = tk.Tk()
-    root.tk.call('tk', 'scaling', 4.0)  # doesn't help on hdpi screen
-    root.withdraw()
-    os.chdir('./input')
-    filetypes=[("Video files", ".avi .mp4 .wmv"),('Any type','*')]
-    filepath = filedialog.askopenfilename(filetypes=filetypes)
-    os.chdir('..')
-    return filepath
 
 if __name__ == "__main__":
     overwrite=args.overwrite
@@ -167,9 +157,9 @@ if __name__ == "__main__":
     davisData= DDD20SimpleReader(input_file)
 
     startPacket=davisData.search(timeS=start_time) if start_time else davisData.firstPacketNumber
-    if not startPacket: raise ValueError('cannot find relative start time ' + str(start_time) + 's within recording')
+    if startPacket  is None: raise ValueError('cannot find relative start time ' + str(start_time) + 's within recording')
     stopPacket=davisData.search(timeS=stop_time) if stop_time else davisData.numPackets-1
-    if not stopPacket: raise ValueError('cannot find relative stop time ' + str(start_time) + 's within recording')
+    if stopPacket is None: raise ValueError('cannot find relative stop time ' + str(start_time) + 's within recording')
     if not start_time: start_time=0
     if not stop_time: stop_time=davisData.durationS
 
