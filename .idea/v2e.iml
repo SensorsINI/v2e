@@ -4,6 +4,10 @@
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/ddd20_interfaces" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/ddd20_utils" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/desktop" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/output" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.7 (pt-v2e)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

@@ -6,20 +6,16 @@ Python code for extracting frames and events from .hdf5 file in DDD20 dataset.
 @latest update: 2019-June-28 22:27
 """
 from pathlib import Path, PurePath
-from tempfile import TemporaryDirectory
-
 import cv2
 import numpy as np
 import argparse
 import os
-
 from engineering_notation import EngNumber
 from tqdm import tqdm
 import atexit
-
 import src
-from ddd20_utils import ddd_h5_reader
-from output.aedat2_output import AEDat2Output
+from src.ddd20_utils import ddd_h5_reader
+from src.output.aedat2_output import AEDat2Output
 from src.v2e_utils import inputFileDialog, checkAddSuffix, read_image
 from src.ddd20_utils.ddd_h5_reader import DDD20SimpleReader
 import logging

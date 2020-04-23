@@ -12,9 +12,9 @@ import logging
 import h5py
 from tqdm import tqdm
 import multiprocessing as mp
-from ddd20_utils.datasets import CHUNK_SIZE
-from ddd20_interfaces.caer import unpack_data
-from ddd20_interfaces import caer
+from src.ddd20_utils.datasets import CHUNK_SIZE
+from src.ddd20_interfaces.caer import unpack_data
+from src.ddd20_interfaces import caer
 
 class DDD20SimpleReader(object):
     '''
