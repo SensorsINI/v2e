@@ -6,6 +6,7 @@ import struct
 
 logger = logging.getLogger(__name__)
 
+# todo add rotate?
 
 class DVSTextOutput:
     '''

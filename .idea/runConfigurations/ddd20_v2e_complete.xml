@@ -10,7 +10,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ddd20-v2e.py" />
-    <option name="PARAMETERS" value="--input input/rec1501902136.hdf5 --slomo_model input/SuperSloMo39.ckpt --slowdown_factor 10 --stop 22 --start 20 --output_folder output-v2e-ddd-test2 --pos_thres=.3 --neg_thres=.3 --sigma_thres=0 --leak_rate_hz=0 --overwrite --rotate180=True --cutoff_hz=0 --dvs_vid_full_scale=2 --preview --dvs_aedat2=dvs-v2e" />
+    <option name="PARAMETERS" value="--input input/rec1501902136.hdf5 --slomo_model input/SuperSloMo39.ckpt --slowdown_factor 10 --stop 22 --start 20 --output_folder output-v2e-ddd-test3 --pos_thres=.3 --neg_thres=.3 --sigma_thres=.03 --leak_rate_hz=.1 --overwrite --rotate180=True --cutoff_hz=200 --dvs_vid_full_scale=2 --preview --dvs_aedat2=dvs-v2e --frame_rate=100" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

@@ -6,31 +6,24 @@ by comparing the real DVS events with v2e events from DAVIS APS frames.
 
 @author: Zhe He, Yuhuang Hu, Tobi Delbruck
 """
-from pathlib import Path
-
-import numpy as np
 import argparse
+import logging
 import os
-
-from tempfile import TemporaryDirectory
-
-from engineering_notation import EngNumber
-
-import src.desktop
-import argcomplete
 import tkinter as tk
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from tkinter import filedialog
-
+import argcomplete
+import numpy as np
+from engineering_notation import EngNumber
+from tqdm import tqdm
+import src.desktop
+from ddd20_utils import ddd_h5_reader
 from ddd20_utils.ddd_h5_reader import DDD20SimpleReader
+from output.aedat2_output import AEDat2Output
 from src.renderer import EventEmulator, EventRenderer
 from src.slomo import SuperSloMo
-import warnings
-import logging
-from tqdm import tqdm
-from ddd20_utils import ddd_h5_reader
-import logging
-
-from v2e_utils import OUTPUT_VIDEO_FPS, all_images, read_image
+from v2e_utils import OUTPUT_VIDEO_FPS, all_images, read_image, checkAddSuffix
 
 logging.basicConfig()
 root = logging.getLogger()
@@ -75,7 +68,7 @@ parser.add_argument("--dvs_vid", type=str, default="dvs-video.avi", help="output
 parser.add_argument("--dvs_vid_full_scale", type=int, default=3, help="set full scale count for DVS videos to be this many ON or OFF events")
 parser.add_argument("--dvs_h5", type=str, default=None, help="output DVS events as hdf5 event database")
 # parser.add_argument("--dvs_np", type=str, default=None, help="output DVS events as numpy event file")
-parser.add_argument("--dvs_aedat2", type=str, default=None, help="output DVS events as AEDAT-2.0 event file for jAER")
+parser.add_argument("--dvs_aedat2", type=str, default=None, help="output DVS events as AEDAT-2.0 event file for jAER; one file for real and one file for v2e events")
 parser.add_argument("--dvs_text", type=str, default=None, help="output DVS events as text file with one event per line [timestamp (float s), x, y, polarity (0,1)]")
 parser.add_argument("--vid_orig", type=str, default="video_orig.avi", help="output src video at same rate as slomo video (with duplicated frames)")
 parser.add_argument("--vid_slomo", type=str, default="video_slomo.avi", help="output slomo of src video slowed down by slowdown_factor")
@@ -169,11 +162,7 @@ if __name__ == "__main__":
     eventRendererReal = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres, output_path=output_folder, dvs_vid=dvsVidReal, preview=preview, rotate=rotate180,full_scale_count=dvs_vid_full_scale)
     eventRendererFake = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres, output_path=output_folder, dvs_vid=dvsVidFake, preview=preview, rotate=rotate180,full_scale_count=dvs_vid_full_scale)
     emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text,rotate180=rotate180)
-
-
-
-    # generates fake DVS events from real and interpolated APS frames, renders them to frames, writes to video file, and saves events to dataset file
-
+    realDvsAeDatOutput=None
 
     davisData= DDD20SimpleReader(input_file)
 
@@ -187,6 +176,7 @@ if __name__ == "__main__":
     srcDurationToBeProcessed=stop_time-start_time
     dvsFps = args.frame_rate
     dvsNumFrames = int(np.math.floor(dvsFps * srcDurationToBeProcessed))
+    if dvsNumFrames==0: dvsNumFrames=1                  # we need at least 1
     dvsDuration = srcDurationToBeProcessed
     dvsPlaybackDuration = dvsNumFrames / OUTPUT_VIDEO_FPS
     dvsFrameTimestamps = np.linspace(davisData.startTimeS+start_time,
@@ -212,6 +202,10 @@ if __name__ == "__main__":
             numDvsEvents+=packet['enumber']
             events=np.array(packet['data'],dtype=float) # get just events [:,[ts,x,y,pol]]
             events[:, 0] = events[:, 0] * 1e-6 # us timestamps
+            if not realDvsAeDatOutput and dvs_aedat2:
+                filepath=checkAddSuffix(os.path.join(output_folder, dvs_aedat2),'.aedat').replace('.aedat','-real.aedat')
+                realDvsAeDatOutput = AEDat2Output(filepath,rotate180=rotate180)
+            realDvsAeDatOutput.appendEvents(events)
             # prepend saved events if there are some
             events=np.vstack((savedEvents,events))
             # find dvs starting frame index
@@ -219,9 +213,11 @@ if __name__ == "__main__":
             ts1=events[-1,0]
             dt=ts1-ts0
             dvsFrameStartIdx=np.searchsorted(dvsFrameTimestamps, ts0, side='left') # find first DVS frame
-            dvsFrameEndIdx=np.searchsorted(dvsFrameTimestamps,ts1,side='left')-1 # and last one, we go back -1 more to make sure that the last DVS frame is not partially filled by this packet
+            dvsFrameEndIdx=np.searchsorted(dvsFrameTimestamps,ts1,side='right')-1 # and last one, we go back -1 more to make sure that the last DVS frame is not partially filled by this packet
             if dvsFrameEndIdx==len(dvsFrameTimestamps): # if ts is past last frame, set to last
                 dvsFrameEndIdx-=1
+            # todo if dvs frame interval is longer than the packet, then we can get frames here that dont have any events, ever
+            # we need to make eventRenderer stateful, so that it keeps accumulating events until frames are full, i.e. we get timestamp past frame that we are filling
             endEventIdx = np.searchsorted(events[:, 0], dvsFrameTimestamps[dvsFrameEndIdx], side='right') # find last event that fits into the last DVS frame
             savedEvents=np.copy(events[endEventIdx:,:]) # save all events after this for next batch of DVS frames
             theseEvents=events[:endEventIdx-1,:]

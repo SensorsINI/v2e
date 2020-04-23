@@ -67,7 +67,8 @@ class EventEmulator(object):
             dvs_h5:str=None,
             dvs_aedat2:str=None,
             dvs_text:str=None,
-            rotate180:bool=False
+            rotate180:bool=False,
+            show_input:str=None # 'logBaseFrame','lpLogFrame', 'diff_frame'
             # dvs_rosbag=None
     ):
         """
@@ -105,6 +106,7 @@ class EventEmulator(object):
         self.output_width = None
         self.output_height = None  # set on first frame
         self.rotate180=rotate180
+        self.show_input=show_input
         np.random.seed(seed)
 
         # if leak_rate_hz>0:
@@ -168,6 +170,12 @@ class EventEmulator(object):
         self.lasttime=None
         self.lpLogFrame=None
 
+    def _show(self,inp:np.ndarray):
+        min=np.min(inp)
+        img=((inp-min)/(np.max(inp)-min))
+        if self.rotate180: img=np.rot90(img,k=2)
+        cv2.imshow(__name__,img)
+
     def compute_events(self, new_frame: np.ndarray, t_start: float, t_end: float) -> np.ndarray:
         """Compute events in new frame.
 
@@ -220,6 +228,15 @@ class EventEmulator(object):
 
         diff_frame =  self.lpLogFrame - self.baseLogFrame  # log intensity (brightness) change from memorized values
 
+        if self.show_input:
+            if self.show_input=='baseLogFrame':
+                self._show(self.baseLogFrame)
+            elif self.show_input=='lpLogFrame':
+                self._show(self.lpLogFrame)
+            elif self.show_input=='diff_frame':
+                self._show(diff_frame)
+            else:
+                logger.error("don't know about showing {}".format(self.show_input))
         pos_frame = np.zeros_like(diff_frame)  # initialize
         neg_frame = np.zeros_like(diff_frame)
         poxIdxs = diff_frame > 0

@@ -39,18 +39,26 @@ class AEDat2Output:
             self.flipx=not self.flipx
             self.flipy=not self.flipy
         self.numEventsWritten = 0
+        self.numOnEvents=0
+        self.numOffEvents=0
         logging.info('opening AEDAT-2.0 output file {} in binary mode'.format(filepath))
         try:
             self.file = open(filepath, 'wb')
             self._writeHeader()
             atexit.register(self.cleanup)
+            logger.info('opened {} for DVS output data for jAER'.format(filepath))
         except OSError as err:
             logger.error('caught {}:\n  could not open {} for writing; maybe jAER has it open?'.format(err,filepath))
             quit()
 
     def cleanup(self):
         if self.file:
-            logger.info("Closing {} after writing {} events".format(self.filepath, EngNumber(self.numEventsWritten)))
+            logger.info("Closing {} after writing {} events ({} on, {} off)".
+                        format(self.filepath,
+                               EngNumber(self.numEventsWritten),
+                               EngNumber(self.numOnEvents),
+                               EngNumber(self.numOffEvents),
+                               ))
             self.file.close()
 
     def close(self):
@@ -87,7 +95,8 @@ class AEDat2Output:
         if self.flipx: x = (self.sizex - 1) - x  # 0 goes to sizex-1
         y = events[:, 2].astype(np.int32)
         if self.flipy: y = (self.sizey - 1) - y
-        p = ((events[:, 3] + 1) / 2).astype(np.int32)
+        p = ((events[:, 3] + 1) / 2).astype(np.int32) # 0=off, 1=on
+
         a = (x << self.xShiftBits | y << self.yShiftBits | p << self.polShiftBits)
         out = np.empty(2 * n, dtype=np.int32)
         out[0::2] = a  # addresses even
@@ -103,6 +112,10 @@ class AEDat2Output:
         # now out is numpy array holding int32 timestamp,address array, i.e. ts0, ad0, ts1, ad1, etc
         self.file.write(bytes)  # java is big-endian, so  byteswap to get this
         self.numEventsWritten += n
+        onCount=np.count_nonzero(p)
+        offCount=n-onCount
+        self.numOnEvents+=onCount
+        self.numOffEvents+=offCount
         self.file.flush()
         # logger.info('wrote {} events'.format(n))
 
