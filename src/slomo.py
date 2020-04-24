@@ -61,8 +61,6 @@ class SuperSloMo(object):
             True if frames need to be rotated else False
          vid_orig: str or None,
             name of output original (input) video at slo motion rate
-         id_slomo: str or None,
-            name of slo mo video # todo implement
         """
 
         if torch.cuda.is_available():
@@ -277,8 +275,8 @@ class SuperSloMo(object):
                             cv2.namedWindow(name, cv2.WINDOW_NORMAL)
                             gray = np.uint8(img_resize)
                             if self.rotate:
-                                rotimg=np.rot90(gray,k=2)
-                            cv2.imshow(name, rotimg)
+                                gray=np.rot90(gray,k=2)
+                            cv2.imshow(name, gray)
                             if not self.preview_resized:
                                 cv2.resizeWindow(name, 800, 600)
                                 self.preview_resized=True

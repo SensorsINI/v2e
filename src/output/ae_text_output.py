@@ -6,8 +6,6 @@ import struct
 
 logger = logging.getLogger(__name__)
 
-# todo add rotate?
-
 class DVSTextOutput:
     '''
     outputs text format DVS events to file according to events.txt format in http://rpg.ifi.uzh.ch/davis_data.html
@@ -33,7 +31,7 @@ class DVSTextOutput:
         self.file = open(filepath, 'w')
         self._writeHeader()
         atexit.register(self.cleanup)
-        self.flipx=False
+        self.flipx=False # set both flipx and flipy to rotate
         self.flipy=False
         self.sizex=346
         self.sizey=260 # adjust to your needs
@@ -70,7 +68,7 @@ class DVSTextOutput:
             return
         n = events.shape[0]
         t = (events[:, 0]).astype(np.float)
-        x = events[:, 1].astype(np.int32) # TODO validate that this element is really x and not y
+        x = events[:, 1].astype(np.int32)
         if self.flipx: x = (self.sizex - 1) - x  # 0 goes to sizex-1
         y = events[:, 2].astype(np.int32)
         if self.flipy: y = (self.sizey - 1) - y

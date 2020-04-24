@@ -14,7 +14,7 @@ from skimage.io import imread
 
 from tempfile import TemporaryDirectory
 
-from src.renderer import VideoSequenceFiles2EventsRenderer
+from src.renderer import VideoSequenceFiles2EventsRenderer, EventRenderer
 from src.slomo import SuperSloMo
 
 # define a parser

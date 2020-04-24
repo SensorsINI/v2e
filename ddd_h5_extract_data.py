@@ -13,11 +13,13 @@ import os
 from engineering_notation import EngNumber
 from tqdm import tqdm
 import atexit
-import src
 from src.ddd20_utils import ddd_h5_reader
 from src.output.aedat2_output import AEDat2Output
 from src.v2e_utils import inputFileDialog, checkAddSuffix, read_image
 from src.ddd20_utils.ddd_h5_reader import DDD20SimpleReader
+import src.desktop as desktop
+
+
 import logging
 logging.basicConfig()
 root = logging.getLogger()
@@ -152,9 +154,9 @@ if __name__ == "__main__":
                  output_folder))
     logger.info("done; see output folder " + str(args.output_folder))
     try:
-        src.desktop.open(output_folder)
-    except:
-        logger.warning('could not open {} in desktop'.format(output_folder))
+        desktop.open(os.path.abspath(output_folder))
+    except Exception as e:
+        logger.warning('{}: could not open {} in desktop'.format(e,output_folder))
     quit()
 
 

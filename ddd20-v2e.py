@@ -15,7 +15,7 @@ import argcomplete
 import numpy as np
 from engineering_notation import EngNumber
 from tqdm import tqdm
-import src.desktop
+
 from ddd20_utils import ddd_h5_reader
 from ddd20_utils.ddd_h5_reader import DDD20SimpleReader
 from output.aedat2_output import AEDat2Output
@@ -23,6 +23,7 @@ from src.renderer import EventEmulator, EventRenderer
 from src.slomo import SuperSloMo
 from v2e_utils import OUTPUT_VIDEO_FPS, all_images, read_image, checkAddSuffix
 from src.v2e_utils import inputFileDialog
+import src.desktop as desktop
 
 logging.basicConfig()
 root = logging.getLogger()
@@ -66,7 +67,6 @@ parser.add_argument("--frame_rate", type=int, default=300,
 parser.add_argument("--dvs_vid", type=str, default="dvs-video.avi", help="output DVS events as AVI video at frame_rate")
 parser.add_argument("--dvs_vid_full_scale", type=int, default=3, help="set full scale count for DVS videos to be this many ON or OFF events")
 parser.add_argument("--dvs_h5", type=str, default=None, help="output DVS events as hdf5 event database")
-# parser.add_argument("--dvs_np", type=str, default=None, help="output DVS events as numpy event file")
 parser.add_argument("--dvs_aedat2", type=str, default=None, help="output DVS events as AEDAT-2.0 event file for jAER; one file for real and one file for v2e events")
 parser.add_argument("--dvs_text", type=str, default=None, help="output DVS events as text file with one event per line [timestamp (float s), x, y, polarity (0,1)]")
 parser.add_argument("--vid_orig", type=str, default="video_orig.avi", help="output src video at same rate as slomo video (with duplicated frames)")
@@ -80,7 +80,7 @@ args = parser.parse_args()
 
 if __name__ == "__main__":
     overwrite=args.overwrite
-    output_folder=args.output_folder
+    output_folder: str=args.output_folder
     f=not overwrite and os.path.exists(output_folder) and os.listdir(output_folder)
     if f:
         logger.error('output folder {} already exists\n it holds files {}\n - use --overwrite'.format(os.path.abspath(output_folder),f))
@@ -116,6 +116,7 @@ if __name__ == "__main__":
     with open(os.path.join(args.output_folder, "info.txt"), "w") as f:
         f.write(arguments_list)
 
+    dvsFps=args.frame_rate
     start_time=args.start_time
     stop_time=args.stop_time
     slowdown_factor = args.slowdown_factor
@@ -124,8 +125,8 @@ if __name__ == "__main__":
     sigma_thres = args.sigma_thres
     cutoff_hz=args.cutoff_hz
     leak_rate_hz=args.leak_rate_hz
-    dvs_vid = args.dvs_vid
-    dvs_vid_full_scale = args.dvs_vid_full_scale
+    dvs_vid: str = args.dvs_vid
+    dvs_vid_full_scale: int = args.dvs_vid_full_scale
     dvs_h5 = args.dvs_h5
     # dvs_np = args.dvs_np
     dvs_aedat2 = args.dvs_aedat2
@@ -149,9 +150,9 @@ if __name__ == "__main__":
     slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview,rotate=rotate180)
     dvsVidReal=str(dvs_vid).replace('.avi','-real.avi')
     dvsVidFake=str(dvs_vid).replace('.avi','-fake.avi')
-    eventRendererReal = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres, output_path=output_folder, dvs_vid=dvsVidReal, preview=preview, rotate=rotate180,full_scale_count=dvs_vid_full_scale)
-    eventRendererFake = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres, output_path=output_folder, dvs_vid=dvsVidFake, preview=preview, rotate=rotate180,full_scale_count=dvs_vid_full_scale)
     emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text,rotate180=rotate180)
+    eventRendererReal = EventRenderer(frame_rate_hz=dvsFps, output_path=output_folder, dvs_vid=dvsVidReal, preview=preview, rotate180=rotate180, full_scale_count=dvs_vid_full_scale)
+    eventRendererFake = EventRenderer(frame_rate_hz=dvsFps, output_path=output_folder, dvs_vid=dvsVidFake, preview=preview, rotate180=rotate180, full_scale_count=dvs_vid_full_scale)
     realDvsAeDatOutput=None
 
     davisData= DDD20SimpleReader(input_file)
@@ -195,7 +196,7 @@ if __name__ == "__main__":
             if not realDvsAeDatOutput and dvs_aedat2:
                 filepath=checkAddSuffix(os.path.join(output_folder, dvs_aedat2),'.aedat').replace('.aedat','-real.aedat')
                 realDvsAeDatOutput = AEDat2Output(filepath,rotate180=rotate180)
-            realDvsAeDatOutput.appendEvents(events)
+            if realDvsAeDatOutput: realDvsAeDatOutput.appendEvents(events)
             # prepend saved events if there are some
             events=np.vstack((savedEvents,events))
             # find dvs starting frame index
@@ -206,14 +207,12 @@ if __name__ == "__main__":
             dvsFrameEndIdx=np.searchsorted(dvsFrameTimestamps,ts1,side='right')-1 # and last one, we go back -1 more to make sure that the last DVS frame is not partially filled by this packet
             if dvsFrameEndIdx==len(dvsFrameTimestamps): # if ts is past last frame, set to last
                 dvsFrameEndIdx-=1
-            # todo if dvs frame interval is longer than the packet, then we can get frames here that dont have any events, ever
-            # we need to make eventRenderer stateful, so that it keeps accumulating events until frames are full, i.e. we get timestamp past frame that we are filling
             endEventIdx = np.searchsorted(events[:, 0], dvsFrameTimestamps[dvsFrameEndIdx], side='right') # find last event that fits into the last DVS frame
             savedEvents=np.copy(events[endEventIdx:,:]) # save all events after this for next batch of DVS frames
             theseEvents=events[:endEventIdx-1,:]
             # this packet spans some time, and we need to render into DVS frames with regular spacing.
             # But render throws all leftover events into the last DVS
-            eventRendererReal.renderEventsToFrames(event_arr=theseEvents, height=output_height, width=output_width, frame_ts=dvsFrameTimestamps[dvsFrameStartIdx:dvsFrameEndIdx])
+            eventRendererReal.renderEventsToFrames(event_arr=theseEvents, height=output_height, width=output_width)
 
         elif packet['etype']== ddd_h5_reader.DDD20SimpleReader.ETYPE_APS:
             num_frames+=1
@@ -241,8 +240,7 @@ if __name__ == "__main__":
                     interpTimes = np.linspace(start=frame0['timestamp'], stop=frame1['timestamp'], num=n, endpoint=True)
                     for i in range(n - 1):  # for each interpolated frame up to last; use n-1 because we get last interpolated frame as first frame next time
                         fr = read_image(interpFramesFilenames[i])
-                        newEvents = emulator.compute_events(fr, interpTimes[i],
-                                                            interpTimes[i + 1])  # todo something wrong here with count
+                        newEvents = emulator.compute_events(fr, interpTimes[i], interpTimes[i + 1])
                         if not newEvents is None: events = np.append(events, newEvents, axis=0)
                     ts = np.linspace(
                         start=frame0['timestamp'],
@@ -251,7 +249,7 @@ if __name__ == "__main__":
                         endpoint=True
                     )  # output_ts are the timestamps of the DVS video output frames. They come from destFps
                     events = np.array(events)  # remove first None element
-                    eventRendererFake.renderEventsToFrames(events, height=output_height, width=output_width, frame_ts=ts)
+                    eventRendererFake.renderEventsToFrames(events, height=output_height, width=output_width)
 
 
     logger.info("done; see output folder " + str(args.output_folder))
@@ -267,7 +265,7 @@ if __name__ == "__main__":
     logger.info('generated total {} events ({} on, {} off)'.format(EngNumber(emulator.num_events_total),EngNumber(emulator.num_events_on),EngNumber(emulator.num_events_off)))
     logger.info('avg event rate {}Hz ({}Hz on, {}Hz off)'.format(EngNumber(emulator.num_events_total/srcDurationToBeProcessed),EngNumber(emulator.num_events_on/srcDurationToBeProcessed),EngNumber(emulator.num_events_off/srcDurationToBeProcessed)))
     try:
-        src.desktop.open(output_folder)
-    except:
-        logger.warning('could not open {} in desktop'.format(output_folder))
+        desktop.open(os.path.abspath(output_folder))
+    except Exception as e:
+        logger.warning('{}: could not open {} in desktop'.format(e,output_folder))
     quit()

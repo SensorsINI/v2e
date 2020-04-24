@@ -23,11 +23,9 @@ class EventRenderer(object):
 
     def __init__(
             self,
-            pos_thres=0.2,
-            neg_thres=0.2,
-            sigma_thres=0.03,
+            frame_rate_hz=None, # caller must supply this on construction
             full_scale_count=3,
-            rotate=False,
+            rotate180=False,
             output_path:str=None,
             dvs_vid:str=None,
             preview:bool=False
@@ -36,26 +34,43 @@ class EventRenderer(object):
 
         Parameters
         ----------
-        output_path: str, path of output video. Example: ../../XX.avi.
-        event_path: str or None, str if the events need to be saved \
+        frame_rate_hz: float
+            frame rate of video; events will be integrated for 1/frame_rate_hz
+        output_path: str,
+            path of folder to hold output video
+        dvs_vid: str or None, str name of video, e.g. dvs.avi
             else None.
-        rotate: bool, True to rotate the output frames 90 degrees.
+        rotate180: bool,
+            True to rotate the output frames 180 degrees.
+        full_scale_count:int,
+            full scale black/white DVS event count value
+        preview: bool
+            show preview in cv2 window
         """
         self.output_path = output_path
-        self.rotate = rotate
+        self.rotate = rotate180
         self.width = None
         self.height = None  # must be set by specific renderers, which might only know it once they have data
         self.video_output_file_name = dvs_vid
         self.video_output_file = dvs_vid
         self.emulator = None
         self.preview=preview
-        self.preview_resized=False
+        self.preview_resized=False # flag to keep from sizing the preview
         self.numFramesWritten=0
-        self.full_scale_count=full_scale_count
+        self.frame_rate_hz=frame_rate_hz
         atexit.register(self.cleanup)
+        self.full_scale_count=full_scale_count
+
+        self.currentFrameStartTime=None # initialized with first events
+        self.currentFrame=None # initialized with first events, then new frames are built according to events
+
+        if frame_rate_hz is None or frame_rate_hz<=0:
+            raise ValueError('frame_rate_hz must be supplied and be >0 Hz')
+        self.frameIntevalS=1/frame_rate_hz
+
 
     def cleanup(self):
-        if self.video_output_file and (type(self.video_output_file) is not str):
+        if self.video_output_file and (type(self.video_output_file) is not str): #todo not sure this is correct check for str type
             logger.info("Closing DVS video output file after writing {} frames".format(self.numFramesWritten))
             if type(self.video_output_file) is not str: self.video_output_file.release()
             cv2.destroyAllWindows()
@@ -73,23 +88,29 @@ class EventRenderer(object):
             logger.info('opening DVS video output file ' + self.video_output_file)
             self.video_output_file = video_writer(checkAddSuffix(os.path.join(self.output_path, self.video_output_file),'.avi'), self.height, self.width)
 
-    def renderEventsToFrames(self, event_arr: np.ndarray, height: int, width: int, frame_ts: np.array)->None:
-        """ Incrementally render event frames, where events come from overridden method _get_events().
+    def renderEventsToFrames(self, event_arr: np.ndarray, height: int, width: int)->np.ndarray:
+        """ Incrementally render event frames.
+
         Frames are appended to the video output file.
+        The current frame is held for the next packet to fill.
+        Only frames that have been filled are returned.
+
+        Frames are filled when an event comes that is past the end of the frame duration.
+        These filled frames are returned.
 
         Parameters
         ----------
+        event_arr:np.ndarray
+            [n,4] consisting of n events each with [ts,y,x,pol], ts are in float seconds
         height: height of output video in pixels
         width: width of output video in pixels
-        frame_ts: np.array, timestamps of output frames, for rendering DVS events to histogram frames.
-        full_scale_count: int, count of DVS ON and OFF events per pixel for full white and black
+
         Returns
         -------
-        None
+        rendered frames from these events, or None if no new frame was filled. Frames are np.ndarray with [n,h,w] shape, where n is frame, h is height, and w is width
         """
         self.width = width
         self.height = height
-        self.frame_ts = frame_ts
 
         self._check_outputs_open()
 
@@ -97,25 +118,33 @@ class EventRenderer(object):
             logger.info('event_arr is None, doing nothing')
             return None
 
+        ts=event_arr[:,0]
+        if self.currentFrameStartTime is None:
+            self.currentFrameStartTime=ts[0] # initialize this frame
+
+        nextFrameStartTs=self.currentFrameStartTime+self.frameIntevalS
+
+        returnedFrames=None # accumulate frames here
+
+        # loop over events, creating new frames as needed, until we get to frame for last event.
+        # then hold this frame and its start time until we get more events to fill it
+
+        thisFrameIdx=0 # start at first event
+        numEvents=len(ts)
         histrange = [(0, v) for v in (self.height, self.width)]
-        # rendered_frames = list()
 
-        for ts_idx in range(self.frame_ts.shape[0] - 1):
-        # for ts_idx in tqdm(range(self.frame_ts.shape[0] - 1),
-        #                    desc="rendering DVS histograms: ", unit='fr'):
+        done=False
+        while not done:
+            # find first event that is after the current frames start time
+            start=np.searchsorted(ts[thisFrameIdx:],self.currentFrameStartTime,side='left')
+            # find last event that fits within current frame
+            end=np.searchsorted(ts,nextFrameStartTs,side='right')
+            # if the event is after next frame start time, then we finished current frame and can append it to output list
+            if end==numEvents:
+                done=True # we will return now after integrating remaining events
+                end=numEvents-1 # reset to end of current events to integrate all of them
 
-            # assume time_list is sorted.
-            start = np.searchsorted(event_arr[:, 0],
-                                    self.frame_ts[ts_idx],
-                                    side='left')
-            end = np.searchsorted(event_arr[:, 0],
-                                  self.frame_ts[ts_idx + 1],
-                                  side='right')
-            # select events, assume that pos_list is sorted
-            if ts_idx < len(self.frame_ts) - 1:
-                events = event_arr[start: end] # events in this frame
-            else:
-                events = event_arr[start:] # remaining events
+            events = event_arr[start: end] # events in this frame
 
             pol_on = (events[:, 3] == 1)
             pol_off = np.logical_not(pol_on)
@@ -125,68 +154,41 @@ class EventRenderer(object):
             img_off, _, _ = np.histogram2d(
                 events[pol_off, 2], events[pol_off, 1],
                 bins=(self.height, self.width), range=histrange)
-            integrated_img = np.clip(
-                    (img_on - img_off), -self.full_scale_count, self.full_scale_count)
-            
-            # rendered_frames.append(integrated_img)
-            img = (integrated_img + self.full_scale_count) / float(self.full_scale_count * 2)
+            if self.currentFrame is None:
+                self.currentFrame=np.zeros_like(img_on) # make a new empty frame
 
-            if self.rotate:
-                img = np.rot90(img, k=2) # does 180 deg with k=2
+            # clip values of zero-centered current frame with new events added
+            self.currentFrame = np.clip(self.currentFrame+(img_on - img_off), -self.full_scale_count, self.full_scale_count)
 
-            if self.video_output_file:
-                self.video_output_file.write(cv2.cvtColor((img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR))
-                self.numFramesWritten+=1
-            if self.preview:
-                name=str(self.video_output_file_name)
-                cv2.namedWindow(name,cv2.WINDOW_NORMAL)
-                cv2.imshow(name,img)
-                if not self.preview_resized:
-                    cv2.resizeWindow(name, 800, 600)
-                    self.preview_resized = True
-                cv2.waitKey(30) # 30 hz playback
+            if not done: # we finished a frame above, but we will continue to accumulate remaining events after writing out current frame
+                self.currentFrameStartTime+=self.frameIntevalS # increase time to next frame
+                nextFrameStartTs=self.currentFrameStartTime+self.frameIntevalS
+                # img output is 0-1 range
+                img = (self.currentFrame + self.full_scale_count) / float(self.full_scale_count * 2)
+                self.currentFrame=None # done with this frame, allocate new one in next loop
+                if self.rotate:
+                    img = np.rot90(img, k=2) # does 180 deg with k=2
+                if (returnedFrames is not None):
+                    returnedFrames = np.concatenate((returnedFrames, img[np.newaxis,...])) # put new frame under previous ones
+                else:
+                    returnedFrames=img[np.newaxis,...] # add axis at position zero for the frames
 
-        # rendered_frames = np.vstack(rendered_frames) # makes a giant 2D array with all frames stacked vertically to a giant vertical image
-        # return rendered_frames
+                if self.video_output_file:
+                    self.video_output_file.write(cv2.cvtColor((img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR))
+                    self.numFramesWritten+=1
+                if self.preview:
+                    name=str(self.video_output_file_name)
+                    cv2.namedWindow(name,cv2.WINDOW_NORMAL)
+                    cv2.imshow(name,img)
+                    if not self.preview_resized:
+                        cv2.resizeWindow(name, 800, 600)
+                        self.preview_resized = True
+                    cv2.waitKey(30) # 30 hz playback
 
-    def renderVideoFromMemory(self, image_arr: np.ndarray, height: int, width: int, frame_ts: np.array, interpolated_ts: np.array, full_scale_count: int = 3):
-        if not image_arr.shape[0] == frame_ts.shape[0]:
-            raise ValueError(
-                "first dim of image_arr does not match first dim of input_ts")
-        self.all_images = image_arr
-        self.render(self, height, width, frame_ts, interpolated_ts, full_scale_count=3)
 
-    def renderVideoFromFolder(self, images_path: str, height: int, width: int, frame_ts: np.array, interpolated_ts, full_scale_count=3) -> np.ndarray:
+        return returnedFrames
 
-        self.all_images = all_images(images_path)
-        base_frame = read_image(self.all_images[0])  # todo inits emulator every time, not stateful, should be stateful to just take next sequence of images
-        self.height = base_frame.shape[0]
-        self.width = base_frame.shape[1]
-        logger.info('(height,width)=' + str((self.height, self.width)))
 
-        if self.emulator is None:
-            self.emulator = EventEmulator(base_frame, pos_thres=self.pos_thres, neg_thres=self.neg_thres, sigma_thres=self.sigma_thres)
-        super.render(self, height, width, frame_ts, interpolated_ts, full_scale_count=3)
-
-    def _get_events(self):
-        """Get all events."""
-
-        event_list = list()
-
-        for i in tqdm(range(self.interpolated_ts.shape[0] - 1),
-                      desc="VideoSequenceFiles2EventsRenderer: ", unit='fr'):
-            new_frame = read_image(self.all_images[i + 1])
-            tmp_events = self.emulator.compute_events(
-                new_frame,
-                self.interpolated_ts[i],
-                self.interpolated_ts[i + 1]
-            )
-            if tmp_events is not None:
-                event_list.append(tmp_events)
-        event_arr = np.vstack(event_list)
-        logger.info("Generated {} events".format(EngNumber(event_arr.shape[0])))
-
-        return event_arr
 
     def generateEventsFromFramesAndExportEventsToHDF5(self, outputFileName: str, imageFileNames: List[str], frameTimesS: np.array) -> None:
         """Export events to a HDF5 file.

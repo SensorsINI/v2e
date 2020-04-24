@@ -7,10 +7,8 @@ events from this video after SuperSloMo has generated interpolated frames from t
 @contact: tobi@ini.uzh.ch, zhehe@student.ethz.ch
 @latest update: Apr 2020
 """
-# todo  h5ddd, solve bug with gap in events, add batch mode for slomo to speed up
-# todo lowpass filter photoceptor
+# todo  add batch mode for slomo to speed up
 # todo refractory period for pixel
-# todo leak events
 # todo shot noise jitter
 
 import argparse
@@ -25,8 +23,7 @@ from engineering_notation import EngNumber  # only from pip
 import tkinter as tk
 from tkinter import filedialog
 from tqdm import tqdm
-# import webbrowser
-import src.desktop
+import src.desktop as desktop
 
 from src.v2e_utils import all_images, read_image, OUTPUT_VIDEO_FPS
 from src.renderer import EventRenderer
@@ -120,8 +117,8 @@ if __name__ == "__main__":
             logger.info('no file selected, quitting')
             quit()
 
-    output_width = args.output_width
-    output_height = args.output_height
+    output_width: int = args.output_width
+    output_height: int = args.output_height
     if (output_width is None) ^ (output_height is None):
         logger.error('set neither or both of output_width and output_height')
         quit()
@@ -176,9 +173,6 @@ if __name__ == "__main__":
         logger.warning('num frames is less than 2, probably cannot be determined from cv2.CAP_PROP_FRAME_COUNT')
 
     slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview,rotate=rotate180)
-    eventRenderer = EventRenderer(pos_thres=args.pos_thres, neg_thres=args.neg_thres, sigma_thres=args.sigma_thres,
-                                  output_path=output_folder,dvs_vid=dvs_vid,preview=preview,rotate=rotate180,full_scale_count=dvs_vid_full_scale)
-    emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
 
     srcTotalDuration= (srcNumFrames - 1) * srcFrameIntervalS
     start_frame=int(srcNumFrames * (start_time / srcTotalDuration)) if start_time else 0
@@ -202,11 +196,18 @@ if __name__ == "__main__":
                          EngNumber(dvsFps), EngNumber(1 / dvsFps),
                          dvsNumFrames, EngNumber(dvsDuration), EngNumber(dvsPlaybackDuration))
                  )
+
+    emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
+    eventRenderer = EventRenderer(frame_rate_hz=dvsFps,output_path=output_folder, dvs_vid=dvs_vid, preview=preview, rotate180=rotate180, full_scale_count=dvs_vid_full_scale)
+
     frame0 = None
     frame1 = None  # rotating buffers for slomo
     ts0 = 0
     ts1 = srcFrameIntervalS  # timestamps of src frames
     num_frames = 0
+    inputHeight=None
+    inputWidth=None
+    inputChannels=None
     logger.info('processing frames {} to {} from video input'.format(start_frame,stop_frame))
     for frameNumber in tqdm(range(start_frame,stop_frame),unit='fr',desc='v2e'):
     # while (cap.isOpened()):
@@ -229,7 +230,7 @@ if __name__ == "__main__":
         if output_height and output_width and (inputHeight != output_height or inputWidth != output_width):
             dim = (output_width, output_height)
             (fx, fy) = (float(output_width) / inputWidth, float(output_height) / inputHeight)
-            frame = cv2.resize(src=frame, dsize=dim, fx=fx, fy=fy, interpolation=cv2.INTER_AREA)  # todo check that this scales to full output size. It doesn't; leaves border at top/bottom with noise on edge that creates events
+            frame = cv2.resize(src=frame, dsize=dim, fx=fx, fy=fy, interpolation=cv2.INTER_AREA)
         if  inputChannels == 3: # color
             if frame1 is None: # print info once
                 logger.info('converting input frames from RGB color to luma')
@@ -260,8 +261,7 @@ if __name__ == "__main__":
             interpTimes = np.linspace(start=ts0, stop=ts1, num=n, endpoint=True)
             for i in range(n -1):  # for each interpolated frame up to last; use n-1 because we get last interpolated frame as first frame next time
                 fr = read_image(interpFramesFilenames[i])
-                newEvents = emulator.compute_events(fr, interpTimes[i],
-                                                    interpTimes[i + 1])  # todo something wrong here with count
+                newEvents = emulator.compute_events(fr, interpTimes[i], interpTimes[i + 1])
                 if not newEvents is None: events = np.append(events, newEvents, axis=0)
             dvsFrameTimestamps = np.linspace(
                 start=ts0,
@@ -270,7 +270,7 @@ if __name__ == "__main__":
                 endpoint=True
             ) # output_ts are the timestamps of the DVS video output frames. They come from destFps
             events = np.array(events)  # remove first None element
-            eventRenderer.renderEventsToFrames(events, height=output_height, width=output_width, frame_ts=dvsFrameTimestamps)
+            eventRenderer.renderEventsToFrames(events, height=output_height, width=output_width)
             ts0 = ts1
             ts1 += srcFrameIntervalS
 
@@ -291,8 +291,8 @@ if __name__ == "__main__":
     logger.info('generated total {} events ({} on, {} off)'.format(EngNumber(emulator.num_events_total),EngNumber(emulator.num_events_on),EngNumber(emulator.num_events_off)))
     logger.info('avg event rate {}Hz ({}Hz on, {}Hz off)'.format(EngNumber(emulator.num_events_total/srcDurationToBeProcessed),EngNumber(emulator.num_events_on/srcDurationToBeProcessed),EngNumber(emulator.num_events_off/srcDurationToBeProcessed)))
     try:
-        src.desktop.open(output_folder)
-    except:
-        logger.warning('could not open {} in desktop'.format(output_folder))
+        desktop.open(os.path.abspath(output_folder))
+    except Exception as e:
+        logger.warning('{}: could not open {} in desktop'.format(e, output_folder))
     quit()
 

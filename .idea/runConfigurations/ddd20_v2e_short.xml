@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="ddd20-v2e" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="ddd20-v2e-short" type="PythonConfigurationType" factoryName="Python">
     <module name="v2e" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -10,7 +10,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ddd20-v2e.py" />
-    <option name="PARAMETERS" value="--input input/rec1501902136.hdf5 --slomo_model input/SuperSloMo39.ckpt --slowdown_factor 30 --start 5 --stop 7 --output_folder v2e-ddd-test --pos_thres=.2 --neg_thres=.2 --overwrite" />
+    <option name="PARAMETERS" value="--input input/rec1501350986.hdf5 --slomo_model input/SuperSloMo39.ckpt --slowdown_factor 10 --start 50 --stop 52 --output_folder output/ddd20-v2e-short --pos_thres=.2 --neg_thres=.2 --overwrite --dvs_vid_full_scale=2 --frame_rate=100" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

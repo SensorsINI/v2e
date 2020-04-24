@@ -49,8 +49,6 @@ class EventEmulator(object):
     - contact: zhehe@student.ethz.ch
     """
 
-    # todo add event count statistics for ON and OFF events\
-    # todo add lowpass filter
     # todo add refractory period
 
     def __init__(
@@ -121,8 +119,6 @@ class EventEmulator(object):
         self.num_events_total=0
         self.num_events_on=0
         self.num_events_off=0
-        # self.dvs_rosbag=dvs_rosbag
-        # self.specpix=None # todo debug
 
         if self.output_folder:
             if dvs_h5:
@@ -254,13 +250,6 @@ class EventEmulator(object):
 
         events = []
 
-        # maxpix=np.where(pos_evts_frame==pos_iters)
-        # if len(maxpix)>0:
-        #     if not self.specpix:
-        #         self.specpix=maxpix[0][0],maxpix[1][0]
-        #     print('pix {} has log={:5.2f} base={:5.2f} diff={:5.2f} evts={:5.2f}'.format(
-        #         self.specpix,logNewFrame[self.specpix], self.baseLogFrame[self.specpix], diff_frame[self.specpix],pos_evts_frame[self.specpix]
-        #     ))
         for i in range(num_iters):
 
             # intermediate timestamps are linearly spaced
@@ -328,10 +317,6 @@ class EventEmulator(object):
                 if num_neg_events > 0:
                     self.baseLogFrame[neg_cord] -= \
                         neg_evts_frame[neg_cord] * self.neg_thres[neg_cord]  # neg_thres is >0
-                # p = maxpix[0][0], maxpix[1][0]
-                # print('after update, pix {} has log={:5.2f} base={:5.2f} diff={:5.2f} evts={:5.2f}'.format(
-                #     self.specpix, logNewFrame[self.specpix], self.baseLogFrame[self.specpix], diff_frame[self.specpix], pos_evts_frame[self.specpix]
-                # ))
 
             if num_events > 0:
                 events.append(events_tmp)
@@ -449,7 +434,7 @@ class EventFrameRenderer(object):
                 logger.info("Image2Events processed {} frames".format(EngNumber(idx + 1)))
 
         event_arr = np.vstack(event_list)
-        logger.info("generated {} events".format(EngNumber(event_arr.shape[0])))  # TODO engineering format, events/sec
+        logger.info("generated {} events".format(EngNumber(event_arr.shape[0])))
 
         return event_arr, time_list, pos_list, num_frames, height, width
 
