@@ -10,7 +10,7 @@ Tobi Delbruck (tobi@ini.uzh.ch)
 ## Environment
 
 ```bash
-python==3.7.3
+python==3.7.7
 ```
 
 We highly recommend running the code in virtual environment. Conda is always your best friend. :)
@@ -51,15 +51,16 @@ mv SuperSloMo39.ckpt ./input
 ## Render emulated DVS events from conventional video.
 
 ```bash
-(pt-v2e) H:\Dropbox (Personal)\GitHub\SensorsINI\v2e>python v2e.py -h
+(pt-v2e)$ python v2e.py -h
 usage: v2e.py [-h] [-i INPUT] [--start_time START_TIME]
               [--stop_time STOP_TIME] [--pos_thres POS_THRES]
               [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
               [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
               [--slowdown_factor SLOWDOWN_FACTOR]
               [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
-              [--slomo_model SLOMO_MODEL] -o OUTPUT_FOLDER
-              [--frame_rate FRAME_RATE] [--dvs_vid DVS_VID] [--dvs_h5 DVS_H5]
+              [--rotate180] [--slomo_model SLOMO_MODEL] -o OUTPUT_FOLDER
+              [--frame_rate FRAME_RATE] [--dvs_vid DVS_VID]
+              [--dvs_vid_full_scale DVS_VID_FULL_SCALE] [--dvs_h5 DVS_H5]
               [--dvs_aedat2 DVS_AEDAT2] [--dvs_text DVS_TEXT]
               [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO] [-p] [--overwrite]
 
@@ -102,6 +103,7 @@ optional arguments:
   --output_width OUTPUT_WIDTH
                         width of output DVS data in pixels. If None, same as
                         input video. (default: None)
+  --rotate180           rotate all output 180 deg (default: False)
   --slomo_model SLOMO_MODEL
                         path of slomo_model checkpoint (default:
                         input/SuperSloMo39.ckpt)
@@ -114,6 +116,9 @@ optional arguments:
                         (default: 300)
   --dvs_vid DVS_VID     output DVS events as AVI video at frame_rate (default:
                         dvs-video.avi)
+  --dvs_vid_full_scale DVS_VID_FULL_SCALE
+                        set full scale count for DVS videos to be this many ON
+                        or OFF events (default: 3)
   --dvs_h5 DVS_H5       output DVS events as hdf5 event database (default:
                         None)
   --dvs_aedat2 DVS_AEDAT2
@@ -132,7 +137,6 @@ optional arguments:
                         of non-empty output_folder) (default: False)
 
 Run with no --input to open file dialog
-
 ```
 For example: (using OpenCV example video)
 ```bash
@@ -165,6 +169,36 @@ The file is _aug04/rec1501902136.hdf5_ [[link]](https://drive.google.com/open?id
 mkdir -p input
 mv rec1501902136.hdf5 ./input
 ```
+
+### Extract data from DDD recording
+
+_ddd_h5_extract_data.py_ extracts the DDD recording DVS events to jAER .aedat and video .avi files.
+
+```bash
+(pt-v2e) $ python ddd_h5_extract_data.py -h
+usage: ddd_h5_extract_data.py [-h] [-i INPUT] -o OUTPUT_FOLDER
+                              [--start_time START_TIME]
+                              [--stop_time STOP_TIME] [--rotate180]
+                              [--overwrite]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT, --input INPUT
+                        input video file; leave empty for file chooser dialog
+  -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
+                        folder to store outputs
+  --start_time START_TIME
+                        start at this time in seconds in video
+  --stop_time STOP_TIME
+                        stop point of video stream
+  --rotate180           rotate output 180 deg
+  --overwrite           overwrites files in existing folder (checks existance
+                        of non-empty output_folder)
+
+```
+
+###
+
 
 
 

@@ -16,6 +16,8 @@ from src.ddd20_utils.datasets import CHUNK_SIZE
 from src.ddd20_interfaces.caer import unpack_data
 from src.ddd20_interfaces import caer
 
+logger=logging.getLogger(__name__)
+
 class DDD20SimpleReader(object):
     '''
     Simple reader with no multiprocessing threads to read in DDD recording and
@@ -37,9 +39,9 @@ class DDD20SimpleReader(object):
         stopTimeS: float
             stop time of the stream in seconds from start of recording.
         """
-        logging.info('making reader for DDD recording '+str(fname))
+        logger.info('making reader for DDD recording '+str(fname))
         self.f_in =h5py.File(fname, 'r')
-        logging.info(str(fname)+' contains following keys')
+        logger.info(str(fname)+' contains following keys')
         hasDavisData=False
         dvsKey='dvs'
         for key in self.f_in.keys():
@@ -48,16 +50,16 @@ class DDD20SimpleReader(object):
         if not hasDavisData: raise('file does not contain DAVIS data (key dvs)')
 
         dvsGroup=self.f_in[dvsKey]
-        logging.info('group dvs contains following keys')
+        logger.info('group dvs contains following keys')
         for key in dvsGroup.keys():
             print(key)
 
-        logging.info('group dvs contains following items')
+        logger.info('group dvs contains following items')
         for item in dvsGroup.items():
             print(item)
 
         self.davisData=dvsGroup['data']
-        logging.info('The DAVIS data has the shape '+str(self.davisData.shape))
+        logger.info('The DAVIS data has the shape '+str(self.davisData.shape))
 
         self.numPackets=self.davisData.shape[0] # start here, this is not actual size
         self.firstPacketNumber=0
@@ -74,9 +76,11 @@ class DDD20SimpleReader(object):
             lastPacket = self.readPacket(self.numPackets-1)
         self.endTimeS=lastPacket['timestamp']
         self.durationS=self.endTimeS-self.startTimeS
-        logging.info('file has '+str(self.numPackets)+' packets with start time='+str(self.startTimeS)+'s and end time='+str(self.endTimeS)+'s')
+        logger.info('{} has {} packets with start time {:7.2f}s and end time {:7.2f}s (duration {:8.1f}s)'.format(
+            fname, self.numPackets, self.startTimeS, self.endTimeS, self.durationS
+        ))
 
-        # logging.info('Sample DAVIS data is the following')
+        # logger.info('Sample DAVIS data is the following')
         # i=0
         # for dat in self.davisData:
         #     headerDat=dat[1] # caer header
@@ -141,16 +145,16 @@ class DDD20SimpleReader(object):
         packet number
 
         """
-        logging.info('searching for time {}'.format(timeS))
+        logger.info('searching for time {}'.format(timeS))
         for k in tqdm(range(self.firstPacketNumber,self.numPackets),unit='packet',desc='ddd-h5-search'):
             data=self.readPacket(k)
             if not data: # maybe cannot parse this particular type of packet (e.g. imu6)
                 continue
             t=data['timestamp']
             if t>=self.startTimeS+timeS:
-                logging.info('\nfound start time '+str(timeS)+' at packet '+str(k))
+                logger.info('\nfound start time '+str(timeS)+' at packet '+str(k))
                 return k
-        logging.warning('\ncould not find start time '+str(timeS)+' before end of file')
+        logger.warning('\ncould not find start time '+str(timeS)+' before end of file')
         return False
 
 
