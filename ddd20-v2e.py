@@ -16,12 +16,13 @@ import numpy as np
 from engineering_notation import EngNumber
 from tqdm import tqdm
 
-from ddd20_utils import ddd_h5_reader
-from ddd20_utils.ddd_h5_reader import DDD20SimpleReader
-from output.aedat2_output import AEDat2Output
+from src.ddd20_utils import ddd_h5_reader
+from src.ddd20_utils.ddd_h5_reader import DDD20SimpleReader
+from src.output.aedat2_output import AEDat2Output
 from src.renderer import EventEmulator, EventRenderer
 from src.slomo import SuperSloMo
-from v2e_utils import OUTPUT_VIDEO_FPS, all_images, read_image, checkAddSuffix
+from src.v2e_utils import OUTPUT_VIDEO_FPS, all_images, \
+    read_image, checkAddSuffix
 from src.v2e_utils import inputFileDialog
 import src.desktop as desktop
 
