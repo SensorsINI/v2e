@@ -5,3 +5,4 @@ data/
 notebook/
 *.sh
 aedat-text-test.txt
+input/*
