@@ -132,8 +132,8 @@ optional arguments:
   --vid_slomo VID_SLOMO
                         output slomo of src video slowed down by
                         slowdown_factor (default: video_slomo.avi)
-  -p, --preview         show preview in cv2 windows (default: False)
-  --overwrite           overwrites files in existing folder (checks existance
+  --no_preview         disable preview in cv2 windows for faster processing (default: False)
+  --overwrite           overwrites files in existing folder (checks existence
                         of non-empty output_folder) (default: False)
 
 Run with no --input to open file dialog
