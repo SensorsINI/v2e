@@ -178,6 +178,11 @@ if __name__ == "__main__":
     inputHeight=None
     inputWidth=None
     inputChannels=None
+    if start_frame>0:
+        logger.info('skipping to frame {}'.format(start_frame))
+        for i in range(start_frame):
+            ret, _ = cap.read()
+            if not ret: raise ValueError('something wrong, got to end of file before reaching start_frame')
     logger.info('processing frames {} to {} from video input'.format(start_frame,stop_frame))
     for frameNumber in tqdm(range(start_frame,stop_frame),unit='fr',desc='v2e'):
     # while (cap.isOpened()):
