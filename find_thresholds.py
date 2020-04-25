@@ -44,8 +44,10 @@ if __name__ == "__main__":
     else: input_file=args.i
 
     dddReader = DDD20ReaderMultiProcessing(input_file, startTimeS=args.start, stopTimeS=args.stop)
-    frames, events = dddReader.readEntire()
+    frames, dvsEvents = dddReader.readEntire()
 
+    dvsOnEvents=dvsEvents[dvsEvents[:, 3] == 1].shape[0]
+    dvsOffEvents = dvsEvents.shape[0] - dvsOnEvents
     results = []
 
     with TemporaryDirectory() as dirname:
@@ -56,36 +58,21 @@ if __name__ == "__main__":
         height, width = frames["frame"].shape[1:]
         nFrames=frames.shape[0]
 
-        emulator= EventEmulator(frames[0],output_folder=None,rotate180=True,show_input=True)
-
-        events_dvs=[]
-        for i in range(nFrames):
-            e=emulator.compute_events(frames[i],frame_ts[i],frame_ts[i+1])
-            events.append(e)
-
-        num_pos_dvs = events_dvs[events_dvs[:, 3] == 1].shape[0]
-        num_neg_dvs = events_dvs.shape[0] - num_pos_dvs
-
         pos_thres = -1.
         neg_thres = -1.
-
+        results=[]
         for threshold in np.arange(0.01, 0.91, 0.01):
 
-            r = VideoSequenceFiles2EventsRenderer(
-                dirname,
-                frame_ts,
-                frame_ts,
-                threshold,
-                threshold,
-                "data/from_image_{:.2f}.avi".format(threshold))
+            apsOnEvents=0
+            apsOffEvents=0
+            emulator = EventEmulator(frames[0], output_folder=None, pos_thres=threshold, neg_thres=threshold, show_input=False)
+            for i in range(nFrames):
+                e = emulator.compute_events(frames[i], frame_ts[i], frame_ts[i + 1])
+                apsOnEvents+=emulator.num_events_on
+                apsOffEvents+=emulator.num_events_off
 
-            events_aps = r._get_events()
-
-            num_pos_aps = events_aps[events_aps[:, 3] == 1].shape[0]
-            num_neg_aps = events_aps.shape[0] - num_pos_aps
-
-            abs_pos_diff = np.abs(num_pos_dvs - num_pos_aps)
-            abs_neg_diff = np.abs(num_neg_dvs - num_neg_aps)
+            abs_pos_diff = np.abs(dvsOnEvents - apsOnEvents)
+            abs_neg_diff = np.abs(dvsOffEvents - apsOffEvents)
 
             if len(results) > 0:
                 if abs_pos_diff >= results[-1][1] and pos_thres < 0:
