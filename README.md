@@ -2,6 +2,10 @@
 
 Python torch + opencv code to go from conventional stroboscopic video frames with low frame rate into synthetic DVS event streams with much higher effective timing precision.
 
+See the [v2e home page](https://sites.google.com/view/video2events/home) for videos and README.
+
+
+
 ## Contact
 Yuhuang Hu (yuhuang.hu@ini.uzh.ch)
 Zhe He (hezhehz@live.cn)
@@ -27,12 +31,13 @@ For conda users, you can first make an env with pip in it, then install with pip
 ```bash
 conda create -n pt-v2e python=3.7 pip
 conda activate pt-v2e
+which pip # check to make sure new pip is first in path
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-The program is designed to serve multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for generating DVS events from conventional video and from specific datasets.
+_v2e_ serves multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for generating DVS events from conventional video and from specific datasets.
 
 **NOTE** We recommend running v2e on a CUDA GPU or it will be very slow.
 
@@ -40,17 +45,22 @@ The program is designed to serve multiple purposes. Please read to code if you w
 
 We use the excellent [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects/superslomo/) framework to interpolate the APS frames. 
 However, since APS frames only record light intensity, we  retrained it on grayscale images. 
-You can download our pre-trained model from Google Drive 
+You can download our pre-trained model checkpoint from Google Drive 
 [[link]](https://drive.google.com/file/d/17QSN207h05S_b2ndXjLrqPbBTnYIl0Vb/view?usp=sharing) (151 MB).
+
 
 ```bash
 mkdir -p input
 mv SuperSloMo39.ckpt ./input
 ```
+The default value of --slomo_model argument is set to this location.
 
 ## Render emulated DVS events from conventional video.
 
+_v2e.py_ reads a standard video (e.g. in .avi, .mp4, .mov, or .wmv) and generates emulated DVS events at upsampled timestamp resolution.
+
 ```bash
+(base)$ conda activate pt-v2e # activate your workspace 
 (pt-v2e)$ python v2e.py -h
 usage: v2e.py [-h] [-i INPUT] [--start_time START_TIME]
               [--stop_time STOP_TIME] [--pos_thres POS_THRES]
@@ -138,21 +148,24 @@ optional arguments:
 
 Run with no --input to open file dialog
 ```
-For example: (using OpenCV example video)
+You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the __input__ folder to try it out with the command line below.
+
 ```bash
-python v2e.py --input input/v_SoccerJuggling_g23_c01.avi --slomo_model=input/SuperSloMo39.ckpt --slowdown_factor=20 --output_folder=output --pos_thres=.15 --neg_thres=.15 --sigma_thres=0.01 --frame_rate=400 --dvs_aedat2 v2e-test-long.aedat --output_width=346 --output_height=260
+python v2e.py --i input/tennis.mov --slowdown_factor=10 --o=output --pos_thres=.15 --neg_thres=.15 --sigma_thres=0.01 --frame_rate=300 --dvs_aedat2 tennis.aedat --output_width=346 --output_height=260
 ```
 Run the command above, and the following files will be created in a folder called _output_.
 
 ```bash
-original.avi  slomo.avi  dvs-video.avi  v2e-test-long.aedat 
+original.avi  slomo.avi  dvs-video.avi  tennis.aedat 
 ```
 
 * _original.avi_: input video, but converted to luma and resized to output (width,height) and with repeated frames to allow comparison to _slomo.avi_.
 * _slomo.avi_: slow motion video (with playback rate 30Hz) but slowed down by slowdown_factor.
 * _dvs-video.avi_: DVS video (with playback rate 30Hz) but with frame rate (DVS timestamp resolution) set by source video frame rate times slowdown_factor.
-* _v2e-test-long.aedat_: AEDAT-2.0 file for playback and algorithm experiments in jAER
+* _tennis.aedat_: AEDAT-2.0 file for playback and algorithm experiments in [jAER](https://jaerproject.net) (use the AEChip _Davis346Blue_ to play this file.)
 
+The [v2e site](https://sites.google.com/view/video2events/home) shows these videos.
+ 
 ## DAVIS camera conversion Dataset
 
 v2e can convert recordings from [DDD17](https://docs.google.com/document/d/1HM0CSmjO8nOpUeTvmPjopcBcVCk7KXvLUuiZFS6TWSg/pub) which is the first public end-to-end training dataset 
@@ -172,7 +185,7 @@ mv rec1501902136.hdf5 ./input
 
 ### Extract data from DDD recording
 
-_ddd_h5_extract_data.py_ extracts the DDD recording DVS events to jAER .aedat and video .avi files.
+_ddd_h5_extract_data.py_ extracts the DDD recording DVS events to jAER _.aedat_ and video _.avi_ files.
 
 ```bash
 (pt-v2e) $ python ddd_h5_extract_data.py -h
@@ -197,9 +210,104 @@ optional arguments:
 
 ```
 
-###
+### Synthesize events from DDD recording
 
+_ddd20-v2e.py_ is like v2e.py but it reads DDD .hdf5 recordings and extracts the real DVS events from the same part of the recording used for the synthesis of DVS events.
 
+You can try it like this:
+```bash
+/home/tobi/anaconda3/envs/pt-v2e/bin/python /home/tobi/Dropbox/GitHub/SensorsINI/v2e/ddd20-v2e.py --input input/rec1501350986.hdf5 --slomo_model input/SuperSloMo39.ckpt --slowdown_factor 20 --start 70 --stop 73 --output_folder output/ddd20-v2e-short --dvs_aedat dvs --pos_thres=.2 --neg_thres=.2 --overwrite --dvs_vid_full_scale=2 --frame_rate=100
+INFO:__main__:arguments:
+cutoff_hz:      300
+dvs_aedat2:     dvs
+dvs_h5: None
+dvs_text:       None
+dvs_vid:        dvs-video.avi
+dvs_vid_full_scale:     2
+frame_rate:     100
+input:  input/rec1501350986.hdf5
+leak_rate_hz:   0.05
+neg_thres:      0.2
+no_preview:     False
+output_folder:  output/ddd20-v2e-short
+output_height:  260
+output_width:   346
+overwrite:      True
+pos_thres:      0.2
+rotate180:      True
+sigma_thres:    0.03
+slomo_model:    input/SuperSloMo39.ckpt
+slowdown_factor:        20
+start_time:     70.0
+stop_time:      73.0
+vid_orig:       video_orig.avi
+vid_slomo:      video_slomo.avi
+
+INFO:__main__:opening output files
+INFO:src.slomo:CUDA available, running on GPU :-)
+INFO:src.emulator:ON/OFF log_e temporal contrast thresholds: 0.2 / 0.2 +/- 0.03
+INFO:src.emulator:opening AEDAT-2.0 output file output/ddd20-v2e-short/dvs.aedat
+INFO:root:opening AEDAT-2.0 output file output/ddd20-v2e-short/dvs.aedat in binary mode
+INFO:src.output.aedat2_output:opened output/ddd20-v2e-short/dvs.aedat for DVS output data for jAER
+INFO:src.ddd20_utils.ddd_h5_reader:making reader for DDD recording input/rec1501350986.hdf5
+INFO:src.ddd20_utils.ddd_h5_reader:input/rec1501350986.hdf5 contains following keys
+accelerator_pedal_position
+brake_pedal_status
+dvs
+engine_speed
+fine_odometer_since_restart
+fuel_consumed_since_restart
+fuel_level
+gear_lever_position
+headlamp_status
+high_beam_status
+ignition_status
+lateral_acceleration
+latitude
+longitude
+longitudinal_acceleration
+odometer
+parking_brake_status
+steering_wheel_angle
+torque_at_transmission
+transmission_gear_position
+vehicle_speed
+windshield_wiper_status
+INFO:src.ddd20_utils.ddd_h5_reader:group dvs contains following keys
+data
+timestamp
+INFO:src.ddd20_utils.ddd_h5_reader:group dvs contains following items
+('data', <HDF5 dataset "data": shape (38912, 3), type "|O">)
+('timestamp', <HDF5 dataset "timestamp": shape (38912,), type "<i8">)
+INFO:src.ddd20_utils.ddd_h5_reader:The DAVIS data has the shape (38912, 3)
+INFO:src.ddd20_utils.ddd_h5_reader:input/rec1501350986.hdf5 has 38271 packets with start time 1123.34s and end time 1246.31s (duration    123.0s)
+INFO:src.ddd20_utils.ddd_h5_reader:searching for time 70.0
+ddd-h5-search:  56%|███████████████████████████████████████▉                                | 21244/38271 [00:08<00:05, 3002.45packet/s]INFO:src.ddd20_utils.ddd_h5_reader:
+found start time 70.0 at packet 21369
+
+INFO:src.ddd20_utils.ddd_h5_reader:searching for time 73.0
+ddd-h5-search:  58%|█████████████████████████████████████████▊                              | 22197/38271 [00:08<00:05, 2692.97packet/s]INFO:src.ddd20_utils.ddd_h5_reader:
+found start time 73.0 at packet 22469
+
+INFO:__main__:iterating over input file contents
+v2e-ddd20:   0%|                                                                                           | 0/1100 [00:00<?, ?packet/s]INFO:root:opening AEDAT-2.0 output file output/ddd20-v2e-short/dvs-real.aedat in binary mode
+INFO:src.output.aedat2_output:opened output/ddd20-v2e-short/dvs-real.aedat for DVS output data for jAER
+INFO:src.renderer:opening DVS video output file dvs-video-real.avi
+DEBUG:src.v2e_utils:opened output/ddd20-v2e-short/dvs-video-real.avi with  XVID https://www.fourcc.org/ codec, 30.0fps, and (346x260) size
+v2e-ddd20:   5%|███▊                                                                              | 51/1100 [00:00<00:15, 67.70packet/s]INFO:src.slomo:loading SuperSloMo model from input/SuperSloMo39.ckpt
+
+```
+
+The generated outputs will be
+```angular2
+dvs-v2e.aedat
+dvs-v2e-real.aedat
+dvs-video-fake.avi
+dvs-video-real.avi
+info.txt
+original.avi
+slomo.avi
+```
 
 
 ### Plot the Events
