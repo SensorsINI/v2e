@@ -20,8 +20,6 @@ import numpy as np
 import os
 from tempfile import TemporaryDirectory
 from engineering_notation import EngNumber  # only from pip
-import tkinter as tk
-from tkinter import filedialog
 from tqdm import tqdm
 import src.desktop as desktop
 
@@ -30,6 +28,9 @@ from src.renderer import EventRenderer
 from src.slomo import SuperSloMo
 from src.emulator import EventEmulator
 import logging
+
+from v2e_utils import inputVideoFileDialog
+
 logging.basicConfig()
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -51,18 +52,6 @@ parser.add_argument("--rotate180", type=bool, default=False,
 argcomplete.autocomplete(parser)
 args = parser.parse_args()
 
-
-
-def inputFileDialog():
-    root = tk.Tk()
-    root.tk.call('tk', 'scaling', 4.0)  # doesn't help on hdpi screen
-    root.withdraw()
-    os.chdir('./input')
-    filetypes=[("Video files", ".avi .mp4 .wmv"),('Any type','*')]
-    filepath = filedialog.askopenfilename(filetypes=filetypes)
-    os.chdir('..')
-    return filepath
-
 if __name__ == "__main__":
     overwrite=args.overwrite
     output_folder=args.output_folder
@@ -75,14 +64,12 @@ if __name__ == "__main__":
         logger.info('making output folder {}'.format(output_folder))
         os.mkdir(output_folder)
 
-
-
     if (args.output_width != None) ^ (args.output_width != None):
         logger.error('provide both or neither of output_width and output_height')
         quit()
     input_file = args.input
     if not input_file:
-        input_file =inputFileDialog()
+        input_file = inputVideoFileDialog()
         if not input_file:
             logger.info('no file selected, quitting')
             quit()

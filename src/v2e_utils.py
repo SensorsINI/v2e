@@ -48,12 +48,18 @@ def v2e_args(parser):
     return parser
 
 
-def inputFileDialog():
+def inputVideoFileDialog():
+    return _inputFileDialog([("Video/Data files", ".avi .mp4 .wmv"),('Any type','*')])
+
+def inputDDDFileDialog():
+    return _inputFileDialog([("DDD recordings", ".hdf5"),('Any type','*')])
+
+def _inputFileDialog(types):
     root = tk.Tk()
     root.tk.call('tk', 'scaling', 4.0)  # doesn't help on hdpi screen
     root.withdraw()
     os.chdir('./input')
-    filetypes=[("Video/Data files", ".avi .mp4 .wmv .hdf5"),('Any type','*')]
+    filetypes=types
     filepath = filedialog.askopenfilename(filetypes=filetypes)
     os.chdir('..')
     return filepath

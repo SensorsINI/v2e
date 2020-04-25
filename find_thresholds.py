@@ -1,78 +1,67 @@
+import logging
+import os
+
 import numpy as np
 import argparse
 
 from tempfile import TemporaryDirectory
 
-from src.renderer import VideoSequenceFiles2EventsRenderer, Events2VideoRenderer
+from emulator import EventEmulator
 from src.slomo import SuperSloMo
-from src.ddd20_utils.ddd_h5_reader import DDD20ReaderMultiProcessing
+from src.ddd20_utils.ddd_h5_reader import DDD20ReaderMultiProcessing, DDD20SimpleReader
 
 # TODO rename to find_thresholds.py
+from v2e_utils import inputVideoFileDialog, inputDDDFileDialog
+
+logging.basicConfig()
+root = logging.getLogger()
+root.setLevel(logging.DEBUG)
+# https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output/7995762#7995762
+logging.addLevelName( logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.WARNING))
+logging.addLevelName( logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
+logger=logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser()
-
-parser.add_argument(
-    "--start",
-    type=float,
-    default=0.0,
-    help="start point of video stream"
-)
-parser.add_argument(
-    "--stop",
-    type=float,
-    default=5.0,
-    help="stop point of video stream"
-)
-parser.add_argument(
-    "--fname",
-    type=str,
-    required=True,
-    help="path of .h5 file"
-)
-parser.add_argument(
-    "--checkpoint",
-    type=str,
-    required=True,
-    help="path of checkpoint"
-)
-parser.add_argument(
-    "--sf",
-    type=int,
-    required=True,
-    help="slow motion factor"
-)
-
+parser.add_argument("--start", type=float, default=0.0, help="start point of video stream")
+parser.add_argument("--stop", type=float, default=5.0, help="stop point of video stream")
+parser.add_argument("-i", type=str, help="path of DDD .hdf5 file")
+parser.add_argument("--model", type=str, default='input/SuperSlo39.ckpt', help="path of checkpoint")
+parser.add_argument("--slowdown_factor", type=int, default=10, help="slow motion factor")
 args = parser.parse_args()
-
 
 if __name__ == "__main__":
 
-    m = DDD20ReaderMultiProcessing(args.fname, startTimeS=args.start, stopTimeS=args.stop)
-    frames, events = m.readEntire()
+    if os.name=='nt':
+        logger.warning('A Windows python multiprocessing threading problem means that the HDF5 reader will probably not work '
+                       '\n you may get the infamous "TypeError: h5py objects cannot be pickled" bug')
+
+
+    if not args.i:
+        input_file = inputDDDFileDialog()
+        if not input_file:
+            logger.info('no file selected, quitting')
+            quit()
+    else: input_file=args.i
+
+    dddReader = DDD20ReaderMultiProcessing(input_file, startTimeS=args.start, stopTimeS=args.stop)
+    frames, events = dddReader.readEntire()
 
     results = []
 
     with TemporaryDirectory() as dirname:
-
-        print("tmp_dir: ", dirname)
-
-        s = SuperSloMo(
-            args.checkpoint,
-            args.sf,
-            dirname
-        )
-
+        logger.info("tmp_dir: ", dirname)
+        s = SuperSloMo(args.checkpoint, args.sf, dirname)
         s.interpolate(frames["frame"])
         frame_ts = s.get_ts(frames["ts"])
         height, width = frames["frame"].shape[1:]
+        nFrames=frames.shape[0]
 
-        r_events = Events2VideoRenderer(
-            frame_ts,
-            events,
-            "data/from_event.avi"
-        )
+        emulator= EventEmulator(frames[0],output_folder=None,rotate180=True,show_input=True)
 
-        events_dvs = r_events._get_events()
+        events_dvs=[]
+        for i in range(nFrames):
+            e=emulator.compute_events(frames[i],frame_ts[i],frame_ts[i+1])
+            events.append(e)
 
         num_pos_dvs = events_dvs[events_dvs[:, 3] == 1].shape[0]
         num_neg_dvs = events_dvs.shape[0] - num_pos_dvs

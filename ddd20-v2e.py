@@ -22,7 +22,7 @@ from src.output.aedat2_output import AEDat2Output
 from src.renderer import EventEmulator, EventRenderer
 from src.slomo import SuperSloMo
 from src.v2e_utils import OUTPUT_VIDEO_FPS, all_images, \
-    read_image, checkAddSuffix, v2e_args
+    read_image, checkAddSuffix, v2e_args, inputDDDFileDialog
 from src.v2e_utils import inputFileDialog
 import src.desktop as desktop
 
@@ -65,7 +65,7 @@ if __name__ == "__main__":
         quit()
     input_file = args.input
     if not input_file:
-        input_file =inputFileDialog()
+        input_file =inputDDDFileDialog()
         if not input_file:
             logger.info('no file selected, quitting')
             quit()
