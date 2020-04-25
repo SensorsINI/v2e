@@ -41,7 +41,7 @@ _v2e_ serves multiple purposes. Please read to code if you would like to adapt i
 
 **NOTE** We recommend running v2e on a CUDA GPU or it will be very slow.
 
-## Download Checkpoint
+## Download SuperSloMo model
 
 We use the excellent [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects/superslomo/) framework to interpolate the APS frames. 
 However, since APS frames only record light intensity, we  retrained it on grayscale images. 
