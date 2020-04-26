@@ -9,8 +9,8 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/find_thresholds.py" />
-    <option name="PARAMETERS" value="-i input/rec1501350986.hdf5 --start 40 --stop 41" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ddd_find_thresholds.py" />
+    <option name="PARAMETERS" value="-i input/rec1501350986.hdf5 --start 25 --stop 30" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

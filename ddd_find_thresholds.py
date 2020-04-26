@@ -1,22 +1,15 @@
 import logging
 import os
-
 import numpy as np
 import argparse
-
 from tempfile import TemporaryDirectory
-
-from matplotlib import pyplot
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from emulator import EventEmulator
+from src.emulator import EventEmulator
 from src.slomo import SuperSloMo
 from src.ddd20_utils.ddd_h5_reader import DDD20ReaderMultiProcessing, DDD20SimpleReader
-
-# TODO rename to find_thresholds.py
-from v2e_utils import inputVideoFileDialog, inputDDDFileDialog
-
+from src.v2e_utils import inputVideoFileDialog, inputDDDFileDialog
 
 logging.basicConfig()
 root = logging.getLogger()
@@ -26,14 +19,16 @@ logging.addLevelName(logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevel
 logging.addLevelName(logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
 logger = logging.getLogger(__name__)
 
-parser = argparse.ArgumentParser(description='find_thresholds.py: generate simulated DVS events from video with sweep of thresholds to compare with real DVS to find optimal thresholds.',
+parser = argparse.ArgumentParser(description='ddd_find_thresholds.py: generate simulated DVS events from video with sweep of thresholds to compare with real DVS to find optimal thresholds.',
                                  epilog='Run with no --input to open file dialog', allow_abbrev=True,
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--start", type=float, default=0.0, help="start point of video stream")
 parser.add_argument("--stop", type=float, default=5.0, help="stop point of video stream")
 parser.add_argument("-i", type=str, help="path of DDD .hdf5 file")
+parser.add_argument("-o", type=str, default='output/find_thresholds', help="path to where output is stored")
 parser.add_argument("--slowdown_factor", type=int, default=10, help="slow motion factor")
 parser.add_argument("--slomo_model", type=str, default="input/SuperSloMo39.ckpt", help="path of slomo_model checkpoint.")
+parser.add_argument("--no_preview", action="store_true", help="disable preview in cv2 windows for faster processing.")
 args = parser.parse_args()
 
 if __name__ == "__main__":
@@ -50,13 +45,14 @@ if __name__ == "__main__":
     else:
         input_file = args.i
 
+    preview=not args.no_preview
     assert os.path.exists(input_file)
     assert args.start == None or args.stop == None or args.start < args.stop
     assert os.path.exists(args.slomo_model)
 
     from pathlib import Path
 
-    outdir = 'output/find_thresholds'
+    outdir = args.o
     Path(outdir).mkdir(parents=True, exist_ok=True)
 
     frames, dvsEvents = [], []
@@ -69,7 +65,7 @@ if __name__ == "__main__":
 
     with TemporaryDirectory() as interp_frames_dir:
         logger.info("intepolated frames folder: {}".format(interp_frames_dir))
-        slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor)
+        slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor,preview=preview)
         slomo.interpolate(images=frames['frame'], output_folder=interp_frames_dir)  # writes all frames to interp_frames_folder
         frame_ts = slomo.get_interpolated_timestamps(frames["ts"])
         height, width = frames['frame'].shape[1:]
@@ -77,16 +73,29 @@ if __name__ == "__main__":
 
         pos_thres = -1.
         neg_thres = -1.
+
         results = np.empty((0,3),float)
         thresholds = np.arange(1, 0.2, -0.01)
         on_diffs = np.zeros_like(thresholds)
         on_diffs[:]=np.nan
         off_diffs = np.zeros_like(thresholds)
         off_diffs[:]=np.nan
+
         emulator = EventEmulator(output_folder=None, show_input=False)
         k=0
         min_pos_diff=np.inf
         min_neg_diff=np.inf
+
+        fig,ax=plt.subplots()
+        online, offline=ax.plot(thresholds, on_diffs, 'g-', thresholds, off_diffs, 'r-')
+        online.set_label('On')
+        offline.set_label('Off')
+        ax.set_ylabel('absolute event count difference')
+        ax.set_xlabel('threshold (log_e)')
+        plt.ion()
+        plt.show()
+        # plt.legend()
+
         for threshold in tqdm(thresholds, desc='thr sweep'):
             apsOnEvents = 0
             apsOffEvents = 0
@@ -110,14 +119,12 @@ if __name__ == "__main__":
 
             on_diffs[k]=abs_pos_diff
             off_diffs[k]=abs_neg_diff
-            plt.cla()
-            plt.clf()
-            plt.plot(thresholds,on_diffs, 'g-', label='ON')
-            plt.plot(thresholds,off_diffs,'r-', label='OFF')
-            plt.ylabel('absolute event count difference')
-            plt.xlabel('threshold (log_e)')
-            plt.legend()
-            plt.show()
+            online.set_ydata(on_diffs)
+            offline.set_ydata(off_diffs)
+            ax.relim()  # Recalculate limits
+            ax.autoscale_view(True, True, True)  # Autoscale
+            plt.draw()
+            plt.pause(.2)
             k=k+1
 
     if pos_thres > 0 and neg_thres > 0:
@@ -127,17 +134,14 @@ if __name__ == "__main__":
     print("Optimal thresholds for smallest difference in event counts")
     print("thres_on={:.2f} thres_off={:.2f}".format(pos_thres, neg_thres))
 
-    results = {
-        'thresholds': thresholds,
-        'on_diff': on_diffs,
-        'off_diff': off_diffs
-    }
+    results=np.stack((thresholds,on_diffs,off_diffs),axis=0)
     path = os.path.join(outdir, 'find_thresholds.npy')
     np.save(path, results)
+
     path = os.path.join(outdir, 'find_thresholds.pdf')
-    plt.savefig(path)
+    fig.savefig(path)
     path = os.path.join(outdir, 'find_thresholds.png')
-    plt.savefig(path)
+    fig.savefig(path)
     logger.info('saved results to {}'.format(outdir))
 
 

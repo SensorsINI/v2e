@@ -188,7 +188,7 @@ mv rec1501902136.hdf5 ./input
 _ddd_h5_extract_data.py_ extracts the DDD recording DVS events to jAER _.aedat_ and video _.avi_ files.
 
 ```bash
-(pt-v2e) $ python ddd_h5_extract_data.py -h
+(pt-v2e) $ python ddd_extract_data.py -h
 usage: ddd_h5_extract_data.py [-h] [-i INPUT] -o OUTPUT_FOLDER
                               [--start_time START_TIME]
                               [--stop_time STOP_TIME] [--rotate180]
@@ -212,11 +212,11 @@ optional arguments:
 
 ### Synthesize events from DDD recording
 
-_ddd20-v2e.py_ is like v2e.py but it reads DDD .hdf5 recordings and extracts the real DVS events from the same part of the recording used for the synthesis of DVS events.
+_ddd-v2e.py_ is like _v2e.py_ but it reads DDD .hdf5 recordings and extracts the real DVS events from the same part of the recording used for the synthesis of DVS events.
 
 You can try it like this:
 ```bash
-/home/tobi/anaconda3/envs/pt-v2e/bin/python /home/tobi/Dropbox/GitHub/SensorsINI/v2e/ddd20-v2e.py --input input/rec1501350986.hdf5 --slomo_model input/SuperSloMo39.ckpt --slowdown_factor 20 --start 70 --stop 73 --output_folder output/ddd20-v2e-short --dvs_aedat dvs --pos_thres=.2 --neg_thres=.2 --overwrite --dvs_vid_full_scale=2 --frame_rate=100
+python ddd-v2e.py --input input/rec1501350986.hdf5 --slomo_model input/SuperSloMo39.ckpt --slowdown_factor 20 --start 70 --stop 73 --output_folder output/ddd20-v2e-short --dvs_aedat dvs --pos_thres=.2 --neg_thres=.2 --overwrite --dvs_vid_full_scale=2 --frame_rate=100
 INFO:__main__:arguments:
 cutoff_hz:      300
 dvs_aedat2:     dvs
@@ -336,25 +336,52 @@ One example is shown below, the left side is the ground-truth DVS frames, and th
 
 ## Calibrate the Thresholds
 
-To get the threshold of triggering an event, you need to run the commands below.
+_ddd_find_thresholds.py_ estimates the correct thresholds of triggering ON and OFF events, you can use a synhronized DAVIS recording from the DDD dataset:
 
 ```bash
-python renderer_sweep.py \
---start [start] \
---stop [end] \
---fname [path to the .hdf5 DVS recording file]] \
---checkpoint [the .ckpt checkpoint of the slow motion network] \
---sf [slow motion factor]
+$ python ddd_find_thresholds.py -h
+usage: ddd_find_thresholds.py [-h] [--start START] [--stop STOP] [-i I] [-o O]
+                              [--slowdown_factor SLOWDOWN_FACTOR]
+                              [--slomo_model SLOMO_MODEL] [--no_preview]
+
+ddd_find_thresholds.py: generate simulated DVS events from video with sweep of
+thresholds to compare with real DVS to find optimal thresholds.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --start START         start point of video stream (default: 0.0)
+  --stop STOP           stop point of video stream (default: 5.0)
+  -i I                  path of DDD .hdf5 file (default: None)
+  -o O                  path to where output is stored (default:
+                        output/find_thresholds)
+  --slowdown_factor SLOWDOWN_FACTOR
+                        slow motion factor (default: 10)
+  --slomo_model SLOMO_MODEL
+                        path of slomo_model checkpoint. (default:
+                        input/SuperSloMo39.ckpt)
+  --no_preview          disable preview in cv2 windows for faster processing.
+                        (default: False)
+
+Run with no --input to open file dialog
+
 ```
+You can run it like this:
+
+```bash
+python ddd_find_thresholds.py -i input\rec1501350986.hdf5 --start 25 --stop 35
+```
+Make sure you use part of the recording where the input is changing.
 
 The program will take the DVS recording data, which starts at time 'start' and ends at time 'end', to calculate the best threshold values for positive and negative self separately.
 
+A typical result from _ddd_find_thresholds.py_ is shown below. The smallest difference between real and v2e DVS event counts is found at about 0.3.
+
+### Obtaining acceptable results 
 For the best frame interpolation by SuperSloMo, the input video needs to satisfy the requirements below,
 
-- Daytime
-- Cloudy
-- No rain
-- High frame rate
+- Daytime - for short exposure times to avoid blurry frames
+- Cloudy - for limited dynamic range, to ensure that the frames are not clipped
+- High frame rate - objects must not be aliased too much, i.e. they must not move too much between frames
 
 If the video is underexposed, overexposed, has motion blur or aliasing, then the emulated DVS events will have poor realism.
 
