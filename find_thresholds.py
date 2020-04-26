@@ -125,7 +125,7 @@ if __name__ == "__main__":
         logger.info("Optimal Neg Threshold Found: {}".format(neg_thres))
 
     print("Optimal thresholds for smallest difference in event counts")
-    print("thres_on={:.2f} thres_off={:.2f} (overall: {:.2f})".format(pos_thres, neg_thres, threshold))
+    print("thres_on={:.2f} thres_off={:.2f}".format(pos_thres, neg_thres))
 
     results = {
         'thresholds': thresholds,
