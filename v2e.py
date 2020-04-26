@@ -33,7 +33,7 @@ from v2e_utils import inputVideoFileDialog
 
 logging.basicConfig()
 root = logging.getLogger()
-root.setLevel(logging.DEBUG)
+root.setLevel(logging.INFO)
 # https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output/7995762#7995762
 logging.addLevelName( logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.WARNING))
 logging.addLevelName( logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
@@ -154,7 +154,7 @@ if __name__ == "__main__":
                          dvsNumFrames, EngNumber(dvsDuration), EngNumber(dvsPlaybackDuration))
                  )
 
-    emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
+    emulator = EventEmulator(pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
     eventRenderer = EventRenderer(frame_rate_hz=dvsFps,output_path=output_folder, dvs_vid=dvs_vid, preview=preview, rotate180=rotate180, full_scale_count=dvs_vid_full_scale)
 
     frame0 = None

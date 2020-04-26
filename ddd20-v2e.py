@@ -118,7 +118,7 @@ if __name__ == "__main__":
     slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview,rotate=rotate180)
     dvsVidReal=str(dvs_vid).replace('.avi','-real.avi')
     dvsVidFake=str(dvs_vid).replace('.avi','-fake.avi')
-    emulator = EventEmulator(None, pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text,rotate180=rotate180)
+    emulator = EventEmulator(pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text,rotate180=rotate180)
     eventRendererReal = EventRenderer(frame_rate_hz=dvsFps, output_path=output_folder, dvs_vid=dvsVidReal, preview=preview, rotate180=rotate180, full_scale_count=dvs_vid_full_scale)
     eventRendererFake = EventRenderer(frame_rate_hz=dvsFps, output_path=output_folder, dvs_vid=dvsVidFake, preview=preview, rotate180=rotate180, full_scale_count=dvs_vid_full_scale)
     realDvsAeDatOutput=None
@@ -138,8 +138,8 @@ if __name__ == "__main__":
     if dvsNumFrames==0: dvsNumFrames=1                  # we need at least 1
     dvsDuration = srcDurationToBeProcessed
     dvsPlaybackDuration = dvsNumFrames / OUTPUT_VIDEO_FPS
-    dvsFrameTimestamps = np.linspace(davisData.startTimeS+start_time,
-                                     davisData.startTimeS+start_time+srcDurationToBeProcessed, dvsNumFrames)
+    dvsFrameTimestamps = np.linspace(davisData.firstTimeS + start_time,
+                                     davisData.firstTimeS + start_time + srcDurationToBeProcessed, dvsNumFrames)
 
     logger.info('iterating over input file contents')
     num_frames=0
@@ -154,7 +154,7 @@ if __name__ == "__main__":
     for i in tqdm(range(startPacket, stopPacket),desc='v2e-ddd20',unit='packet'):
         packet=davisData.readPacket(i)
         if not packet: continue # empty or could not parse this one
-        if stop_time >0 and packet['timestamp']>davisData.startTimeS+ stop_time:
+        if stop_time >0 and packet['timestamp']>davisData.firstTimeS+ stop_time:
             logger.info('\n reached stop time {}'.format(stop_time))
             break
         if packet['etype']== ddd_h5_reader.DDD20SimpleReader.ETYPE_DVS:

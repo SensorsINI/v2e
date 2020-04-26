@@ -119,7 +119,7 @@ if __name__ == "__main__":
                 video_path=output_path
             )
             s.interpolate(frames)
-            interpolated_ts = s.get_ts(input_ts)
+            interpolated_ts = s.get_interpolated_timestamps(input_ts)
             height, width = frames.shape[1:]
 
             for factor in [1, 10]:

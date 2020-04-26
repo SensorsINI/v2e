@@ -6,6 +6,10 @@ import argparse
 
 from tempfile import TemporaryDirectory
 
+from matplotlib import pyplot
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+
 from emulator import EventEmulator
 from src.slomo import SuperSloMo
 from src.ddd20_utils.ddd_h5_reader import DDD20ReaderMultiProcessing, DDD20SimpleReader
@@ -13,81 +17,127 @@ from src.ddd20_utils.ddd_h5_reader import DDD20ReaderMultiProcessing, DDD20Simpl
 # TODO rename to find_thresholds.py
 from v2e_utils import inputVideoFileDialog, inputDDDFileDialog
 
+
 logging.basicConfig()
 root = logging.getLogger()
-root.setLevel(logging.DEBUG)
+root.setLevel(logging.INFO)
 # https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output/7995762#7995762
-logging.addLevelName( logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.WARNING))
-logging.addLevelName( logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
-logger=logging.getLogger(__name__)
+logging.addLevelName(logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.WARNING))
+logging.addLevelName(logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
+logger = logging.getLogger(__name__)
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(description='find_thresholds.py: generate simulated DVS events from video with sweep of thresholds to compare with real DVS to find optimal thresholds.',
+                                 epilog='Run with no --input to open file dialog', allow_abbrev=True,
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--start", type=float, default=0.0, help="start point of video stream")
 parser.add_argument("--stop", type=float, default=5.0, help="stop point of video stream")
 parser.add_argument("-i", type=str, help="path of DDD .hdf5 file")
-parser.add_argument("--model", type=str, default='input/SuperSlo39.ckpt', help="path of checkpoint")
 parser.add_argument("--slowdown_factor", type=int, default=10, help="slow motion factor")
+parser.add_argument("--slomo_model", type=str, default="input/SuperSloMo39.ckpt", help="path of slomo_model checkpoint.")
 args = parser.parse_args()
 
 if __name__ == "__main__":
 
-    if os.name=='nt':
-        logger.warning('A Windows python multiprocessing threading problem means that the HDF5 reader will probably not work '
-                       '\n you may get the infamous "TypeError: h5py objects cannot be pickled" bug')
-
+    # if os.name=='nt':
+    #     logger.warning('A Windows python multiprocessing threading problem means that the HDF5 reader will probably not work '
+    #                    '\n you may get the infamous "TypeError: h5py objects cannot be pickled" bug')
 
     if not args.i:
         input_file = inputDDDFileDialog()
         if not input_file:
             logger.info('no file selected, quitting')
             quit()
-    else: input_file=args.i
+    else:
+        input_file = args.i
 
-    dddReader = DDD20ReaderMultiProcessing(input_file, startTimeS=args.start, stopTimeS=args.stop)
-    frames, dvsEvents = dddReader.readEntire()
+    assert os.path.exists(input_file)
+    assert args.start == None or args.stop == None or args.start < args.stop
+    assert os.path.exists(args.slomo_model)
 
-    dvsOnEvents=dvsEvents[dvsEvents[:, 3] == 1].shape[0]
+    from pathlib import Path
+
+    outdir = 'output/find_thresholds'
+    Path(outdir).mkdir(parents=True, exist_ok=True)
+
+    frames, dvsEvents = [], []
+    dddReader = DDD20SimpleReader(input_file)
+    frames, dvsEvents = dddReader.readEntire(startTimeS=args.start, stopTimeS=args.stop)
+    if frames is None or dvsEvents is None: raise Exception('no frames or no events')
+
+    dvsOnEvents = dvsEvents[dvsEvents[:, 3] == 1].shape[0]
     dvsOffEvents = dvsEvents.shape[0] - dvsOnEvents
-    results = []
 
-    with TemporaryDirectory() as dirname:
-        logger.info("tmp_dir: ", dirname)
-        s = SuperSloMo(args.checkpoint, args.sf, dirname)
-        s.interpolate(frames["frame"])
-        frame_ts = s.get_ts(frames["ts"])
-        height, width = frames["frame"].shape[1:]
-        nFrames=frames.shape[0]
+    with TemporaryDirectory() as interp_frames_dir:
+        logger.info("intepolated frames folder: {}".format(interp_frames_dir))
+        slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor)
+        slomo.interpolate(images=frames['frame'], output_folder=interp_frames_dir)  # writes all frames to interp_frames_folder
+        frame_ts = slomo.get_interpolated_timestamps(frames["ts"])
+        height, width = frames['frame'].shape[1:]
+        nFrames = frames.shape[0]
 
         pos_thres = -1.
         neg_thres = -1.
-        results=[]
-        for threshold in np.arange(0.01, 0.91, 0.01):
-
-            apsOnEvents=0
-            apsOffEvents=0
-            emulator = EventEmulator(frames[0], output_folder=None, pos_thres=threshold, neg_thres=threshold, show_input=False)
+        results = np.empty((0,3),float)
+        thresholds = np.arange(1, 0.2, -0.01)
+        on_diffs = np.zeros_like(thresholds)
+        on_diffs[:]=np.nan
+        off_diffs = np.zeros_like(thresholds)
+        off_diffs[:]=np.nan
+        emulator = EventEmulator(output_folder=None, show_input=False)
+        k=0
+        min_pos_diff=np.inf
+        min_neg_diff=np.inf
+        for threshold in tqdm(thresholds, desc='thr sweep'):
+            apsOnEvents = 0
+            apsOffEvents = 0
+            emulator.pos_thres = threshold
+            emulator.neg_thres = threshold
+            emulator.reset()
             for i in range(nFrames):
-                e = emulator.compute_events(frames[i], frame_ts[i], frame_ts[i + 1])
-                apsOnEvents+=emulator.num_events_on
-                apsOffEvents+=emulator.num_events_off
+                e = emulator.compute_events(frames['frame'][i], frame_ts[i], frame_ts[i + 1])
+                apsOnEvents += emulator.num_events_on
+                apsOffEvents += emulator.num_events_off
 
             abs_pos_diff = np.abs(dvsOnEvents - apsOnEvents)
             abs_neg_diff = np.abs(dvsOffEvents - apsOffEvents)
 
-            if len(results) > 0:
-                if abs_pos_diff >= results[-1][1] and pos_thres < 0:
-                    pos_thres = results[-1][0]
-                if abs_neg_diff >= results[-1][2] and neg_thres < 0:
-                    neg_thres = results[-1][0]
-            if pos_thres > 0 and neg_thres > 0:
-                print("Optimal Pos Threshold Found: {}".format(pos_thres))
-                print("Optimal Neg Threshold Found: {}".format(neg_thres))
-                break
-            results.append(
-                [threshold, abs_pos_diff, abs_neg_diff]
-            )
-            print("Threshold: {:.2f}".format(threshold))
-            print("Pos Thres: {:.2f}".format(pos_thres))
-            print("Neg Thres: {:.2f}".format(neg_thres))
-    results = np.array(results)
-    np.save('data/results.npy', results)
+            if abs_pos_diff < min_pos_diff:
+                min_pos_diff=abs_pos_diff
+                pos_thres = threshold
+            if abs_neg_diff < min_neg_diff:
+                min_neg_diff=abs_neg_diff
+                neg_thres = threshold
+
+            on_diffs[k]=abs_pos_diff
+            off_diffs[k]=abs_neg_diff
+            plt.cla()
+            plt.clf()
+            plt.plot(thresholds,on_diffs, 'g-', label='ON')
+            plt.plot(thresholds,off_diffs,'r-', label='OFF')
+            plt.ylabel('absolute event count difference')
+            plt.xlabel('threshold (log_e)')
+            plt.legend()
+            plt.show()
+            k=k+1
+
+    if pos_thres > 0 and neg_thres > 0:
+        logger.info("Optimal Pos Threshold Found: {}".format(pos_thres))
+        logger.info("Optimal Neg Threshold Found: {}".format(neg_thres))
+
+    print("Optimal thresholds for smallest difference in event counts")
+    print("thres_on={:.2f} thres_off={:.2f} (overall: {:.2f})".format(pos_thres, neg_thres, threshold))
+
+    results = {
+        'thresholds': thresholds,
+        'on_diff': on_diffs,
+        'off_diff': off_diffs
+    }
+    path = os.path.join(outdir, 'find_thresholds.npy')
+    np.save(path, results)
+    path = os.path.join(outdir, 'find_thresholds.pdf')
+    plt.savefig(path)
+    path = os.path.join(outdir, 'find_thresholds.png')
+    plt.savefig(path)
+    logger.info('saved results to {}'.format(outdir))
+
+

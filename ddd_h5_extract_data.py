@@ -118,7 +118,7 @@ if __name__ == "__main__":
     for i in tqdm(range(startPacket, stopPacket),desc='v2e-ddd20',unit='packet'):
         packet=davisData.readPacket(i)
         if not packet: continue # empty or could not parse this one
-        if stop_time >0 and packet['timestamp']>davisData.startTimeS+ stop_time:
+        if stop_time >0 and packet['timestamp']>davisData.firstTimeS+ stop_time:
             logger.info('\n reached stop time {}'.format(stop_time))
             break
         if packet['etype']== ddd_h5_reader.DDD20SimpleReader.ETYPE_DVS:

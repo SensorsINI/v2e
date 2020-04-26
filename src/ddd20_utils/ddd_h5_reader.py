@@ -27,7 +27,7 @@ class DDD20SimpleReader(object):
     ETYPE_APS = 'frame_event'
     ETYPE_IMU = 'imu6_event'
 
-    def __init__(self, fname, startTimeS=None, stopTimeS=None):
+    def __init__(self, fname):
         """Init
 
         Parameters
@@ -67,17 +67,17 @@ class DDD20SimpleReader(object):
         while not firstPacket:
             self.firstPacketNumber+=1
             firstPacket = self.readPacket(self.firstPacketNumber)
-        self.startTimeS=firstPacket['timestamp']
+        self.firstTimeS=firstPacket['timestamp']
         # the last packets in file are actually empty (some consequence of how file is written)
         # just go backards until we get a packet with some data
         lastPacket=self.readPacket(self.numPackets-1)
         while not lastPacket:
             self.numPackets-=1
             lastPacket = self.readPacket(self.numPackets-1)
-        self.endTimeS=lastPacket['timestamp']
-        self.durationS=self.endTimeS-self.startTimeS
+        self.lastTimeS=lastPacket['timestamp']
+        self.durationS= self.lastTimeS - self.firstTimeS
         logger.info('{} has {} packets with start time {:7.2f}s and end time {:7.2f}s (duration {:8.1f}s)'.format(
-            fname, self.numPackets, self.startTimeS, self.endTimeS, self.durationS
+            fname, self.numPackets, self.firstTimeS, self.lastTimeS, self.durationS
         ))
 
         # logger.info('Sample DAVIS data is the following')
@@ -138,7 +138,7 @@ class DDD20SimpleReader(object):
         Search for a starting time
         Parameters
         ----------
-        timeS time in s from start of recording (self.startTimeS)
+        timeS relative time in s from start of recording (self.startTimeS)
 
         Returns
         -------
@@ -151,11 +151,65 @@ class DDD20SimpleReader(object):
             if not data: # maybe cannot parse this particular type of packet (e.g. imu6)
                 continue
             t=data['timestamp']
-            if t>=self.startTimeS+timeS:
+            if t>=self.firstTimeS+timeS:
                 logger.info('\nfound start time '+str(timeS)+' at packet '+str(k))
                 return k
         logger.warning('\ncould not find start time '+str(timeS)+' before end of file')
         return False
+
+    def readEntire(self,startTimeS=None, stopTimeS=None):
+        sys_ts, t_offset, current = 0, 0, 0
+        timestamp = 0
+        frames, events = [], []
+
+
+        start=self.search(startTimeS)
+        stop=self.search(stopTimeS)
+        for k in tqdm(range(start,stop),desc='read',unit='packet'):
+            d = self.readPacket(k)
+            if not d:
+                continue # some packet type we can't parse
+            if d['etype'] == 'special_event':
+                unpack_data(d)
+                # this is a timestamp reset
+                if any(d['data'] == 0):
+                    print('ts reset detected, setting offset', timestamp)
+                    t_offset += current
+                    # NOTE the timestamp of this special event is not meaningful
+                continue
+            if d['etype'] == 'frame_event':
+                ts = d['timestamp'] + t_offset
+                frame = filter_frame(unpack_data(d))
+                data = np.array(
+                    [(ts, frame)],
+                    dtype=np.dtype(
+                        [('ts', np.float64),
+                         ('frame', np.uint8, frame.shape)]
+                    )
+                )
+                frames.append(data)
+                current = ts
+                continue
+            if d['etype'] == 'polarity_event':
+                unpack_data(d)
+                data = d["data"]
+                data = np.hstack(
+                    (data[:, 0][:, None] * 1e-6 + t_offset,
+                     data[:, 1][:, None],
+                     data[:, 2][:, None],
+                     data[:, 3].astype(np.int)[:, None] * 2 - 1)
+                )
+                events.append(data)
+                continue
+
+        if frames:
+            frames = np.hstack(frames)
+            frames["ts"] -= frames["ts"][0]
+        if events:
+            events = np.vstack(events)
+            events[:, 0] -= events[0][0]
+        return frames, events
+
 
 
 class DDD20ReaderMultiProcessing(object):

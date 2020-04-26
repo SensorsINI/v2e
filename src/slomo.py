@@ -12,6 +12,9 @@ import os
 import numpy as np
 import cv2
 import glob
+
+from tqdm import tqdm
+
 from src.v2e_utils import video_writer
 
 import torchvision.transforms as transforms
@@ -194,6 +197,8 @@ class SuperSloMo(object):
         output_folder:str, folder that stores the interpolated images, numbered 1:N*slowdown_factor
 
         """
+        if not output_folder: raise Exception('output_folder is None; it must be supplied to store the interpolated frames')
+
         video_frame_loader, dim, ori_dim = self.__load_data(images)
         if not self.model_loaded:
             self.flow_estimator, self.warper, self.interpolator = self.__model(dim)
@@ -218,8 +223,10 @@ class SuperSloMo(object):
         # torch.cuda.empty_cache()
         with torch.no_grad():
             # logger.debug("using " + str(output_folder) + " to store interpolated frames")
-            # for _, (frame0, frame1) in enumerate(tqdm(video_frame_loader, desc='slomo-interp',unit='fr'), 0):
-            for _, (frame0, frame1) in enumerate(video_frame_loader, 0):
+            nImages=images.shape[0]
+            disableTqdm=nImages<3
+            for _, (frame0, frame1) in enumerate(tqdm(video_frame_loader, desc='slomo-interp',unit='fr',disable=disableTqdm), 0):
+            # for _, (frame0, frame1) in enumerate(video_frame_loader, 0):
 
                 I0 = frame0.to(self.device)
                 I1 = frame1.to(self.device)
@@ -292,27 +299,29 @@ class SuperSloMo(object):
             # don't duplicate each frame if called using rotating buffer of two frames in a row
             numin=images.shape[0]
             num2write=1 if numin==2 else numin
-            for i in range(0,num2write):  #tqdm(range(0,num2write-1), desc='slomo--write-orig-vid',unit='fr'):
-                frame=images[i]
-                if self.rotate:
-                    frame = np.rot90(frame, k=2)
-                for _ in range(self.sf):    # duplicate frames to match speed of slomo video
-                    self.ori_writer.write(cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
-                    self.numOrigVideoFramesWritten+=1
-                # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
-                #     break
+            if self.ori_writer:
+                for i in range(0,num2write):  #tqdm(range(0,num2write-1), desc='slomo--write-orig-vid',unit='fr'):
+                    frame=images[i]
+                    if self.rotate:
+                        frame = np.rot90(frame, k=2)
+                    for _ in range(self.sf):    # duplicate frames to match speed of slomo video
+                        self.ori_writer.write(cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
+                        self.numOrigVideoFramesWritten+=1
+                    # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
+                    #     break
 
             frame_paths = self.__all_images(output_folder)
             # write slomo frames into video
             # will not duplicate frames if called in 2-frame loop (tobi thinks)
-            for path in frame_paths: #tqdm(frame_paths,desc='slomo-write-slomo-vid',unit='fr'):
-                frame = self.__read_image(path)
-                if self.rotate:
-                    frame = np.rot90(frame, k=2)
-                self.slomo_writer.write(cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
-                self.numSlomoVideoFramesWritten+=1
-                 # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
-                #     break
+            if self.slomo_writer:
+                for path in frame_paths: #tqdm(frame_paths,desc='slomo-write-slomo-vid',unit='fr'):
+                    frame = self.__read_image(path)
+                    if self.rotate:
+                        frame = np.rot90(frame, k=2)
+                    self.slomo_writer.write(cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
+                    self.numSlomoVideoFramesWritten+=1
+                     # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
+                    #     break
 
     def __all_images(self, data_path):
         """Return path of all input images. Assume that the ascending order of
@@ -353,7 +362,7 @@ class SuperSloMo(object):
         img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
         return img
 
-    def get_ts(self, ts):
+    def get_interpolated_timestamps(self, ts):
         """ Interpolate the timestamps.
 
         Parameters

@@ -120,7 +120,7 @@ for vid_path in collectd_paths:
             video_path=None
         )
         s.interpolate(frames)
-        interpolated_ts = s.get_ts(input_ts)
+        interpolated_ts = s.get_interpolated_timestamps(input_ts)
         height, width = frames.shape[1:]
 
         # render events

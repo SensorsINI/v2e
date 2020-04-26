@@ -53,7 +53,6 @@ class EventEmulator(object):
 
     def __init__(
             self,
-            base_frame: np.ndarray,
             pos_thres=0.21,
             neg_thres=0.17,
             sigma_thres=0.03,
@@ -142,11 +141,8 @@ class EventEmulator(object):
                 logger.info('opening text DVS output file '+path)
                 self.dvs_text=DVSTextOutput(path)
 
-        if not base_frame is None:
-            self._init(base_frame)
-
     def _init(self, firstFrameLinear):
-        logger.info('initializing random temporal contrast thresholds from from base frame')
+        logger.debug('initializing random temporal contrast thresholds from from base frame')
         self.baseLogFrame = lin_log(firstFrameLinear)  # base_frame are memorized lin_log pixel values
         self.lpLogFrame = np.copy(self.baseLogFrame)
         # take the variance of threshold into account.
@@ -400,7 +396,6 @@ class EventFrameRenderer(object):
         height = base_frame.shape[0]
         width = base_frame.shape[1]
         emulator = EventEmulator(
-            base_frame,
             pos_thres=self.pos_thres,
             neg_thres=self.neg_thres
         )
