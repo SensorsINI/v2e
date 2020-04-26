@@ -23,7 +23,6 @@ from src.renderer import EventEmulator, EventRenderer
 from src.slomo import SuperSloMo
 from src.v2e_utils import OUTPUT_VIDEO_FPS, all_images, \
     read_image, checkAddSuffix, v2e_args, inputDDDFileDialog
-from src.v2e_utils import inputFileDialog
 import src.desktop as desktop
 
 logging.basicConfig()
@@ -41,6 +40,7 @@ parser = argparse.ArgumentParser(description='ddd20-v2e: generate simulated DVS 
 parser=v2e_args(parser)
 parser.add_argument("--rotate180", type=bool, default=True,
                     help="rotate all output 180 deg. NOTE by default True for DDD recordings because camera was mounted upside down.")
+parser.add_argument("--numpy_output", action="store_true", help="export real and synthetic DVS events to numpy files. NOTE: uses a lot of memory.")
 
 # https://kislyuk.github.io/argcomplete/#global-completion
 # Shellcode (only necessary if global completion is not activated - see Global completion below), to be put in e.g. .bashrc:
@@ -103,6 +103,11 @@ if __name__ == "__main__":
     vid_slomo = args.vid_slomo
     preview=not args.no_preview
     rotate180 = args.rotate180
+    numpy_output=args.numpy_output
+
+    if numpy_output:
+        allEventsReal=np.empty((0,4),float)
+        allEventsFake=np.empty((0,4),float)
 
     import time
     time_run_started = time.time()
@@ -161,6 +166,8 @@ if __name__ == "__main__":
             numDvsEvents+=packet['enumber']
             events=np.array(packet['data'],dtype=float) # get just events [:,[ts,x,y,pol]]
             events[:, 0] = events[:, 0] * 1e-6 # us timestamps
+            if numpy_output:
+                allEventsReal=np.concatenate((allEventsReal,events))
             if not realDvsAeDatOutput and dvs_aedat2:
                 filepath=checkAddSuffix(os.path.join(output_folder, dvs_aedat2),'.aedat').replace('.aedat','-real.aedat')
                 realDvsAeDatOutput = AEDat2Output(filepath,rotate180=rotate180)
@@ -217,8 +224,15 @@ if __name__ == "__main__":
                         endpoint=True
                     )  # output_ts are the timestamps of the DVS video output frames. They come from destFps
                     events = np.array(events)  # remove first None element
+                    if numpy_output:
+                        allEventsFake = np.concatenate((allEventsFake,events))
                     eventRendererFake.renderEventsToFrames(events, height=output_height, width=output_width)
 
+
+    if output_folder and numpy_output:
+        np.save(os.path.join(output_folder, "dvs_real.npy"), allEventsReal)
+        np.save(os.path.join(output_folder, "dvs_v2e.npy"), allEventsFake)
+        logger.info('saved numpy files with real and v2e events to {}'.format(output_folder))
 
     logger.info("done; see output folder " + str(args.output_folder))
     totalTime=(time.time() - time_run_started)

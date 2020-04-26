@@ -31,7 +31,9 @@ logger=logging.getLogger(__name__)
 
 from src.slomo import video_writer
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(description='Extract data from DDD recording',
+                                 epilog='Run with no --input to open file dialog', allow_abbrev=True,
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument("-i","--input", type=str, help="input video file; leave empty for file chooser dialog")
 parser.add_argument("-o", "--output_folder", type=str, required=True, help="folder to store outputs")
