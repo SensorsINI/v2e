@@ -16,8 +16,9 @@ TODO add paper
 
 ## Environment
 
-```bash
+```
 python==3.7.7
+Ubuntu 18.04 or Windows 10x64
 ```
 Code includes pycharm project files for your convenience.
 
@@ -62,8 +63,8 @@ The default value of --slomo_model argument is set to this location.
 
 _v2e.py_ reads a standard video (e.g. in .avi, .mp4, .mov, or .wmv) and generates emulated DVS events at upsampled timestamp resolution.
 
-```bash
-(base)$ conda activate pt-v2e # activate your workspace 
+```
+(base)$ conda activate pt-v2e # activate your workspace
 (pt-v2e)$ python v2e.py -h
 usage: v2e.py [-h] [-i INPUT] [--start_time START_TIME]
               [--stop_time STOP_TIME] [--pos_thres POS_THRES]
@@ -151,14 +152,14 @@ optional arguments:
 
 Run with no --input to open file dialog
 ```
-You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the __input__ folder to try it out with the command line below.
+You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.
 
-```bash
+```
 python v2e.py -i input/tennis.mov --slowdown_factor=10 --output_folder=output --pos_thres=.15 --neg_thres=.15 --sigma_thres=0.01 --frame_rate=300 --dvs_aedat2 tennis.aedat --output_width=346 --output_height=260
 ```
 Run the command above, and the following files will be created in a folder called _output_.
 
-```bash
+```
 original.avi  slomo.avi  dvs-video.avi  tennis.aedat 
 ```
 
@@ -201,7 +202,7 @@ mv rec1501902136.hdf5 ./input
 
 _ddd_h5_extract_data.py_ extracts the DDD recording DVS events to jAER _.aedat_ and video _.avi_ files.
 
-```bash
+```
 (pt-v2e) $ python ddd_extract_data.py -h
 usage: ddd_h5_extract_data.py [-h] [-i INPUT] -o OUTPUT_FOLDER
                               [--start_time START_TIME]
@@ -237,7 +238,7 @@ output/output-ddd-h5-data/rec1501350986.avi
 _ddd-v2e.py_ is like _v2e.py_ but it reads DDD .hdf5 recordings and extracts the real DVS events from the same part of the recording used for the synthesis of DVS events.
 
 You can try it like this:
-```bash
+```
 $ python ddd-v2e.py --input input/rec1501350986.hdf5 --slomo_model input/SuperSloMo39.ckpt --slowdown_factor 20 --start 70 --stop 73 --output_folder output/ddd20-v2e-short --dvs_aedat dvs --pos_thres=.2 --neg_thres=.2 --overwrite --dvs_vid_full_scale=2 --frame_rate=100
 INFO:__main__:arguments:
 cutoff_hz:      300
@@ -307,7 +308,7 @@ slomo.avi
 
 _ddd_find_thresholds.py_ estimates the correct thresholds of triggering ON and OFF events, you can use a synhronized DAVIS recording from the DDD dataset:
 
-```bash
+```
 $ python ddd_find_thresholds.py -h
 usage: ddd_find_thresholds.py [-h] [--start START] [--stop STOP] [-i I] [-o O]
                               [--slowdown_factor SLOWDOWN_FACTOR]
@@ -387,7 +388,7 @@ ddd_plot_event_counts.py --path output\ddd20-v2e-short --start 0 --stop 2 --x 0 
 produces the output
 ![real vs v2e DVS event counts](media/ddd-plot-event-counts.png)
 
-We can see that the ON threshold is approximately correct, while the OFF threshold for v2e was too small; too many v2e events were generated.
+This run used the default bin duration of 50ms. The plot shows the count of ON and OFF events over the entire pixel array for real DVS and emulated v2e. We can see that the ON threshold is approximately correct, while the OFF threshold for v2e was too small; too many v2e events were generated.
 
 Another example is shown below: The left side is the ground-truth DVS frames, and the figure on the right side shows the histogram plot of the generated DVS events within the region denoted by the black box. Histograms of the ground-truth self and our generated self are plotted in the same figure. It can be seen that the distribution of generated v2e events is quite similar to the distribution of the real DVS events.
 
