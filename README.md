@@ -376,6 +376,8 @@ The program will take the DVS recording data, which starts at time 'start' and e
 
 A typical result from _ddd_find_thresholds.py_ is shown below. The smallest difference between real and v2e DVS event counts is found at about 0.3.
 
+![find_threshold_plot](media/find_thresholds.png)
+
 ### Obtaining acceptable results 
 For the best frame interpolation by SuperSloMo, the input video needs to satisfy the requirements below,
 
