@@ -1,15 +1,18 @@
 # v2e [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Python torch + opencv code to go from conventional stroboscopic video frames with low frame rate into synthetic DVS event streams with much higher effective timing precision.
+Python torch + opencv code to go from conventional stroboscopic video frames with low frame rate into realistic synthetic DVS event streams with much higher effective timing precision. v2e includes finite photoreceptor bandwidth, pixel to pixel event threshold variation, and noise 'leak' events.
 
-See the [v2e home page](https://sites.google.com/view/video2events/home) for videos and README.
-
-
+See the [v2e home page](https://sites.google.com/view/video2events/home) for videos and further information.
 
 ## Contact
 Yuhuang Hu (yuhuang.hu@ini.uzh.ch)
 Zhe He (hezhehz@live.cn)
 Tobi Delbruck (tobi@ini.uzh.ch)
+
+###
+If you use v2e, we appreciate a citation to the paper below. See the [v2e home page](https://sites.google.com/view/video2events/home) for futher background papers.
+
+TODO add paper
 
 ## Environment
 
@@ -19,19 +22,17 @@ python==3.7.7
 
 We highly recommend running the code in virtual environment. Conda is always your best friend. :)
 
-## Install Dependencies
-
-
-```bash
-pip install -r requirements.txt
-```
-
 For conda users, you can first make an env with pip in it, then install with pip. The torch and opencv-python packages are not available in conda.  Make sure this pip is first in your PATH.
 
 ```bash
 conda create -n pt-v2e python=3.7 pip
 conda activate pt-v2e
-which pip # check to make sure new pip is first in path
+```
+
+## Install Dependencies
+
+```bash
+which pip # check to make sure your conda pip is first in path
 pip install -r requirements.txt
 ```
 
@@ -39,7 +40,7 @@ pip install -r requirements.txt
 
 _v2e_ serves multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for generating DVS events from conventional video and from specific datasets.
 
-**NOTE** We recommend running v2e on a CUDA GPU or it will be very slow.
+**NOTE** We recommend running _v2e_ on a CUDA GPU or it will be very slow. With a low-end GTX-1050, _v2e_ runs about 100-200X slower than real time using 10X slowdown factor and 346x260 video.
 
 ## Download SuperSloMo model
 
@@ -254,52 +255,23 @@ INFO:src.ddd20_utils.ddd_h5_reader:input/rec1501350986.hdf5 contains following k
 accelerator_pedal_position
 brake_pedal_status
 dvs
-engine_speed
-fine_odometer_since_restart
-fuel_consumed_since_restart
-fuel_level
-gear_lever_position
-headlamp_status
-high_beam_status
-ignition_status
-lateral_acceleration
-latitude
-longitude
-longitudinal_acceleration
-odometer
-parking_brake_status
-steering_wheel_angle
-torque_at_transmission
-transmission_gear_position
-vehicle_speed
-windshield_wiper_status
-INFO:src.ddd20_utils.ddd_h5_reader:group dvs contains following keys
-data
-timestamp
-INFO:src.ddd20_utils.ddd_h5_reader:group dvs contains following items
-('data', <HDF5 dataset "data": shape (38912, 3), type "|O">)
-('timestamp', <HDF5 dataset "timestamp": shape (38912,), type "<i8">)
-INFO:src.ddd20_utils.ddd_h5_reader:The DAVIS data has the shape (38912, 3)
+
+...
+
 INFO:src.ddd20_utils.ddd_h5_reader:input/rec1501350986.hdf5 has 38271 packets with start time 1123.34s and end time 1246.31s (duration    123.0s)
 INFO:src.ddd20_utils.ddd_h5_reader:searching for time 70.0
 ddd-h5-search:  56%|███████████████████████████████████████▉                                | 21244/38271 [00:08<00:05, 3002.45packet/s]INFO:src.ddd20_utils.ddd_h5_reader:
 found start time 70.0 at packet 21369
 
-INFO:src.ddd20_utils.ddd_h5_reader:searching for time 73.0
-ddd-h5-search:  58%|█████████████████████████████████████████▊                              | 22197/38271 [00:08<00:05, 2692.97packet/s]INFO:src.ddd20_utils.ddd_h5_reader:
-found start time 73.0 at packet 22469
+...
 
-INFO:__main__:iterating over input file contents
-v2e-ddd20:   0%|                                                                                           | 0/1100 [00:00<?, ?packet/s]INFO:root:opening AEDAT-2.0 output file output/ddd20-v2e-short/dvs-real.aedat in binary mode
-INFO:src.output.aedat2_output:opened output/ddd20-v2e-short/dvs-real.aedat for DVS output data for jAER
-INFO:src.renderer:opening DVS video output file dvs-video-real.avi
-DEBUG:src.v2e_utils:opened output/ddd20-v2e-short/dvs-video-real.avi with  XVID https://www.fourcc.org/ codec, 30.0fps, and (346x260) size
+:src.v2e_utils:opened output/ddd20-v2e-short/dvs-video-real.avi with  XVID https://www.fourcc.org/ codec, 30.0fps, and (346x260) size
 v2e-ddd20:   5%|███▊                                                                              | 51/1100 [00:00<00:15, 67.70packet/s]INFO:src.slomo:loading SuperSloMo model from input/SuperSloMo39.ckpt
 
 ```
 
 The generated outputs will be
-```angular2
+```
 dvs-v2e.aedat
 dvs-v2e-real.aedat
 dvs-video-fake.avi
@@ -309,30 +281,6 @@ original.avi
 slomo.avi
 ```
 
-
-### Plot the Events
-
-```bash
-python plot.py \
---path [path of input files] \
---bin_size [size of the time bin] \
---start [start timestamp] \
---stop [stop timestamp] \
---x [range of x coordinate] \
---y [range of y coordinate] \
---rotate [if the video needs to be rotated]
-```
-
-'--path' is the folder which contains the output files generated by executing 'v2e_h5.py'.
-
-'--rotate' is **IMPORTANT**, because some files in the DDD20 dataset are recorded upside down. More information regarding this can be found in the documentation of DDD20 dataset.
-
-One example is shown below, the left side is the ground-truth DVS frames, and the figure on the right side shows the histogram plot of the generated self within the region denoted by the black box. Histograms of the ground-truth self and our generated self are plotted in the same figure. It can be seen that the distribution of generated self is quite similar to the distribution of the real self.
-
-<p float="left">
-  <img src="media/counting.gif" width="320" class="center" />
-  <img src="media/plot.png" width="350"  class="center"/> 
-</p>
 
 ## Calibrate the Thresholds
 
@@ -405,10 +353,40 @@ The thresholds vary slightly depending on the time interval of the input APS fra
 
 All the thresholds above are estimated based on the file rec1500403661.hdf5. The estimated thresholds also slightly vary depending on the input file. For example, based on the APS frames in the time interval 35s - 45s from the file rec1499025222.hdf5, the estimated positive threshold is 0.28, and the estimated negative threshold is 0.42.
 
+
+
+### Plot the Events
+
+**NOT CURRENTLY WORKING**
+
+```bash
+python plot.py \
+--path [path of input files] \
+--bin_size [size of the time bin] \
+--start [start timestamp] \
+--stop [stop timestamp] \
+--x [range of x coordinate] \
+--y [range of y coordinate] \
+--rotate [if the video needs to be rotated]
+```
+
+'--path' is the folder which contains the output files generated by executing 'v2e_h5.py'.
+
+'--rotate' is **IMPORTANT**, because some files in the DDD20 dataset are recorded upside down. More information regarding this can be found in the documentation of DDD20 dataset.
+
+One example is shown below, the left side is the ground-truth DVS frames, and the figure on the right side shows the histogram plot of the generated self within the region denoted by the black box. Histograms of the ground-truth self and our generated self are plotted in the same figure. It can be seen that the distribution of generated self is quite similar to the distribution of the real self.
+
+<p float="left">
+  <img src="media/counting.gif" width="320" class="center" />
+  <img src="media/plot.png" width="350"  class="center"/> 
+</p>
+
+
 ## Generating Synthetic DVS Dataset from UCF-101 action recognition dataset ##
 
-To generate synthetic data from a single input video UCF-101 [[link] (https://www.crcv.ucf.edu/data/UCF101.php)] .
-video
+**NOT CURRENTLY WORKING**
+
+_ucf101_single.py_ generates synthetic data from a single input video from the action recognition dataset [UCF-101](https://www.crcv.ucf.edu/data/UCF101.php).
 
 ```bash
 python ucf101_single.py \
@@ -420,8 +398,8 @@ python ucf101_single.py \
 --output_dir [path to store the output videos]
 ```
 
-The code needs to be modified accordingly if the input video is from a different dataset.
+The code needs to be modified if the input video is from a different dataset.
 
 ## Technical Details ##
 
-Click [PDF](docs/technical_report.pdf) to download.
+See the [v2e home page](https://sites.google.com/view/video2events/home).
