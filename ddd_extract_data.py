@@ -15,7 +15,7 @@ from tqdm import tqdm
 import atexit
 from src.ddd20_utils import ddd_h5_reader
 from src.output.aedat2_output import AEDat2Output
-from src.v2e_utils import inputFileDialog, checkAddSuffix, read_image
+from src.v2e_utils import inputDDDFileDialog, checkAddSuffix, read_image
 from src.ddd20_utils.ddd_h5_reader import DDD20SimpleReader
 import src.desktop as desktop
 
@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
     input_file = args.input
     if not input_file:
-        input_file =inputFileDialog()
+        input_file =inputDDDFileDialog()
         if not input_file:
             logger.info('no file selected, quitting')
             quit()

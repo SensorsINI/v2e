@@ -19,6 +19,7 @@ TODO add paper
 ```bash
 python==3.7.7
 ```
+Code includes pycharm project files for your convenience.
 
 We highly recommend running the code in virtual environment. Conda is always your best friend. :)
 
@@ -32,6 +33,7 @@ conda activate pt-v2e
 ## Install Dependencies
 
 ```bash
+conda install pip
 which pip # check to make sure your conda pip is first in path
 pip install -r requirements.txt
 ```
@@ -152,7 +154,7 @@ Run with no --input to open file dialog
 You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the __input__ folder to try it out with the command line below.
 
 ```bash
-python v2e.py --i input/tennis.mov --slowdown_factor=10 --o=output --pos_thres=.15 --neg_thres=.15 --sigma_thres=0.01 --frame_rate=300 --dvs_aedat2 tennis.aedat --output_width=346 --output_height=260
+python v2e.py -i input/tennis.mov --slowdown_factor=10 --output_folder=output --pos_thres=.15 --neg_thres=.15 --sigma_thres=0.01 --frame_rate=300 --dvs_aedat2 tennis.aedat --output_width=346 --output_height=260
 ```
 Run the command above, and the following files will be created in a folder called _output_.
 
@@ -166,6 +168,17 @@ original.avi  slomo.avi  dvs-video.avi  tennis.aedat
 * _tennis.aedat_: AEDAT-2.0 file for playback and algorithm experiments in [jAER](https://jaerproject.net) (use the AEChip _Davis346Blue_ to play this file.)
 
 The [v2e site](https://sites.google.com/view/video2events/home) shows these videos.
+
+## Model parameters
+
+The DVS ON and OFF threshold nominal values are set by _pos_thres_ and _neg_thres_. The pixel to pixel variation is set by _sigma_thres_. The pixel cutoff frequency in Hz is set by _cutoff_hz_. The leak event rate is set by _leak_rate_hz_. 
+
+See our technical paper for futher information about these parameters.
+ 
+ ### Frame rate and DVS timestamp resolution in v2e
+ The _frame_rate_ parameter sets the output frame rate of DVS movies. It does not affect the generated DVS events, only how they are rendered to make the AVI movies.
+ 
+ The timestep resolution of the generated DVS events is set by combining the source frame rate and _slowdown_factor_ parameters. For example, if the source video is at 30Hz frame rate and _slowdown_factor_ is 20, then the DVS events will have timestamp resolution of 1/(30*20)s=1/600s=1.66ms.
  
 ## DAVIS camera conversion Dataset
 
@@ -210,14 +223,22 @@ optional arguments:
                         of non-empty output_folder)
 
 ```
-
+Running it from python console with
+```python
+runfile('E:\\Dropbox\\GitHub\\SensorsINI\\v2e\\ddd_extract_data.py', args=['--overwrite', '--output_folder=output/output-ddd-h5-data', '--overwrite', '--rotate180'], wdir='E:/Dropbox/GitHub/SensorsINI/v2e')
+```
+produces
+```
+output/output-ddd-h5-data/rec1501350986.aedat
+output/output-ddd-h5-data/rec1501350986.avi
+```
 ### Synthesize events from DDD recording
 
 _ddd-v2e.py_ is like _v2e.py_ but it reads DDD .hdf5 recordings and extracts the real DVS events from the same part of the recording used for the synthesis of DVS events.
 
 You can try it like this:
 ```bash
-python ddd-v2e.py --input input/rec1501350986.hdf5 --slomo_model input/SuperSloMo39.ckpt --slowdown_factor 20 --start 70 --stop 73 --output_folder output/ddd20-v2e-short --dvs_aedat dvs --pos_thres=.2 --neg_thres=.2 --overwrite --dvs_vid_full_scale=2 --frame_rate=100
+$ python ddd-v2e.py --input input/rec1501350986.hdf5 --slomo_model input/SuperSloMo39.ckpt --slowdown_factor 20 --start 70 --stop 73 --output_folder output/ddd20-v2e-short --dvs_aedat dvs --pos_thres=.2 --neg_thres=.2 --overwrite --dvs_vid_full_scale=2 --frame_rate=100
 INFO:__main__:arguments:
 cutoff_hz:      300
 dvs_aedat2:     dvs
@@ -270,7 +291,7 @@ v2e-ddd20:   5%|███▊                                                    
 
 ```
 
-The generated outputs will be
+The generated outputs in folder _output/ddd20-v2e-short_ will be
 ```
 dvs-v2e.aedat
 dvs-v2e-real.aedat
@@ -322,7 +343,7 @@ Make sure you use part of the recording where the input is changing.
 
 The program will take the DVS recording data, which starts at time 'start' and ends at time 'end', to calculate the best threshold values for positive and negative self separately.
 
-A typical result from _ddd_find_thresholds.py_ is shown below. The smallest difference between real and v2e DVS event counts is found at about 0.3.
+A typical result from _ddd_find_thresholds.py_ is shown below. It plots the absolute difference in ON and OFF event counts between the real and v2e data. ON counts are green and OFF counts are red. The smallest difference between real and v2e DVS event counts is found at about 0.3. It means that this recording use a DVS threshold of about 0.3 log_e units, or about +35% and -25% intensity change.
 
 ![find_threshold_plot](media/find_thresholds.png)
 
