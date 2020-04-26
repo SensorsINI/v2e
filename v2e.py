@@ -210,7 +210,7 @@ if __name__ == "__main__":
             twoFrames = np.stack([frame0, frame1], axis=0)
             slomo.interpolate(twoFrames, interpFramesFolder)  # interpolated frames are stored to tmpfolder as 1.png, 2.png, etc
             interpFramesFilenames = all_images(interpFramesFolder)  # read back to memory
-            n = len(interpFramesFilenames)  # number of interpolated frames
+            n = len(interpFramesFilenames)  # number of interpolated frames, will be 1 if slowdown_factor==1
             events = np.empty((0, 4), float)
             # Interpolating the 2 frames f0 to f1 results in n frames f0 fi0 fi1 ... fin-2 f1
             # The endpoint frames are same as input.
@@ -221,10 +221,14 @@ if __name__ == "__main__":
 
             # compute times of output integrated frames
             interpTimes = np.linspace(start=ts0, stop=ts1, num=n, endpoint=True)
-            for i in range(n -1):  # for each interpolated frame up to last; use n-1 because we get last interpolated frame as first frame next time
-                fr = read_image(interpFramesFilenames[i])
-                newEvents = emulator.compute_events(fr, interpTimes[i], interpTimes[i + 1])
-                if not newEvents is None: events = np.append(events, newEvents, axis=0)
+            if n==1: # no slowdown
+                fr = read_image(interpFramesFilenames[0])
+                newEvents = emulator.compute_events(fr, ts0, ts1)
+            else:
+                for i in range(n -1):  # for each interpolated frame up to last; use n-1 because we get last interpolated frame as first frame next time
+                    fr = read_image(interpFramesFilenames[i])
+                    newEvents = emulator.compute_events(fr, interpTimes[i], interpTimes[i + 1])
+            if not newEvents is None: events = np.append(events, newEvents, axis=0)
             dvsFrameTimestamps = np.linspace(
                 start=ts0,
                 stop=ts1,

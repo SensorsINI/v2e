@@ -377,7 +377,7 @@ All the thresholds above are estimated based on the file rec1500403661.hdf5. The
 
 
 
-### Plot the event counts from v2e versus real DVS
+### Plot the DDD event counts from v2e versus real DVS
 
 After running _ddd-v2e.py_, _ddd_plot_event_counts.py_ reads the saved numpy files holding the real and v2e events from _ddd-v2e.py_ (**if you enabled --numpy_output**) and plots the event counts over an ROI. 
 
@@ -397,6 +397,13 @@ Another example is shown below: The left side is the ground-truth DVS frames, an
   <img src="media/plot.png" width="350"  class="center"/> 
 </p>
 
+## Working with jAER DAVIS recordings
+
+DAVIS cameras like the one that recorded DDD17 and DDD20 are often used with [jAER](https://jaerproject.net) (although DDD recordings were made with custom python wrapper around caer). _v2e_ will output a jAER-compatible .aedat file in [AEDAT-2.0 format](https://inivation.com/support/software/fileformat/#aedat-20), which jAER uses.
+
+To work with existing jAER DAVIS .aedat, you can export the DAVIS APS frames using the jAER EventFilter [DavisFrameAVIWriter](https://github.com/SensorsINI/jaer/blob/master/src/ch/unizh/ini/jaer/projects/davis/frames/DavisFrameAviWriter.java); see the [jAER user guide](https://docs.google.com/document/d/1fb7VA8tdoxuYqZfrPfT46_wiT1isQZwTHgX8O22dJ0Q/edit?usp=sharing), in particular, the [section about using DavisFrameAVIWriter](https://docs.google.com/document/d/1fb7VA8tdoxuYqZfrPfT46_wiT1isQZwTHgX8O22dJ0Q/edit#heading=h.g4cschniofmo). In DavisFrameAVIWriter, **don't forget to set the frameRate to the actual frame rate of the DAVIS frames** (which you can see at the top of the jAER display). This will make the conversion have approximately the correct DVS event timing. (jAER can drop APS frames if there are too many DVS events, so don't count on this.) Once you have the AVI from jAER, you can generate v2e events from it with _v2e.py_ and see how they compare with the original DVS events in jAER, by playing the exported v2e .aedat file in jAER.
+
+An example of this conversion and comparison is on the [v2e home page](https://sites.google.com/view/video2events/home).
 
 ## Generating Synthetic DVS Dataset from UCF-101 action recognition dataset ##
 

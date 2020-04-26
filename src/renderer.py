@@ -114,8 +114,8 @@ class EventRenderer(object):
 
         self._check_outputs_open()
 
-        if event_arr is None:
-            logger.info('event_arr is None, doing nothing')
+        if event_arr is None or event_arr.shape[0]==0:
+            logger.info('event_arr is None or there are no events, doing nothing')
             return None
 
         ts=event_arr[:,0]
