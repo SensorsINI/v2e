@@ -1,0 +1,21 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="v2e test pendulum" type="PythonConfigurationType" factoryName="Python">
+    <module name="v2e" />
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="PARENT_ENVS" value="true" />
+    <option name="SDK_HOME" value="" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="IS_MODULE_SDK" value="true" />
+    <option name="ADD_CONTENT_ROOTS" value="true" />
+    <option name="ADD_SOURCE_ROOTS" value="true" />
+    <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/v2e.py" />
+    <option name="PARAMETERS" value="--overwrite --input input/pendulum.avi --slomo_model=input/SuperSloMo39.ckpt --slowdown_factor=10 --output_folder=output/pendulum --pos_thres=.2 --neg_thres=.2 --sigma_thres=0.03 --cutoff_hz=300 --leak_rate_hz=.03 --frame_rate=100 --dvs_aedat2 v2e.aedat  --output_height=260 --output_width=346 --start_time=1 --stop_time=3" />
+    <option name="SHOW_COMMAND_LINE" value="true" />
+    <option name="EMULATE_TERMINAL" value="false" />
+    <option name="MODULE_MODE" value="false" />
+    <option name="REDIRECT_INPUT" value="false" />
+    <option name="INPUT_FILE" value="" />
+    <method v="2" />
+  </configuration>
+</component>

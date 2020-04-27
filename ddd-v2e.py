@@ -215,14 +215,8 @@ if __name__ == "__main__":
                     interpTimes = np.linspace(start=frame0['timestamp'], stop=frame1['timestamp'], num=n, endpoint=True)
                     for i in range(n - 1):  # for each interpolated frame up to last; use n-1 because we get last interpolated frame as first frame next time
                         fr = read_image(interpFramesFilenames[i])
-                        newEvents = emulator.compute_events(fr, interpTimes[i], interpTimes[i + 1])
+                        newEvents = emulator.accumulate_events(fr, interpTimes[i], interpTimes[i + 1])
                         if not newEvents is None: events = np.append(events, newEvents, axis=0)
-                    ts = np.linspace(
-                        start=frame0['timestamp'],
-                        stop=frame1['timestamp'],
-                        num=int((frame1['timestamp']-frame0['timestamp']) * dvsFps),
-                        endpoint=True
-                    )  # output_ts are the timestamps of the DVS video output frames. They come from destFps
                     events = np.array(events)  # remove first None element
                     if numpy_output:
                         allEventsFake = np.concatenate((allEventsFake,events))

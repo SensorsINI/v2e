@@ -144,7 +144,7 @@ if __name__ == "__main__":
                  '\nsource video is {}fps (frame interval {}s),'
                  '\n slomo will have {}fps,'
                  '\n events will have timestamp resolution {}s,'
-                 '\n v2e DVS video will have {}fps (accumulation time {}), '
+                 '\n v2e DVS video will have {}fps (accumulation time {}s), '
                  '\n DVS video will have {} frames with duration {}s and playback duration {}s\n'
                  .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
                          EngNumber(srcFps), EngNumber(srcFrameIntervalS),
@@ -223,18 +223,12 @@ if __name__ == "__main__":
             interpTimes = np.linspace(start=ts0, stop=ts1, num=n, endpoint=True)
             if n==1: # no slowdown
                 fr = read_image(interpFramesFilenames[0])
-                newEvents = emulator.compute_events(fr, ts0, ts1)
+                newEvents = emulator.accumulate_events(fr, ts0, ts1)
             else:
                 for i in range(n -1):  # for each interpolated frame up to last; use n-1 because we get last interpolated frame as first frame next time
                     fr = read_image(interpFramesFilenames[i])
-                    newEvents = emulator.compute_events(fr, interpTimes[i], interpTimes[i + 1])
-            if not newEvents is None: events = np.append(events, newEvents, axis=0)
-            dvsFrameTimestamps = np.linspace(
-                start=ts0,
-                stop=ts1,
-                num=int(srcFrameIntervalS * dvsFps) if dvsFps else int(srcFrameIntervalS * srcFps),
-                endpoint=True
-            ) # output_ts are the timestamps of the DVS video output frames. They come from destFps
+                    newEvents = emulator.accumulate_events(fr, interpTimes[i], interpTimes[i + 1])
+                    if not newEvents is None: events = np.append(events, newEvents, axis=0)
             events = np.array(events)  # remove first None element
             eventRenderer.renderEventsToFrames(events, height=output_height, width=output_width)
             ts0 = ts1

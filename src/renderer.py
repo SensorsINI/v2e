@@ -213,7 +213,7 @@ class EventRenderer(object):
             new_frame = read_image(imageFileNames[i + 1])
             if self.emulator is None:
                 self.emulator = EventEmulator(pos_thres=self.pos_thres, neg_thres=self.neg_thres, sigma_thres=self.sigma_thres)
-            tmp_events = self.emulator.compute_events(
+            tmp_events = self.emulator.accumulate_events(
                 new_frame,
                 frameTimesS[i],
                 frameTimesS[i + 1]

@@ -103,7 +103,7 @@ if __name__ == "__main__":
             emulator.neg_thres = threshold
             emulator.reset()
             for i in range(nFrames):
-                e = emulator.compute_events(frames['frame'][i], frame_ts[i], frame_ts[i + 1])
+                e = emulator.accumulate_events(frames['frame'][i], frame_ts[i], frame_ts[i + 1])
                 apsOnEvents += emulator.num_events_on
                 apsOffEvents += emulator.num_events_off
 
