@@ -23,7 +23,7 @@ def v2e_args(parser):
     parser.add_argument("--sigma_thres", type=float, default=0.03,
                         help="1-std deviation threshold variation in log_e intensity change.")
     parser.add_argument("--cutoff_hz", type=float, default=300,
-                        help="photoreceptor first order IIR lowpass cutoff-off 3dB frequency in Hz - see https://ieeexplore.ieee.org/document/4444573")
+                        help="photoreceptor second-order IIR lowpass filter cutoff-off 3dB frequency in Hz - see https://ieeexplore.ieee.org/document/4444573")
     parser.add_argument("--leak_rate_hz", type=float, default=0.05,
                         help="leak event rate per pixel in Hz - see https://ieeexplore.ieee.org/abstract/document/7962235")
     parser.add_argument("--slowdown_factor", type=int, default=10,

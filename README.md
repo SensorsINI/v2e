@@ -99,7 +99,7 @@ optional arguments:
                         1-std deviation threshold variation in log_e intensity
                         change (default: 0.03)
   --cutoff_hz CUTOFF_HZ
-                        photoreceptor first order IIR lowpass cutoff-off 3dB
+                        photoreceptor second-order IIR lowpass cutoff-off 3dB
                         frequency in Hz - see
                         https://ieeexplore.ieee.org/document/4444573 (default:
                         300)

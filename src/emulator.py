@@ -65,7 +65,7 @@ class EventEmulator(object):
             dvs_aedat2:str=None,
             dvs_text:str=None,
             rotate180:bool=False,
-            show_input:str=None # 'logBaseFrame','lpLogFrame', 'diff_frame'
+            show_input:str='lpLogFrame' # change as you like to see 'logBaseFrame','lpLogFrame', 'diff_frame'
             # dvs_rosbag=None
     ):
         """
@@ -144,7 +144,8 @@ class EventEmulator(object):
     def _init(self, firstFrameLinear):
         logger.debug('initializing random temporal contrast thresholds from from base frame')
         self.baseLogFrame = lin_log(firstFrameLinear)  # base_frame are memorized lin_log pixel values
-        self.lpLogFrame = np.copy(self.baseLogFrame)
+        self.lpLogFrame0 = np.copy(self.baseLogFrame) # initialize first stage of 2nd order IIR to first input
+        self.lpLogFrame1 = np.copy(self.baseLogFrame) # 2nd stage is initialized to same, so diff will be zero for first frame
         # take the variance of threshold into account.
         self.pos_thres = np.random.normal(self.pos_thres, self.sigma_thres, firstFrameLinear.shape)
         # to avoid the situation where the threshold is too small.
@@ -160,7 +161,8 @@ class EventEmulator(object):
         self.num_events_off = 0
         self.baseLogFrame = None
         self.lasttime=None
-        self.lpLogFrame=None
+        self.lpLogFrame0=None # lowpass stage 0
+        self.lpLogFrame1=None # stage 1
 
     def _show(self,inp:np.ndarray):
         min=np.min(inp)
@@ -199,7 +201,10 @@ class EventEmulator(object):
             self._init(new_frame)
             self.lasttime = t_start
             return None
-        # apply log transform and lowpass filter here
+        logNewFrame = lin_log(new_frame)
+        # apply lowpass filter here. Filter is 2nd order
+        # lowpass IIR that uses two internal state variables
+        # to store stages of cascaded first order RC filters.
         deltaTime = t_start - self.lasttime
         if self.cutoff_hz<=0:
             eps=1
@@ -207,8 +212,8 @@ class EventEmulator(object):
             tau=1/(np.pi*2*self.cutoff_hz)
             eps= deltaTime / tau
             if eps>1: eps=1
-        logNewFrame = lin_log(new_frame)
-        self.lpLogFrame= (1 - eps) * self.lpLogFrame + eps * logNewFrame
+        self.lpLogFrame0= (1 - eps) * self.lpLogFrame0 + eps * logNewFrame # first internal state is updated
+        self.lpLogFrame1= (1 - eps) * self.lpLogFrame1 + eps * self.lpLogFrame0 # then 2nd internal state (output) is updated from first
         self.lasttime=t_start
 
         # switch in diff change amp leaks at some rate equivalent to some hz of ON events
@@ -218,13 +223,15 @@ class EventEmulator(object):
             deltaLeak=deltaTime*self.leak_rate_hz/self.pos_thres_nominal
             self.baseLogFrame-=deltaLeak # subract so it increases ON events
 
-        diff_frame =  self.lpLogFrame - self.baseLogFrame  # log intensity (brightness) change from memorized values
+        # log intensity (brightness) change from memorized values is computed
+        # from the difference between new input (from lowpass of lin-log input) and the memorized value
+        diff_frame = self.lpLogFrame1 - self.baseLogFrame
 
         if self.show_input:
             if self.show_input=='baseLogFrame':
                 self._show(self.baseLogFrame)
             elif self.show_input=='lpLogFrame':
-                self._show(self.lpLogFrame)
+                self._show(self.lpLogFrame1)
             elif self.show_input=='diff_frame':
                 self._show(diff_frame)
             else:
