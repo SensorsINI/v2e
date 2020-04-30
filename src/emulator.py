@@ -351,17 +351,17 @@ class EventEmulator(object):
 
                     # the shot noise rate varies with intensity: for lowest intensity the rate rises to parameter.
                     # the noise is reduced by factor SHOT_NOISE_INTEN_FACTOR for brightest intensities
-                    SHOT_NOISE_INTEN_FACTOR=4
+                    SHOT_NOISE_INTEN_FACTOR=0.1
                     shotNoiseFactor=((self.shot_noise_rate_hz/2)*deltaTime) *((SHOT_NOISE_INTEN_FACTOR-1)*inten01+1)
                                                                     # =1 for inten=0 and SHOT_NOISE_INTEN_FACTOR for inten=1
 
+                    rand01=np.random.uniform(size=self.baseLogFrame.shape) # draw samples
+
                     # probability for each pixel is dt*rate*nom_thres/actual_thres. That way, the smaller the threshold, the larger the rate
                     shotOnProbThisSample=shotNoiseFactor*np.divide(self.pos_thres_nominal,self.pos_thres)
-                    rand01=np.random.uniform(size=self.baseLogFrame.shape) # draw samples
-                    shotOnCord=rand01<shotOnProbThisSample # array with True where ON noise event
+                    shotOnCord=rand01>(1-shotOnProbThisSample) # array with True where ON noise event
 
                     shotOffProbThisSample=shotNoiseFactor*np.divide(self.pos_thres_nominal,self.pos_thres)
-                    rand01=np.random.uniform(size=self.baseLogFrame.shape) # draw samples
                     shotOffCord=rand01<shotOffProbThisSample # array with True where OFF noise event
 
                     shotOnXy=np.where(shotOnCord)
