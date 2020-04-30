@@ -70,87 +70,98 @@ usage: v2e.py [-h] [-i INPUT] [--start_time START_TIME]
               [--stop_time STOP_TIME] [--pos_thres POS_THRES]
               [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
               [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
+              [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ]
               [--slowdown_factor SLOWDOWN_FACTOR]
               [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
-              [--rotate180] [--slomo_model SLOMO_MODEL] -o OUTPUT_FOLDER
+              [--slomo_model SLOMO_MODEL] -o OUTPUT_FOLDER
               [--frame_rate FRAME_RATE] [--dvs_vid DVS_VID]
               [--dvs_vid_full_scale DVS_VID_FULL_SCALE] [--dvs_h5 DVS_H5]
               [--dvs_aedat2 DVS_AEDAT2] [--dvs_text DVS_TEXT]
-              [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO] [-p] [--overwrite]
+              [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO] [--no_preview]
+              [--overwrite] [--rotate180 ROTATE180]
 
 v2e: generate simulated DVS events from video.
 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT, --input INPUT
-                        input video file; leave empty for file chooser dialog
+                        input video file; leave empty for file chooser dialog.
                         (default: None)
   --start_time START_TIME
-                        start at this time in seconds in video (default: None)
+                        start at this time in seconds in video. (default:
+                        None)
   --stop_time STOP_TIME
-                        stop at this time in seconds in video (default: None)
+                        stop at this time in seconds in video. (default: None)
   --pos_thres POS_THRES
                         threshold in log_e intensity change to trigger a
-                        positive event (default: 0.21)
+                        positive event. (default: 0.21)
   --neg_thres NEG_THRES
                         threshold in log_e intensity change to trigger a
-                        negative event (default: 0.17)
+                        negative event. (default: 0.17)
   --sigma_thres SIGMA_THRES
                         1-std deviation threshold variation in log_e intensity
-                        change (default: 0.03)
+                        change. (default: 0.03)
   --cutoff_hz CUTOFF_HZ
-                        photoreceptor second-order IIR lowpass cutoff-off 3dB
-                        frequency in Hz - see
+                        photoreceptor second-order IIR lowpass filter cutoff-
+                        off 3dB frequency in Hz - see
                         https://ieeexplore.ieee.org/document/4444573 (default:
                         300)
   --leak_rate_hz LEAK_RATE_HZ
                         leak event rate per pixel in Hz - see
                         https://ieeexplore.ieee.org/abstract/document/7962235
                         (default: 0.05)
+  --shot_noise_rate_hz SHOT_NOISE_RATE_HZ
+                        Temporal noise rate of ON+OFF events in darkest parts
+                        of scene; reduced in brightest parts. (default: 0)
   --slowdown_factor SLOWDOWN_FACTOR
                         slow motion factor; if the input video has frame rate
                         fps, then the DVS events will have time resolution of
-                        1/(fps*slowdown_factor) (default: 10)
+                        1/(fps*slowdown_factor). (default: 10)
   --output_height OUTPUT_HEIGHT
                         height of output DVS data in pixels. If None, same as
-                        input video. (default: None)
+                        input video. (default: 260)
   --output_width OUTPUT_WIDTH
                         width of output DVS data in pixels. If None, same as
-                        input video. (default: None)
-  --rotate180           rotate all output 180 deg (default: False)
+                        input video. (default: 346)
   --slomo_model SLOMO_MODEL
-                        path of slomo_model checkpoint (default:
+                        path of slomo_model checkpoint. (default:
                         input/SuperSloMo39.ckpt)
   -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
-                        folder to store outputs (default: None)
+                        folder to store outputs. (default: None)
   --frame_rate FRAME_RATE
                         equivalent frame rate of --dvs_vid output video; the
                         events will be accummulated as this sample rate; DVS
                         frames will be accumulated for duration 1/frame_rate
                         (default: 300)
-  --dvs_vid DVS_VID     output DVS events as AVI video at frame_rate (default:
-                        dvs-video.avi)
+  --dvs_vid DVS_VID     output DVS events as AVI video at frame_rate.
+                        (default: dvs-video.avi)
   --dvs_vid_full_scale DVS_VID_FULL_SCALE
                         set full scale count for DVS videos to be this many ON
-                        or OFF events (default: 3)
-  --dvs_h5 DVS_H5       output DVS events as hdf5 event database (default:
+                        or OFF events. (default: 3)
+  --dvs_h5 DVS_H5       output DVS events as hdf5 event database. (default:
                         None)
   --dvs_aedat2 DVS_AEDAT2
-                        output DVS events as AEDAT-2.0 event file for jAER
-                        (default: None)
+                        output DVS events as DAVIS346 camera AEDAT-2.0 event
+                        file for jAER; one file for real and one file for v2e
+                        events. (default: None)
   --dvs_text DVS_TEXT   output DVS events as text file with one event per line
-                        [timestamp (float s), x, y, polarity (0,1)] (default:
+                        [timestamp (float s), x, y, polarity (0,1)]. (default:
                         None)
   --vid_orig VID_ORIG   output src video at same rate as slomo video (with
-                        duplicated frames) (default: video_orig.avi)
+                        duplicated frames). (default: video_orig.avi)
   --vid_slomo VID_SLOMO
                         output slomo of src video slowed down by
-                        slowdown_factor (default: video_slomo.avi)
-  --no_preview         disable preview in cv2 windows for faster processing (default: False)
+                        slowdown_factor. (default: video_slomo.avi)
+  --no_preview          disable preview in cv2 windows for faster processing.
+                        (default: False)
   --overwrite           overwrites files in existing folder (checks existence
-                        of non-empty output_folder) (default: False)
+                        of non-empty output_folder). (default: False)
+  --rotate180 ROTATE180
+                        rotate all output 180 deg. (default: False)
 
 Run with no --input to open file dialog
+
+
 ```
 You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.
 

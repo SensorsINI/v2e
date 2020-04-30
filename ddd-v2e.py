@@ -9,6 +9,7 @@ by comparing the real DVS events with v2e events from DAVIS APS frames.
 import argparse
 import logging
 import os
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import argcomplete
@@ -93,6 +94,7 @@ if __name__ == "__main__":
     sigma_thres = args.sigma_thres
     cutoff_hz=args.cutoff_hz
     leak_rate_hz=args.leak_rate_hz
+    shot_noise_rate_hz=args.shot_noise_rate_hz
     dvs_vid: str = args.dvs_vid
     dvs_vid_full_scale: int = args.dvs_vid_full_scale
     dvs_h5 = args.dvs_h5
@@ -123,7 +125,7 @@ if __name__ == "__main__":
     slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview,rotate=rotate180)
     dvsVidReal=str(dvs_vid).replace('.avi','-real.avi')
     dvsVidFake=str(dvs_vid).replace('.avi','-fake.avi')
-    emulator = EventEmulator(pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text,rotate180=rotate180)
+    emulator = EventEmulator(pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz,  shot_noise_rate_hz=shot_noise_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text,rotate180=rotate180)
     eventRendererReal = EventRenderer(frame_rate_hz=dvsFps, output_path=output_folder, dvs_vid=dvsVidReal, preview=preview, rotate180=rotate180, full_scale_count=dvs_vid_full_scale)
     eventRendererFake = EventRenderer(frame_rate_hz=dvsFps, output_path=output_folder, dvs_vid=dvsVidFake, preview=preview, rotate180=rotate180, full_scale_count=dvs_vid_full_scale)
     realDvsAeDatOutput=None
@@ -244,4 +246,4 @@ if __name__ == "__main__":
         desktop.open(os.path.abspath(output_folder))
     except Exception as e:
         logger.warning('{}: could not open {} in desktop'.format(e,output_folder))
-    quit()
+    sys.exit()

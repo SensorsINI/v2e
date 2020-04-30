@@ -9,9 +9,9 @@ events from this video after SuperSloMo has generated interpolated frames from t
 """
 # todo  add batch mode for slomo to speed up
 # todo refractory period for pixel
-# todo shot noise jitter
 
 import argparse
+import sys
 from pathlib import Path
 
 import argcomplete
@@ -29,7 +29,7 @@ from src.slomo import SuperSloMo
 from src.emulator import EventEmulator
 import logging
 
-from v2e_utils import inputVideoFileDialog
+from src.v2e_utils import inputVideoFileDialog
 
 logging.basicConfig()
 root = logging.getLogger()
@@ -96,6 +96,7 @@ if __name__ == "__main__":
     sigma_thres = args.sigma_thres
     cutoff_hz=args.cutoff_hz
     leak_rate_hz=args.leak_rate_hz
+    shot_noise_rate_hz=args.shot_noise_rate_hz
     dvs_vid = args.dvs_vid
     dvs_vid_full_scale = args.dvs_vid_full_scale
     dvs_h5 = args.dvs_h5
@@ -154,7 +155,7 @@ if __name__ == "__main__":
                          dvsNumFrames, EngNumber(dvsDuration), EngNumber(dvsPlaybackDuration))
                  )
 
-    emulator = EventEmulator(pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
+    emulator = EventEmulator(pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, shot_noise_rate_hz=shot_noise_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
     eventRenderer = EventRenderer(frame_rate_hz=dvsFps,output_path=output_folder, dvs_vid=dvs_vid, preview=preview, rotate180=rotate180, full_scale_count=dvs_vid_full_scale)
 
     frame0 = None
@@ -254,5 +255,5 @@ if __name__ == "__main__":
         desktop.open(os.path.abspath(output_folder))
     except Exception as e:
         logger.warning('{}: could not open {} in desktop'.format(e, output_folder))
-    quit()
+    sys.exit()
 

@@ -17,6 +17,7 @@ from engineering_notation import EngNumber  # only from pip
 from src.v2e_utils import all_images, read_image, video_writer, checkAddSuffix
 from src.output.aedat2_output import AEDat2Output
 from src.output.ae_text_output import DVSTextOutput
+
 # import rosbag # not yet for python 3
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,6 @@ def lin_log(x, threshold=20):
 
     return y
 
-
 class EventEmulator(object):
     """compute events based on the input frame.
     - author: Zhe He
@@ -58,14 +58,15 @@ class EventEmulator(object):
             sigma_thres=0.03,
             cutoff_hz=0,
             leak_rate_hz=0.1,
-            refractory_period_s=0,
+            refractory_period_s=0,  # todo not yet modeled
+            shot_noise_rate_hz=0,  # rate in hz of temporal noise events
             seed=42,
-            output_folder:str=None,
-            dvs_h5:str=None,
-            dvs_aedat2:str=None,
-            dvs_text:str=None,
-            rotate180:bool=False,
-            show_input:str='lpLogFrame' # change as you like to see 'logBaseFrame','lpLogFrame', 'diff_frame'
+            output_folder: str = None,
+            dvs_h5: str = None,
+            dvs_aedat2: str = None,
+            dvs_text: str = None,
+            rotate180: bool = False,
+            show_input: str = 'lpLogFrame'  # change as you like to see 'logBaseFrame','lpLogFrame', 'diff_frame'
             # dvs_rosbag=None
     ):
         """
@@ -93,36 +94,38 @@ class EventEmulator(object):
         logger.info("ON/OFF log_e temporal contrast thresholds: {} / {} +/- {}".format(pos_thres, neg_thres, sigma_thres))
         self.baseLogFrame = None
         self.sigma_thres = sigma_thres
-        self.pos_thres = pos_thres # initialized to scalar, later overwritten by random value array
+        self.pos_thres = pos_thres  # initialized to scalar, later overwritten by random value array
         self.neg_thres = neg_thres  # initialized to scalar, later overwritten by random value array
         self.pos_thres_nominal = pos_thres
         self.neg_thres_nominal = neg_thres
-        self.cutoff_hz=cutoff_hz
-        self.leak_rate_hz=leak_rate_hz
-        self.refractory_period_s=refractory_period_s
+        self.cutoff_hz = cutoff_hz
+        self.leak_rate_hz = leak_rate_hz
+        self.refractory_period_s = refractory_period_s
+        self.shot_noise_rate_hz = shot_noise_rate_hz
         self.output_width = None
         self.output_height = None  # set on first frame
-        self.rotate180=rotate180
-        self.show_input=show_input
-        np.random.seed(seed)
+        self.rotate180 = rotate180
+        self.show_input = show_input
+        if seed>0:
+            np.random.seed(seed)
 
         # if leak_rate_hz>0:
         #     logger.warning('leak events not yet implemented; leak_rate_hz={} will be ignored'.format(leak_rate_hz))
-        if refractory_period_s>0:
+        if refractory_period_s > 0:
             logger.warning('refractory period not yet implemented; refractory_period_s={} will be ignored'.format(refractory_period_s))
 
-        self.output_folder=output_folder
-        self.dvs_h5=dvs_h5
-        self.dvs_aedat2=dvs_aedat2
-        self.dvs_text=dvs_text
-        self.num_events_total=0
-        self.num_events_on=0
-        self.num_events_off=0
+        self.output_folder = output_folder
+        self.dvs_h5 = dvs_h5
+        self.dvs_aedat2 = dvs_aedat2
+        self.dvs_text = dvs_text
+        self.num_events_total = 0
+        self.num_events_on = 0
+        self.num_events_off = 0
 
         if self.output_folder:
             if dvs_h5:
-                path=os.path.join(self.output_folder, dvs_h5)
-                path=checkAddSuffix(path,'.h5')
+                path = os.path.join(self.output_folder, dvs_h5)
+                path = checkAddSuffix(path, '.h5')
                 logger.info('opening event output dataset file ' + path)
                 self.dvs_h5 = h5py.File(path, "w")
                 self.dvs_h5_dataset = self.dvs_h5.create_dataset(
@@ -131,21 +134,21 @@ class EventEmulator(object):
                     maxshape=(None, 4),
                     dtype="uint32")
             if dvs_aedat2:
-                path=os.path.join(self.output_folder,dvs_aedat2)
-                path=checkAddSuffix(path,'.aedat')
-                logger.info('opening AEDAT-2.0 output file '+path)
-                self.dvs_aedat2=AEDat2Output(path,rotate180)
+                path = os.path.join(self.output_folder, dvs_aedat2)
+                path = checkAddSuffix(path, '.aedat')
+                logger.info('opening AEDAT-2.0 output file ' + path)
+                self.dvs_aedat2 = AEDat2Output(path, rotate180)
             if dvs_text:
-                path=checkAddSuffix(path,'.txt')
-                path=os.path.join(self.output_folder,dvs_text)
-                logger.info('opening text DVS output file '+path)
-                self.dvs_text=DVSTextOutput(path)
+                path = checkAddSuffix(path, '.txt')
+                path = os.path.join(self.output_folder, dvs_text)
+                logger.info('opening text DVS output file ' + path)
+                self.dvs_text = DVSTextOutput(path)
 
     def _init(self, firstFrameLinear):
         logger.debug('initializing random temporal contrast thresholds from from base frame')
         self.baseLogFrame = lin_log(firstFrameLinear)  # base_frame are memorized lin_log pixel values
-        self.lpLogFrame0 = np.copy(self.baseLogFrame) # initialize first stage of 2nd order IIR to first input
-        self.lpLogFrame1 = np.copy(self.baseLogFrame) # 2nd stage is initialized to same, so diff will be zero for first frame
+        self.lpLogFrame0 = np.copy(self.baseLogFrame)  # initialize first stage of 2nd order IIR to first input
+        self.lpLogFrame1 = np.copy(self.baseLogFrame)  # 2nd stage is initialized to same, so diff will be zero for first frame
         # take the variance of threshold into account.
         self.pos_thres = np.random.normal(self.pos_thres, self.sigma_thres, firstFrameLinear.shape)
         # to avoid the situation where the threshold is too small.
@@ -160,15 +163,15 @@ class EventEmulator(object):
         self.num_events_on = 0
         self.num_events_off = 0
         self.baseLogFrame = None
-        self.lasttime=None
-        self.lpLogFrame0=None # lowpass stage 0
-        self.lpLogFrame1=None # stage 1
+        self.lasttime = None
+        self.lpLogFrame0 = None  # lowpass stage 0
+        self.lpLogFrame1 = None  # stage 1
 
-    def _show(self,inp:np.ndarray):
-        min=np.min(inp)
-        img=((inp-min)/(np.max(inp)-min))
-        if self.rotate180: img=np.rot90(img,k=2)
-        cv2.imshow(__name__,img)
+    def _show(self, inp: np.ndarray):
+        min = np.min(inp)
+        img = ((inp - min) / (np.max(inp) - min))
+        if self.rotate180: img = np.rot90(img, k=2)
+        cv2.imshow(__name__, img)
 
     def accumulate_events(self, new_frame: np.ndarray, t_start: float, t_end: float) -> np.ndarray:
         """Compute events in new frame.
@@ -201,38 +204,56 @@ class EventEmulator(object):
             self._init(new_frame)
             self.lasttime = t_start
             return None
-        logNewFrame = lin_log(new_frame)
-        # apply lowpass filter here. Filter is 2nd order
-        # lowpass IIR that uses two internal state variables
-        # to store stages of cascaded first order RC filters.
-        deltaTime = t_start - self.lasttime
-        if self.cutoff_hz<=0:
-            eps=1
-        else:
-            tau=1/(np.pi*2*self.cutoff_hz)
-            eps= deltaTime / tau
-            if eps>1: eps=1
-        self.lpLogFrame0= (1 - eps) * self.lpLogFrame0 + eps * logNewFrame # first internal state is updated
-        self.lpLogFrame1= (1 - eps) * self.lpLogFrame1 + eps * self.lpLogFrame0 # then 2nd internal state (output) is updated from first
-        self.lasttime=t_start
 
-        # switch in diff change amp leaks at some rate equivalent to some hz of ON events
-        # actual leak rate depends on threshold for each pixel
-        # we want nominal rate leak_rate_Hz, so
-        if self.leak_rate_hz>0:
-            deltaLeak=deltaTime*self.leak_rate_hz/self.pos_thres_nominal
-            self.baseLogFrame-=deltaLeak # subract so it increases ON events
+        # lin-log mapping
+        logNewFrame = lin_log(new_frame)
+
+        # Apply nonlinear lowpass filter here.
+        # Filter is 2nd order lowpass IIR that uses two internal state variables
+        # to store stages of cascaded first order RC filters.
+        # Time constant of the filter is proportional to the intensity value (with offset to deal with DN=0)
+        deltaTime = t_start - self.lasttime
+        inten01 = None  # define for later
+        if self.cutoff_hz>0 or self.shot_noise_rate_hz>0: # will use later
+            inten01 = (np.array(new_frame, float) + 1) / 256  # make sure we get no zero time constants
+        if self.cutoff_hz <= 0:
+            eps = 1
+        else:
+            tau = (1 / (np.pi * 2 * self.cutoff_hz))
+            eps = inten01 * (deltaTime / tau)  # make the update proportional to the local intensity
+            eps[eps[:] > 1] = 1  # keep filter stable
+        self.lpLogFrame0 = (1 - eps) * self.lpLogFrame0 + eps * logNewFrame  # first internal state is updated
+        self.lpLogFrame1 = (1 - eps) * self.lpLogFrame1 + eps * self.lpLogFrame0  # then 2nd internal state (output) is updated from first
+        self.lasttime = t_start
+
+        # # Noise: add infinite bandwidth white noise to samples after lowpass filtering,
+        # # so that the noise scales up as intensity goes down.
+        # # It will model the fact that total noise power is concentrated
+        # # to low frequencies when photocurrent (and transconductance) is smaller.
+        # if self.shot_noise_rate_hz > 0:
+        #     noise = (self.shot_noise_rate_hz) * (np.divide(np.random.randn(logNewFrame.shape[0], logNewFrame.shape[1]), inten01 + .1))
+        #     # makes the darkest pixels (with DN=0) have sample to sample 1-sigma noise of self.shot_noise_rate_hz
+        # else:
+        #     noise = 0
+
+
+        # Leak events: switch in diff change amp leaks at some rate equivalent to some hz of ON events.
+        # Actual leak rate depends on threshold for each pixel.
+        # We want nominal rate leak_rate_Hz, so
+        if self.leak_rate_hz > 0:
+            deltaLeak = deltaTime * self.leak_rate_hz / self.pos_thres_nominal  # scalars
+            self.baseLogFrame -= deltaLeak  # subract so it increases ON events
 
         # log intensity (brightness) change from memorized values is computed
         # from the difference between new input (from lowpass of lin-log input) and the memorized value
         diff_frame = self.lpLogFrame1 - self.baseLogFrame
 
         if self.show_input:
-            if self.show_input=='baseLogFrame':
+            if self.show_input == 'baseLogFrame':
                 self._show(self.baseLogFrame)
-            elif self.show_input=='lpLogFrame':
+            elif self.show_input == 'lpLogFrame':
                 self._show(self.lpLogFrame1)
-            elif self.show_input=='diff_frame':
+            elif self.show_input == 'diff_frame':
                 self._show(diff_frame)
             else:
                 logger.error("don't know about showing {}".format(self.show_input))
@@ -273,9 +294,9 @@ class EventEmulator(object):
             num_neg_events = neg_event_xy[0].shape[0]
             num_events = num_pos_events + num_neg_events
 
-            self.num_events_off+=num_neg_events
-            self.num_events_on+=num_pos_events
-            self.num_events_total+=num_events
+            self.num_events_on += num_pos_events
+            self.num_events_off += num_neg_events
+            self.num_events_total += num_events
 
             # sort out the positive event and negative event
             if num_pos_events > 0:
@@ -308,8 +329,11 @@ class EventEmulator(object):
             # randomly order events to prevent bias to one corner
             if events_tmp is not None:
                 events_tmp = events_tmp.take(np.random.permutation(events_tmp.shape[0]), axis=0)
+            if num_events > 0:
+                events.append(events_tmp)
 
-            if i == 0: # update the base frame only once, after we know how many events per pixel
+
+            if i == 0:  # update the base frame only once, after we know how many events per pixel
                 # add to memorized brightness values just the events we emitted.
                 # don't add the remainder. the next aps frame might have sufficient value
                 # to trigger another event or it might not,
@@ -321,12 +345,58 @@ class EventEmulator(object):
                     self.baseLogFrame[neg_cord] -= \
                         neg_evts_frame[neg_cord] * self.neg_thres[neg_cord]  # neg_thres is >0
 
-            if num_events > 0:
-                events.append(events_tmp)
+                if self.shot_noise_rate_hz>0:
+                    # NOISE: add temporal noise here by simple Poisson process that has a base noise rate self.shot_noise_rate_hz.
+                    # If there is such noise event, then we output event from each such pixel
+
+                    # the shot noise rate varies with intensity: for lowest intensity the rate rises to parameter.
+                    # the noise is reduced by factor SHOT_NOISE_INTEN_FACTOR for brightest intensities
+                    SHOT_NOISE_INTEN_FACTOR=4
+                    shotNoiseFactor=((self.shot_noise_rate_hz/2)*deltaTime) *((SHOT_NOISE_INTEN_FACTOR-1)*inten01+1)
+                                                                    # =1 for inten=0 and SHOT_NOISE_INTEN_FACTOR for inten=1
+
+                    # probability for each pixel is dt*rate*nom_thres/actual_thres. That way, the smaller the threshold, the larger the rate
+                    shotOnProbThisSample=shotNoiseFactor*np.divide(self.pos_thres_nominal,self.pos_thres)
+                    rand01=np.random.uniform(size=self.baseLogFrame.shape) # draw samples
+                    shotOnCord=rand01<shotOnProbThisSample # array with True where ON noise event
+
+                    shotOffProbThisSample=shotNoiseFactor*np.divide(self.pos_thres_nominal,self.pos_thres)
+                    rand01=np.random.uniform(size=self.baseLogFrame.shape) # draw samples
+                    shotOffCord=rand01<shotOffProbThisSample # array with True where OFF noise event
+
+                    shotOnXy=np.where(shotOnCord)
+                    shotOnCount = shotOnXy[0].shape[0]
+
+                    shotOffXy=np.where(shotOffCord)
+                    shotOffCount = shotOffXy[0].shape[0]
+
+                    self.num_events_on += shotOnCount
+                    self.num_events_off += shotOffCount
+                    self.num_events_total += shotOnCount+shotOffCount
+
+                    if shotOnCount > 0:
+                        shotEvents = np.hstack(
+                            (np.ones((shotOnCount, 1), dtype=np.float32) * ts,
+                             shotOnXy[1][..., np.newaxis],
+                             shotOnXy[0][..., np.newaxis],
+                             np.ones((shotOnCount, 1), dtype=np.float32) * 1))
+                        events.append(shotEvents)
+                        self.baseLogFrame[shotOnCord] += \
+                            shotOnCord[shotOnCord] * self.pos_thres[shotOnCord]
+                    if shotOffCount > 0:
+                        shotEvents = np.hstack(
+                            (np.ones((shotOffCount, 1), dtype=np.float32) * ts,
+                             shotOffXy[1][..., np.newaxis],
+                             shotOffXy[0][..., np.newaxis],
+                             np.ones((shotOffCount, 1), dtype=np.float32) * 1))
+                        events.append(shotEvents)
+                        self.baseLogFrame[shotOffCord] += \
+                            shotOffCord[shotOffCord] * self.neg_thres[shotOffCord]
+                    # end temporal noise
 
         if len(events) > 0:
             events = np.vstack(events)
-            if self.dvs_h5 is not None: # todo add h5 output
+            if self.dvs_h5 is not None:  # todo add h5 output
                 pass
                 # # convert data to uint32 (microsecs) format
                 # tmp_events[:, 0] = tmp_events[:, 0] * 1e6
@@ -349,6 +419,7 @@ class EventEmulator(object):
             return events
         else:
             return None
+
 
 #############################################################################################################
 
@@ -386,8 +457,9 @@ class EventFrameRenderer(object):
         self.output_fps = output_fps
         self.pos_thres = pos_thres
         self.neg_thres = neg_thres
-        self.preview=preview
-        self.preview_resized=False
+        self.preview = preview
+        self.preview_resized = False
+
     def _get_events(self):
         """Get all events.
         """

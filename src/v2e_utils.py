@@ -26,6 +26,8 @@ def v2e_args(parser):
                         help="photoreceptor second-order IIR lowpass filter cutoff-off 3dB frequency in Hz - see https://ieeexplore.ieee.org/document/4444573")
     parser.add_argument("--leak_rate_hz", type=float, default=0.05,
                         help="leak event rate per pixel in Hz - see https://ieeexplore.ieee.org/abstract/document/7962235")
+    parser.add_argument("--shot_noise_rate_hz", type=float, default=0,
+                        help="Temporal noise rate of ON+OFF events in darkest parts of scene; reduced in brightest parts. ")
     parser.add_argument("--slowdown_factor", type=int, default=10,
                         help="slow motion factor; if the input video has frame rate fps, then the DVS events will have time resolution of 1/(fps*slowdown_factor).")
     parser.add_argument("--output_height", type=int, default=260,
