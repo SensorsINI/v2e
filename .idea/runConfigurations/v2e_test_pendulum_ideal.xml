@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="v2e test pendulum" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="v2e test pendulum ideal" type="PythonConfigurationType" factoryName="Python">
     <module name="v2e" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -10,7 +10,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/v2e.py" />
-    <option name="PARAMETERS" value="--overwrite --input input/pendulum.avi --slomo_model=input/SuperSloMo39.ckpt --slowdown_factor=10 --output_folder=output/pendulum --pos_thres=.2 --neg_thres=.2 --sigma_thres=.05 --cutoff_hz=30 --leak_rate_hz=0 --shot_noise=1 --frame_rate=100 --dvs_aedat2 v2e.aedat --output_height=260 --output_width=346 --start_time=1 --stop_time=3" />
+    <option name="PARAMETERS" value="--overwrite --input input/pendulum.avi --slomo_model=input/SuperSloMo39.ckpt --slowdown_factor=10 --output_folder=output/pendulum/ideal --pos_thres=.2 --neg_thres=.2 --sigma_thres=0 --cutoff_hz=0 --leak_rate_hz=0 --shot_noise=0 --frame_rate=100 --dvs_aedat2 v2e.aedat --output_height=260 --output_width=346 --dvs_vid_full_scale=8 --start_time=1 --stop_time=3" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

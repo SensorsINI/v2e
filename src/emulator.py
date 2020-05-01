@@ -66,7 +66,7 @@ class EventEmulator(object):
             dvs_aedat2: str = None,
             dvs_text: str = None,
             rotate180: bool = False,
-            show_input: str = 'lpLogFrame'  # change as you like to see 'logBaseFrame','lpLogFrame', 'diff_frame'
+            show_input: str = None  # change as you like to see 'logBaseFrame','lpLogFrame', 'diff_frame'
             # dvs_rosbag=None
     ):
         """
@@ -173,7 +173,7 @@ class EventEmulator(object):
         if self.rotate180: img = np.rot90(img, k=2)
         cv2.imshow(__name__, img)
 
-    def accumulate_events(self, new_frame: np.ndarray, t_start: float, t_end: float) -> np.ndarray:
+    def generate_events(self, new_frame: np.ndarray, t_start: float, t_end: float) -> np.ndarray:
         """Compute events in new frame.
 
         Parameters
@@ -490,7 +490,7 @@ class EventFrameRenderer(object):
             new_frame = read_image(images[idx])
             t_start = input_ts[idx - 1]
             t_end = input_ts[idx]
-            tmp_events = emulator.accumulate_events(
+            tmp_events = emulator.generate_events(
                 new_frame,
                 t_start,
                 t_end

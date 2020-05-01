@@ -189,7 +189,7 @@ if __name__ == "__main__":
             theseEvents=events[:endEventIdx-1,:]
             # this packet spans some time, and we need to render into DVS frames with regular spacing.
             # But render throws all leftover events into the last DVS
-            eventRendererReal.renderEventsToFrames(event_arr=theseEvents, height=output_height, width=output_width)
+            eventRendererReal.render_events_to_frames(event_arr=theseEvents, height=output_height, width=output_width)
 
         elif packet['etype']== ddd_h5_reader.DDD20SimpleReader.ETYPE_APS:
             num_frames+=1
@@ -217,12 +217,12 @@ if __name__ == "__main__":
                     interpTimes = np.linspace(start=frame0['timestamp'], stop=frame1['timestamp'], num=n, endpoint=True)
                     for i in range(n - 1):  # for each interpolated frame up to last; use n-1 because we get last interpolated frame as first frame next time
                         fr = read_image(interpFramesFilenames[i])
-                        newEvents = emulator.accumulate_events(fr, interpTimes[i], interpTimes[i + 1])
+                        newEvents = emulator.generate_events(fr, interpTimes[i], interpTimes[i + 1])
                         if not newEvents is None: events = np.append(events, newEvents, axis=0)
                     events = np.array(events)  # remove first None element
                     if numpy_output:
                         allEventsFake = np.concatenate((allEventsFake,events))
-                    eventRendererFake.renderEventsToFrames(events, height=output_height, width=output_width)
+                    eventRendererFake.render_events_to_frames(events, height=output_height, width=output_width)
 
 
     if output_folder and numpy_output:
@@ -246,4 +246,7 @@ if __name__ == "__main__":
         desktop.open(os.path.abspath(output_folder))
     except Exception as e:
         logger.warning('{}: could not open {} in desktop'.format(e,output_folder))
-    sys.exit()
+    eventRendererFake.cleanup()
+    eventRendererReal.cleanup()
+    slomo.cleanup()
+    quit()

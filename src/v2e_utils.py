@@ -49,6 +49,18 @@ def v2e_args(parser):
     parser.add_argument("--overwrite", action="store_true", help="overwrites files in existing folder (checks existence of non-empty output_folder).")
     return parser
 
+def check_lowpass(cutoffhz, fs, logger):
+    import numpy as np
+    from engineering_notation import EngNumber as eng
+    if cutoffhz==0 or fs==0: return
+    tau = 1 / (2 * np.pi * cutoffhz)
+    dt = 1 / fs
+    eps = dt / tau
+    if eps>0.3:
+        logger.warning(' Lowpass cutoff is {}Hz with sample rate {}Hz (sample interval {}ms),\nbut this results in tau={}ms and mixing factor eps={:5.3f},\n which means your lowpass will filter few or even 1 samples'.format(eng(cutoffhz), eng(fs), eng(dt*1000), eng(tau*1000), eps))
+    else:
+        logger.info(' Lowpass cutoff is {}Hz with sample rate {}Hz (sample interval {}ms),\nIt has tau={}ms and mixing factor eps={:5.3f}'.format(eng(cutoffhz), eng(fs), eng(dt*1000), eng(tau*1000), eps))
+
 
 def inputVideoFileDialog():
     return _inputFileDialog([("Video/Data files", ".avi .mp4 .wmv"),('Any type','*')])

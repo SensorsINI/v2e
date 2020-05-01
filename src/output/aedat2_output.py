@@ -105,7 +105,7 @@ class AEDat2Output:
         bytes=out.byteswap().tobytes(order='C')
         if self.numEventsWritten==0:
             chopped=False
-            while bytes[0:1].decode('utf-8')=='#':
+            while bytes[0:1].decode('utf-8',errors='ignore')=='#':
                 logger.warning('first event would write a # comment char, dropping it')
                 bytes=bytes[8:]
                 chopped=True

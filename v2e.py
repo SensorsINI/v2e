@@ -23,7 +23,7 @@ from engineering_notation import EngNumber  # only from pip
 from tqdm import tqdm
 import src.desktop as desktop
 
-from src.v2e_utils import all_images, read_image, OUTPUT_VIDEO_FPS, v2e_args
+from src.v2e_utils import all_images, read_image, OUTPUT_VIDEO_FPS, v2e_args, check_lowpass
 from src.renderer import EventRenderer
 from src.slomo import SuperSloMo
 from src.emulator import EventEmulator
@@ -130,6 +130,7 @@ if __name__ == "__main__":
     if srcNumFrames < 2:
         logger.warning('num frames is less than 2, probably cannot be determined from cv2.CAP_PROP_FRAME_COUNT')
 
+    check_lowpass(cutoff_hz,srcFps*slowdown_factor,logger)
     slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview,rotate=rotate180)
 
     srcTotalDuration= (srcNumFrames - 1) * srcFrameIntervalS
@@ -221,17 +222,18 @@ if __name__ == "__main__":
             # since the next iteration will pass in the f1 from previous iteration.
 
             # compute times of output integrated frames
-            interpTimes = np.linspace(start=ts0, stop=ts1, num=n, endpoint=True)
+            interpTimes = np.linspace(start=ts0, stop=ts1, num=n+1, endpoint=False)
             if n==1: # no slowdown
                 fr = read_image(interpFramesFilenames[0])
-                newEvents = emulator.accumulate_events(fr, ts0, ts1)
+                newEvents = emulator.generate_events(fr, ts0, ts1)
             else:
-                for i in range(n -1):  # for each interpolated frame up to last; use n-1 because we get last interpolated frame as first frame next time
+                for i in range(n):  # for each interpolated frame
                     fr = read_image(interpFramesFilenames[i])
-                    newEvents = emulator.accumulate_events(fr, interpTimes[i], interpTimes[i + 1])
-                    if not newEvents is None: events = np.append(events, newEvents, axis=0)
+                    newEvents = emulator.generate_events(fr, interpTimes[i], interpTimes[i + 1])
+                    if not newEvents is None and newEvents.shape[0]>0:
+                        events = np.append(events, newEvents, axis=0)
             events = np.array(events)  # remove first None element
-            eventRenderer.renderEventsToFrames(events, height=output_height, width=output_width)
+            eventRenderer.render_events_to_frames(events, height=output_height, width=output_width)
             ts0 = ts1
             ts1 += srcFrameIntervalS
 
@@ -255,5 +257,11 @@ if __name__ == "__main__":
         desktop.open(os.path.abspath(output_folder))
     except Exception as e:
         logger.warning('{}: could not open {} in desktop'.format(e, output_folder))
-    sys.exit()
+    eventRenderer.cleanup()
+    slomo.cleanup()
+    try:
+        quit()
+    finally:
+        sys.exit()
+
 

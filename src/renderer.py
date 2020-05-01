@@ -88,7 +88,7 @@ class EventRenderer(object):
             logger.info('opening DVS video output file ' + self.video_output_file)
             self.video_output_file = video_writer(checkAddSuffix(os.path.join(self.output_path, self.video_output_file),'.avi'), self.height, self.width)
 
-    def renderEventsToFrames(self, event_arr: np.ndarray, height: int, width: int)->np.ndarray:
+    def render_events_to_frames(self, event_arr: np.ndarray, height: int, width: int)->np.ndarray:
         """ Incrementally render event frames.
 
         Frames are appended to the video output file.
@@ -213,7 +213,7 @@ class EventRenderer(object):
             new_frame = read_image(imageFileNames[i + 1])
             if self.emulator is None:
                 self.emulator = EventEmulator(pos_thres=self.pos_thres, neg_thres=self.neg_thres, sigma_thres=self.sigma_thres)
-            tmp_events = self.emulator.accumulate_events(
+            tmp_events = self.emulator.generate_events(
                 new_frame,
                 frameTimesS[i],
                 frameTimesS[i + 1]

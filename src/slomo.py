@@ -368,7 +368,7 @@ class SuperSloMo(object):
         Parameters
         ----------
         ts: np.array, np.float64,
-            timestamps.
+            timestamps of input frames.
 
         Returns
         -------
