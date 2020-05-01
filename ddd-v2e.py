@@ -23,7 +23,7 @@ from src.output.aedat2_output import AEDat2Output
 from src.renderer import EventEmulator, EventRenderer
 from src.slomo import SuperSloMo
 from src.v2e_utils import OUTPUT_VIDEO_FPS, all_images, \
-    read_image, checkAddSuffix, v2e_args, inputDDDFileDialog
+    read_image, checkAddSuffix, v2e_args, inputDDDFileDialog, check_lowpass
 import src.desktop as desktop
 
 logging.basicConfig()
@@ -119,8 +119,6 @@ if __name__ == "__main__":
         logger.error('input file {} does not exist'.format(input_file))
         quit()
 
-    # with open('a', 'w') as a, open('b', 'w') as b:
-    #     do_something()
     logger.info('opening output files')
     slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview,rotate=rotate180)
     dvsVidReal=str(dvs_vid).replace('.avi','-real.avi')
