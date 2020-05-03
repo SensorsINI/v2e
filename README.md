@@ -209,6 +209,11 @@ mkdir -p input
 mv rec1501902136.hdf5 ./input
 ```
 
+First, cd to the correct folder in v2e:
+```bash
+cd dataset_scripts/ddd
+```
+
 ### Extract data from DDD recording
 
 _ddd_h5_extract_data.py_ extracts the DDD recording DVS events to jAER _.aedat_ and video _.avi_ files.
