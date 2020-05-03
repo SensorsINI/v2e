@@ -22,8 +22,8 @@ import os
 from tempfile import TemporaryDirectory
 from engineering_notation import EngNumber  # only from pip
 from tqdm import tqdm
-import src.desktop as desktop
 
+import v2e.desktop as desktop
 from v2e.v2e_utils import all_images, read_image, OUTPUT_VIDEO_FPS, \
     v2e_args, check_lowpass
 from v2e.renderer import EventRenderer
