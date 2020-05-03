@@ -6,10 +6,10 @@ from tempfile import TemporaryDirectory
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from src.emulator import EventEmulator
-from src.slomo import SuperSloMo
-from src.ddd20_utils.ddd_h5_reader import DDD20ReaderMultiProcessing, DDD20SimpleReader
-from src.v2e_utils import inputVideoFileDialog, inputDDDFileDialog
+from v2e.emulator import EventEmulator
+from v2e.slomo import SuperSloMo
+from v2e.ddd20_utils.ddd_h5_reader import DDD20ReaderMultiProcessing, DDD20SimpleReader
+from v2e.v2e_utils import inputVideoFileDialog, inputDDDFileDialog
 
 logging.basicConfig()
 root = logging.getLogger()

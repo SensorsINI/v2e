@@ -15,8 +15,8 @@ import shutil
 
 from tempfile import TemporaryDirectory
 
-from src.renderer import EventRenderer
-from src.slomo import SuperSloMo
+from v2e.renderer import EventRenderer
+from v2e.slomo import SuperSloMo
 
 if __name__ == "__main__":
 

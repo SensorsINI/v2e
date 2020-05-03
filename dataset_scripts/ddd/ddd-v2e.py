@@ -16,14 +16,14 @@ import numpy as np
 from engineering_notation import EngNumber
 from tqdm import tqdm
 
-from src.ddd20_utils import ddd_h5_reader
-from src.ddd20_utils.ddd_h5_reader import DDD20SimpleReader
-from src.output.aedat2_output import AEDat2Output
-from src.renderer import EventEmulator, EventRenderer
-from src.slomo import SuperSloMo
-from src.v2e_utils import OUTPUT_VIDEO_FPS, all_images, \
+from v2e.ddd20_utils import ddd_h5_reader
+from v2e.ddd20_utils.ddd_h5_reader import DDD20SimpleReader
+from v2e.output.aedat2_output import AEDat2Output
+from v2e.renderer import EventEmulator, EventRenderer
+from v2e.slomo import SuperSloMo
+from v2e.v2e_utils import OUTPUT_VIDEO_FPS, all_images, \
     read_image, checkAddSuffix, v2e_args, inputDDDFileDialog, check_lowpass
-import src.desktop as desktop
+import v2e.desktop as desktop
 
 logging.basicConfig()
 root = logging.getLogger()

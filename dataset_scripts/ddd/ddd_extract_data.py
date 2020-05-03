@@ -13,11 +13,12 @@ import os
 from engineering_notation import EngNumber
 from tqdm import tqdm
 import atexit
-from src.ddd20_utils import ddd_h5_reader
-from src.output.aedat2_output import AEDat2Output
-from src.v2e_utils import inputDDDFileDialog, checkAddSuffix, read_image
-from src.ddd20_utils.ddd_h5_reader import DDD20SimpleReader
-import src.desktop as desktop
+from v2e.ddd20_utils import ddd_h5_reader
+from v2e.output.aedat2_output import AEDat2Output
+from v2e.v2e_utils import inputDDDFileDialog, checkAddSuffix, read_image
+from v2e.ddd20_utils.ddd_h5_reader import DDD20SimpleReader
+import v2e.desktop as desktop
+from v2e.slomo import video_writer
 
 
 import logging
@@ -29,7 +30,6 @@ logging.addLevelName( logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLeve
 logging.addLevelName( logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
 logger=logging.getLogger(__name__)
 
-from src.slomo import video_writer
 
 parser = argparse.ArgumentParser(description='Extract data from DDD recording',
                                  epilog='Run with no --input to open file dialog', allow_abbrev=True,

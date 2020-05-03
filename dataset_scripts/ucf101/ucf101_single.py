@@ -14,8 +14,8 @@ import shutil
 
 from tempfile import TemporaryDirectory
 
-from src.renderer import VideoSequenceFiles2EventsRenderer, ImageSequenceArray2EventsRenderer
-from src.slomo import SuperSloMo
+from v2e.renderer import VideoSequenceFiles2EventsRenderer, ImageSequenceArray2EventsRenderer
+from v2e.slomo import SuperSloMo
 #TODO appears to convert webccam input to DVS frames
 
 if __name__ == "__main__":
