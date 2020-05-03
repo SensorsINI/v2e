@@ -15,18 +15,17 @@ import glob
 
 from tqdm import tqdm
 
-from src.v2e_utils import video_writer
-
 import torchvision.transforms as transforms
 
-import src.dataloader as dataloader
-import src.model as model
+from v2e.v2e_utils import video_writer
+import v2e.dataloader as dataloader
+import v2e.model as model
 
 from PIL import Image
 import logging
 import atexit
 
-logger=logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class SuperSloMo(object):
@@ -43,8 +42,8 @@ class SuperSloMo(object):
         batch_size=1,
         video_path=None,
         rotate=False,
-        vid_orig = None,
-        vid_slomo = None,
+        vid_orig=None,
+        vid_slomo=None,
             preview=False
     ):
         """

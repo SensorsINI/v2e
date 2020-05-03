@@ -14,9 +14,9 @@ import numpy as np
 import logging
 import h5py
 from engineering_notation import EngNumber  # only from pip
-from src.v2e_utils import all_images, read_image, video_writer, checkAddSuffix
-from src.output.aedat2_output import AEDat2Output
-from src.output.ae_text_output import DVSTextOutput
+from v2e.v2e_utils import all_images, read_image, video_writer, checkAddSuffix
+from v2e.output.aedat2_output import AEDat2Output
+from v2e.output.ae_text_output import DVSTextOutput
 
 # import rosbag # not yet for python 3
 
