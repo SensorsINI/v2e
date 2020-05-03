@@ -13,6 +13,11 @@ OUTPUT_VIDEO_CODEC_FOURCC= 'XVID' # good codec, basically mp4 with simplest comp
 logger=logging.getLogger(__name__)
 
 def v2e_args(parser):
+    dir_path = os.getcwd()  # check and add prefix if running script in subfolder
+    if dir_path.endswith('ddd'):
+        prepend='../../'
+    else:
+        prepend=''
     parser.add_argument("-i", "--input", type=str, help="input video file; leave empty for file chooser dialog.")
     parser.add_argument("--start_time", type=float, default=None, help="start at this time in seconds in video.")
     parser.add_argument("--stop_time", type=float, default=None, help="stop at this time in seconds in video.")
@@ -34,7 +39,7 @@ def v2e_args(parser):
                         help="height of output DVS data in pixels. If None, same as input video.")
     parser.add_argument("--output_width", type=int, default=346,
                         help="width of output DVS data in pixels. If None, same as input video.")
-    parser.add_argument("--slomo_model", type=str, default="input/SuperSloMo39.ckpt", help="path of slomo_model checkpoint.")
+    parser.add_argument("--slomo_model", type=str, default=prepend+"input/SuperSloMo39.ckpt", help="path of slomo_model checkpoint.")
     parser.add_argument("-o", "--output_folder", type=str, required=True, help="folder to store outputs.")
     parser.add_argument("--frame_rate", type=int, default=300,
                         help="equivalent frame rate of --dvs_vid output video; the events will be accummulated as this sample rate; DVS frames will be accumulated for duration 1/frame_rate")
@@ -48,6 +53,16 @@ def v2e_args(parser):
     parser.add_argument("--vid_slomo", type=str, default="video_slomo.avi", help="output slomo of src video slowed down by slowdown_factor.")
     parser.add_argument("--no_preview", action="store_true", help="disable preview in cv2 windows for faster processing.")
     parser.add_argument("--overwrite", action="store_true", help="overwrites files in existing folder (checks existence of non-empty output_folder).")
+
+    # perform basic checks
+    args = parser.parse_args()
+    if args.input and not os.path.isfile(args.input):
+        logger.error('input file {} not found'.format(args.input))
+        quit(1)
+    if args.slomo_model and not os.path.isfile(args.slomo_model):
+        logger.error('slomo model checkpoint {} not found'.format(args.slomo_model))
+        quit(1)
+
     return parser
 
 def check_lowpass(cutoffhz, fs, logger):

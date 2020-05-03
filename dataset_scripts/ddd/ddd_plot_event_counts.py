@@ -63,7 +63,7 @@ def select(events, x, y):
     return events[region]
 
 
-def counting(events, start=0, stop=3.5, time_bin_ms=0.5, polarity=None):
+def counting(events, start=0, stop=3.5, time_bin_ms=50, polarity=None):
     """ Count the amount of events in each bin.
     Parameters
     ----------
@@ -75,15 +75,16 @@ def counting(events, start=0, stop=3.5, time_bin_ms=0.5, polarity=None):
     -------
 
     """
+    time_bin_s=time_bin_ms*0.001
 
     if start < 0 or stop < 0:
         raise ValueError("start and stop must be int.")
-    if start + time_bin_ms > stop:
-        raise ValueError("start must be less than (stop - time_bin_ms).")
+    if start + time_bin_s > stop:
+        raise ValueError("start must be less than (stop - time_bin_s).")
     if polarity and polarity not in [1, -1]:
         raise ValueError("polarity must be 1 or -1.")
 
-    ticks = np.arange(start, stop, time_bin_ms)
+    ticks = np.arange(start, stop, time_bin_s)
     bin_num = ticks.shape[0]
     ts_cnt = np.zeros([bin_num - 1, 2])
     for i in range(bin_num - 1):
@@ -116,15 +117,16 @@ if __name__ == "__main__":
 
     path=args.path
     time_bin_ms=args.time_bin_ms
+    time_bin_s=time_bin_ms*.001
     rotate180=args.rotate180
 
     assert Path(path).exists()
-    assert Path(os.path.join(args.path, "dvs-video-real.avi")).exists()
+    assert Path(os.path.join(path, "dvs-video-real.avi")).exists()
 
-    events_aps = np.load(os.path.join(args.path, "dvs_v2e.npy"))
-    events_dvs = np.load(os.path.join(args.path, "dvs_real.npy"))
+    events_aps = np.load(os.path.join(path, "dvs_v2e.npy"))
+    events_dvs = np.load(os.path.join(path, "dvs_real.npy"))
 
-    # cap = cv2.VideoCapture(os.path.join(args.path, "dvs-video-real.avi"))
+    # cap = cv2.VideoCapture(os.path.join(path, "dvs-video-real.avi"))
     # fps = cap.get(cv2.CAP_PROP_FPS)
     # width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     # height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -169,7 +171,7 @@ if __name__ == "__main__":
     dvs_neg = counting(dvs, time_bin_ms=time_bin_ms, polarity=0, start=start, stop=stop) # note DVS off events have polarity 0
 
     fig = plt.figure(figsize=(8, 6))
-    width = args.time_bin_ms / 2
+    width = time_bin_s / 2
 
     y_max = max(aps_pos[:, 1].max(), dvs_pos[:, 1].max()) + 1
     y_min = -max(aps_neg[:, 1].max(), dvs_neg[:, 1].max()) - 1

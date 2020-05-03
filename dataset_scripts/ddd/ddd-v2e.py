@@ -9,7 +9,6 @@ by comparing the real DVS events with v2e events from DAVIS APS frames.
 import argparse
 import logging
 import os
-import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import argcomplete
