@@ -39,6 +39,22 @@ which pip # check to make sure your conda pip is first in path
 pip install -r requirements.txt
 ```
 
+## Install the pacakage
+
+
+1. For developers, you should install the package with `develop`:
+
+    ```bash
+    python setup.py develop
+    ```
+
+2. For users, you can install the package with `install`:
+
+    ```bash
+    python setup.py install
+    ```
+
+
 ## Usage
 
 _v2e_ serves multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for generating DVS events from conventional video and from specific datasets.

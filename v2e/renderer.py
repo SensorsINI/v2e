@@ -7,8 +7,8 @@ from tqdm import tqdm
 from typing import List
 from engineering_notation import EngNumber  # only from pip
 
-from src.emulator import EventEmulator
-from src.v2e_utils import video_writer,all_images,read_image,checkAddSuffix
+from v2e.emulator import EventEmulator
+from v2e.v2e_utils import video_writer,all_images,read_image,checkAddSuffix
 
 logger=logging.getLogger(__name__)
 

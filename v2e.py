@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 """
 Python code for extracting frames from video file and synthesizing fake DVS
-events from this video after SuperSloMo has generated interpolated frames from the original video frames.
+events from this video after SuperSloMo has generated interpolated
+frames from the original video frames.
 
 @author: Tobi Delbruck Zhe He
 @contact: tobi@ini.uzh.ch, zhehe@student.ethz.ch
@@ -21,15 +22,16 @@ import os
 from tempfile import TemporaryDirectory
 from engineering_notation import EngNumber  # only from pip
 from tqdm import tqdm
-import src.desktop as desktop
 
-from src.v2e_utils import all_images, read_image, OUTPUT_VIDEO_FPS, v2e_args, check_lowpass
-from src.renderer import EventRenderer
-from src.slomo import SuperSloMo
-from src.emulator import EventEmulator
+import v2e.desktop as desktop
+from v2e.v2e_utils import all_images, read_image, OUTPUT_VIDEO_FPS, \
+    v2e_args, check_lowpass
+from v2e.renderer import EventRenderer
+from v2e.slomo import SuperSloMo
+from v2e.emulator import EventEmulator
+from v2e.v2e_utils import inputVideoFileDialog
+
 import logging
-
-from src.v2e_utils import inputVideoFileDialog
 
 logging.basicConfig()
 root = logging.getLogger()
