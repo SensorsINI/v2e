@@ -39,7 +39,7 @@ which pip # check to make sure your conda pip is first in path
 pip install -r requirements.txt
 ```
 
-## Install the pacakage
+## Install the Package
 
 
 1. For developers, you should install the package with `develop`:
