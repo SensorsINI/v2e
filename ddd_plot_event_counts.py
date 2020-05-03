@@ -63,7 +63,7 @@ def select(events, x, y):
     return events[region]
 
 
-def counting(events, start=0, stop=3.5, bin_size=0.5, polarity=None):
+def counting(events, start=0, stop=3.5, time_bin_ms=0.5, polarity=None):
     """ Count the amount of events in each bin.
     Parameters
     ----------
@@ -78,12 +78,12 @@ def counting(events, start=0, stop=3.5, bin_size=0.5, polarity=None):
 
     if start < 0 or stop < 0:
         raise ValueError("start and stop must be int.")
-    if start + bin_size > stop:
-        raise ValueError("start must be less than (stop - bin_size).")
+    if start + time_bin_ms > stop:
+        raise ValueError("start must be less than (stop - time_bin_ms).")
     if polarity and polarity not in [1, -1]:
         raise ValueError("polarity must be 1 or -1.")
 
-    ticks = np.arange(start, stop, bin_size)
+    ticks = np.arange(start, stop, time_bin_ms)
     bin_num = ticks.shape[0]
     ts_cnt = np.zeros([bin_num - 1, 2])
     for i in range(bin_num - 1):
@@ -105,7 +105,7 @@ if __name__ == "__main__":
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument("--path", type=str, required=True, help="path to numpy input files and for storing output")
-    parser.add_argument("--bin_size", type=float, default=50e-3, help="the duration of time bins in seconds")
+    parser.add_argument("--time_bin_ms", type=float, default=50, help="the duration of time bins in ms")
     parser.add_argument("--start", required=True,type=float, help="start time in seconds")
     parser.add_argument("--stop", required=True,type=float, help="stop time in seconds")
     parser.add_argument("--x", type=int, nargs=2, required=True, help="x, two integers, e.g. 10 20")
@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
 
     path=args.path
-    bin_size=args.bin_size
+    time_bin_ms=args.time_bin_ms
     rotate180=args.rotate180
 
     assert Path(path).exists()
@@ -163,13 +163,13 @@ if __name__ == "__main__":
     aps = select(events_aps, x, y)
     dvs = select(events_dvs, x, y)
 
-    aps_pos = counting(aps, bin_size=bin_size, polarity=1, start=start, stop=stop)
-    dvs_pos = counting(dvs, bin_size=bin_size, polarity=1, start=start, stop=stop) # APS off events from v2e have polarity -1
-    aps_neg = counting(aps, bin_size=bin_size, polarity=-1, start=start, stop=stop)
-    dvs_neg = counting(dvs, bin_size=bin_size, polarity=0, start=start, stop=stop) # note DVS off events have polarity 0
+    aps_pos = counting(aps, time_bin_ms=time_bin_ms, polarity=1, start=start, stop=stop)
+    dvs_pos = counting(dvs, time_bin_ms=time_bin_ms, polarity=1, start=start, stop=stop) # APS off events from v2e have polarity -1
+    aps_neg = counting(aps, time_bin_ms=time_bin_ms, polarity=-1, start=start, stop=stop)
+    dvs_neg = counting(dvs, time_bin_ms=time_bin_ms, polarity=0, start=start, stop=stop) # note DVS off events have polarity 0
 
     fig = plt.figure(figsize=(8, 6))
-    width = args.bin_size / 2
+    width = args.time_bin_ms / 2
 
     y_max = max(aps_pos[:, 1].max(), dvs_pos[:, 1].max()) + 1
     y_min = -max(aps_neg[:, 1].max(), dvs_neg[:, 1].max()) - 1

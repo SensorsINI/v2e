@@ -43,6 +43,7 @@ def v2e_args(parser):
     parser.add_argument("--dvs_h5", type=str, default=None, help="output DVS events as hdf5 event database.")
     parser.add_argument("--dvs_aedat2", type=str, default=None, help="output DVS events as DAVIS346 camera AEDAT-2.0 event file for jAER; one file for real and one file for v2e events.")
     parser.add_argument("--dvs_text", type=str, default=None, help="output DVS events as text file with one event per line [timestamp (float s), x, y, polarity (0,1)].")
+    parser.add_argument("--dvs_numpy", type=str, default=None, help="accumulates DVS events to memory and writes final numpy data file with this name holding vector of events. WARNING: memory use is unbounded.")
     parser.add_argument("--vid_orig", type=str, default="video_orig.avi", help="output src video at same rate as slomo video (with duplicated frames).")
     parser.add_argument("--vid_slomo", type=str, default="video_slomo.avi", help="output slomo of src video slowed down by slowdown_factor.")
     parser.add_argument("--no_preview", action="store_true", help="disable preview in cv2 windows for faster processing.")
