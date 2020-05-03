@@ -58,7 +58,8 @@ if __name__ == "__main__":
 
     if not os.path.exists(output_folder):
         logger.info('making output folder {}'.format(output_folder))
-        os.mkdir(output_folder)
+        os.makedirs(output_folder, exist_ok=True)
+        # os.mkdir(output_folder)
 
     if (args.output_width != None) ^ (args.output_width != None):
         logger.error('provide both or neither of output_width and output_height')

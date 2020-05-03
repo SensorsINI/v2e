@@ -13,7 +13,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/dataset_scripts/ddd/ddd_extract_data.py" />
-    <option name="PARAMETERS" value="--overwrite --output_folder=../../output/output-ddd-h5-data --overwrite --rotate180" />
+    <option name="PARAMETERS" value="--overwrite --output_folder=output/output-ddd-h5-data --overwrite --rotate180" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

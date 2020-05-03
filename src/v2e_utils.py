@@ -54,14 +54,14 @@ def v2e_args(parser):
     parser.add_argument("--no_preview", action="store_true", help="disable preview in cv2 windows for faster processing.")
     parser.add_argument("--overwrite", action="store_true", help="overwrites files in existing folder (checks existence of non-empty output_folder).")
 
-    # perform basic checks
-    args = parser.parse_args()
-    if args.input and not os.path.isfile(args.input):
-        logger.error('input file {} not found'.format(args.input))
-        quit(1)
-    if args.slomo_model and not os.path.isfile(args.slomo_model):
-        logger.error('slomo model checkpoint {} not found'.format(args.slomo_model))
-        quit(1)
+    # # perform basic checks, however this fails if script adds more arguments later
+    # args = parser.parse_args()
+    # if args.input and not os.path.isfile(args.input):
+    #     logger.error('input file {} not found'.format(args.input))
+    #     quit(1)
+    # if args.slomo_model and not os.path.isfile(args.slomo_model):
+    #     logger.error('slomo model checkpoint {} not found'.format(args.slomo_model))
+    #     quit(1)
 
     return parser
 
