@@ -6,7 +6,7 @@ import os
 import matplotlib
 import cv2
 
-from src.v2e_utils import video_writer
+from v2e.v2e_utils import video_writer
 
 # matplotlib.use('PS')
 
