@@ -47,16 +47,19 @@ pip install -r requirements.txt
 ## Install the Package
 
 
-1. For developers, you should install the package with `develop`:
+1. For developers, you should install the package with `develop` (in your virtual environment):
 
     ```bash
-    python setup.py develop
+    pip install -e .
     ```
+  
+Using -e will let you modify the code and see the results in your runtime without installing again.
+See https://stackoverflow.com/questions/19048732/python-setup-py-develop-vs-install .
 
-2. For users, you can install the package with `install`:
+2. For users of _v2e.py_, you can install the package with `install`:
 
     ```bash
-    python setup.py install
+    pip install .
     ```
 
 
