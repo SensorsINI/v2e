@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -5,6 +6,16 @@ import argparse
 import os
 import matplotlib
 import cv2
+import logging
+
+logging.basicConfig()
+root = logging.getLogger()
+root.setLevel(logging.INFO)
+# https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output/7995762#7995762
+logging.addLevelName( logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.WARNING))
+logging.addLevelName( logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
+logger=logging.getLogger(__name__)
+
 
 from v2e.v2e_utils import video_writer
 
@@ -102,7 +113,7 @@ def counting(events, start=0, stop=3.5, time_bin_ms=50, polarity=None):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Plots time trace of event activity from real DVS and v2e emualated events',
-                                 epilog='Run with no --input to open file dialog', allow_abbrev=True,
+                                 epilog='Run with no --input to open file dialog.\nAssumes that numpy data files have been generated using the --numpy_output option to ddd-v2e.py', allow_abbrev=True,
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument("--path", type=str, required=True, help="path to numpy input files and for storing output")
@@ -112,6 +123,7 @@ if __name__ == "__main__":
     parser.add_argument("--x", type=int, nargs=2, required=True, help="x, two integers, e.g. 10 20")
     parser.add_argument("--y", type=int, nargs=2, required=True, help="y, two integers, e.g. 40 50")
     parser.add_argument("--rotate180", type=bool, default=True, help="whether the video needs to be rotated")
+
     args = parser.parse_args()
 
 
@@ -120,19 +132,32 @@ if __name__ == "__main__":
     time_bin_s=time_bin_ms*.001
     rotate180=args.rotate180
 
-    assert Path(path).exists()
-    assert Path(os.path.join(path, "dvs-video-real.avi")).exists()
+    if not Path(path).exists():
+        logger.error('input folder {} not accessible'.format(Path(path)))
+        sys.exit(1)
 
-    events_aps = np.load(os.path.join(path, "dvs_v2e.npy"))
-    events_dvs = np.load(os.path.join(path, "dvs_real.npy"))
+    dvs_video_real_avi = os.path.join(path, "dvs-video-real.avi")
+    if not Path(dvs_video_real_avi).exists():
+        logger.error('video {} not accessible'.format(dvs_video_real_avi))
+        sys.exit(1)
 
-    # cap = cv2.VideoCapture(os.path.join(path, "dvs-video-real.avi"))
-    # fps = cap.get(cv2.CAP_PROP_FPS)
-    # width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    # height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    # out=video_writer(os.path.join(path, "counting.avi"),width=width,height=height)
-    #
-    # print("width: {} \t height: {}".format(width, height))
+    dvs_v2e_npy = os.path.join(path, "dvs_v2e.npy")
+    dvs_real_npy = os.path.join(path, "dvs_real.npy")
+    if not Path(dvs_v2e_npy).exists() or not Path(dvs_real_npy).exists():
+        logger.error('numpy event files {} or {} not accessible'.format(dvs_v2e_npy, dvs_real_npy))
+        sys.exit(1)
+
+    events_aps = np.load(dvs_v2e_npy)
+    events_dvs = np.load(dvs_real_npy)
+
+    cap = cv2.VideoCapture(dvs_video_real_avi)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    outputVideoPath = os.path.join(path, "ddd_plot_event_counts.avi")
+    out=video_writer(outputVideoPath, width=width, height=height)
+
+    logger.info("Input video {}: width: {} \t height: {}".format(dvs_video_real_avi,width, height))
 
     if not rotate180:
         x = tuple(args.x)
@@ -145,30 +170,32 @@ if __name__ == "__main__":
 
     start = (ts0+args.start)
     stop = (args.stop+ts0)
-    # i = 0
-    # while(cap.isOpened()):
-    #     ret, img = cap.read()
-    #     if ret and i >= start and i <= stop:
-    #         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    #         cv2.rectangle(
-    #             img, (args.x[0], args.y[0]), (args.x[1], args.y[1]), 255, 2)
-    #         out.write(cv2.cvtColor((img * 255).astype(np.uint8),
-    #                                cv2.COLOR_GRAY2BGR))
-    #         if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
-    #             break
-    #     else:
-    #         break
-    #     i += 1
-    # out.release()
-    # print("finished writing video.")
+    i = 0
+    logger.info('writing video output with ROI labeled')
+    while(cap.isOpened()):
+        ret, img = cap.read()
+        if ret: # and i >= start and i <= stop:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            cv2.rectangle(
+                img, (args.x[0], args.y[0]), (args.x[1], args.y[1]), 255, 2)
+            out.write(cv2.cvtColor((img * 255).astype(np.uint8),
+                                   cv2.COLOR_GRAY2BGR))
+            if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
+                break
+        else:
+            break
+        i += 1
+    out.release()
+    logger.info("finished writing {}.".format(outputVideoPath))
 
     aps = select(events_aps, x, y)
-    dvs = select(events_dvs, x, y)
+    dvs_v2e_npy = select(events_dvs, x, y)
 
+    logger.info('counting events...')
     aps_pos = counting(aps, time_bin_ms=time_bin_ms, polarity=1, start=start, stop=stop)
-    dvs_pos = counting(dvs, time_bin_ms=time_bin_ms, polarity=1, start=start, stop=stop) # APS off events from v2e have polarity -1
+    dvs_pos = counting(dvs_v2e_npy, time_bin_ms=time_bin_ms, polarity=1, start=start, stop=stop) # APS off events from v2e have polarity -1
     aps_neg = counting(aps, time_bin_ms=time_bin_ms, polarity=-1, start=start, stop=stop)
-    dvs_neg = counting(dvs, time_bin_ms=time_bin_ms, polarity=0, start=start, stop=stop) # note DVS off events have polarity 0
+    dvs_neg = counting(dvs_v2e_npy, time_bin_ms=time_bin_ms, polarity=0, start=start, stop=stop) # note DVS off events have polarity 0
 
     fig = plt.figure(figsize=(8, 6))
     width = time_bin_s / 2
@@ -197,4 +224,6 @@ if __name__ == "__main__":
     # save the figure
     plt.savefig(os.path.join(path, "ddd-plot-event-counts.pdf"))
     plt.savefig(os.path.join(path, "ddd-plot-event-counts.png"))
+    logger.info('plots written to ddd-plot-event-counts.* in folder {}'.format(path))
     plt.show()
+

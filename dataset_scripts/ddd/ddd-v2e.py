@@ -15,6 +15,9 @@ import argcomplete
 import numpy as np
 from engineering_notation import EngNumber
 from tqdm import tqdm
+from sys import platform
+if platform.startswith('linux'):
+    import resource
 
 from v2e.ddd20_utils import ddd_h5_reader
 from v2e.ddd20_utils.ddd_h5_reader import DDD20SimpleReader
@@ -110,6 +113,8 @@ if __name__ == "__main__":
     if numpy_output:
         allEventsReal=np.empty((0,4),float)
         allEventsFake=np.empty((0,4),float)
+
+    memoryLimit=1e9 # print warnings about excessive memory use in linux, increased by 1GB chunks
 
     import time
     time_run_started = time.time()
@@ -221,6 +226,11 @@ if __name__ == "__main__":
                     if numpy_output:
                         allEventsFake = np.concatenate((allEventsFake,events))
                     eventRendererFake.render_events_to_frames(events, height=output_height, width=output_width)
+        if numpy_output and platform.startswith('linux'):
+            usageBytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            if usageBytes>memoryLimit:
+                logger.warning('memory usage (RSS) is {}B'.format(EngNumber(usageBytes)))
+                memoryLimit+=1e9
 
 
     if output_folder and numpy_output:

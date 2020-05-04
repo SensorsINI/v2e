@@ -16,9 +16,14 @@ TODO add paper
 
 ## Environment
 
+We encourage you to fork v2e and suggest pulls to improve the functionality.
+
+**NOTE** We recommend running _v2e_ on a CUDA GPU or it will be very slow. With a low-end GTX-1050, _v2e_ runs about 50-200X slower than real time using 10X slowdown factor and 346x260 video.
+
 ```
 python==3.7.7
 Ubuntu 18.04 or Windows 10x64
+CUDA GPU
 ```
 Code includes pycharm project files for your convenience.
 
@@ -59,7 +64,6 @@ pip install -r requirements.txt
 
 _v2e_ serves multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for generating DVS events from conventional video and from specific datasets.
 
-**NOTE** We recommend running _v2e_ on a CUDA GPU or it will be very slow. With a low-end GTX-1050, _v2e_ runs about 100-200X slower than real time using 10X slowdown factor and 346x260 video.
 
 ## Download SuperSloMo model
 
