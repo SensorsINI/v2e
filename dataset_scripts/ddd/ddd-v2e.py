@@ -227,9 +227,9 @@ if __name__ == "__main__":
                         allEventsFake = np.concatenate((allEventsFake,events))
                     eventRendererFake.render_events_to_frames(events, height=output_height, width=output_width)
         if numpy_output and platform.startswith('linux'):
-            usageBytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-            if usageBytes>memoryLimit:
-                logger.warning('memory usage (RSS) is {}B'.format(EngNumber(usageBytes)))
+            usageRSS_kB = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            if usageRSS_kB>memoryLimit/1024:
+                logger.warning('\n*** memory usage (RSS) is {}B'.format(EngNumber(1024*usageRSS_kB)))
                 memoryLimit+=1e9
 
 

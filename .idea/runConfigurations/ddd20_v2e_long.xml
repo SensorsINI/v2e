@@ -10,7 +10,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/dataset_scripts/ddd/ddd-v2e.py" />
-    <option name="PARAMETERS" value="--input=input/rec1501350986.hdf5 --slowdown_factor=10 --start=20 --stop=30 --output_folder=output/ddd20-v2e-long --pos_thres=.2 --neg_thres=.2 --sigma_thres=.03 --leak_rate_hz=.03 --shot_noise=.01 --overwrite --rotate180=True --cutoff_hz=200 --dvs_vid_full_scale=3 --no_preview --dvs_aedat2=dvs-v2e --frame_rate=100 --numpy_output" />
+    <option name="PARAMETERS" value="--input=input/rec1501350986.hdf5 --slowdown_factor=10 --start=20 --stop=30 --output_folder=output/ddd20-v2e-long --pos_thres=.15 --neg_thres=.1 --sigma_thres=.03 --leak_rate_hz=.03 --shot_noise=.01 --overwrite --rotate180=True --cutoff_hz=200 --dvs_vid_full_scale=3 --no_preview --dvs_aedat2=dvs-v2e --frame_rate=100 --numpy_output" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />
