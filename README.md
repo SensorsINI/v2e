@@ -232,17 +232,14 @@ mkdir -p input
 mv rec1501902136.hdf5 ./input
 ```
 
-First, cd to the correct folder in v2e:
-```bash
-cd dataset_scripts/ddd
-```
+**NOTE** you must run these scripts with the _-m package.script.py_ notation, not by directly pointing to the .py file.
 
 ### Extract data from DDD recording
 
 _ddd_h5_extract_data.py_ extracts the DDD recording DVS events to jAER _.aedat_ and video _.avi_ files.
 
 ```
-(pt-v2e) $ python ddd_extract_data.py -h
+(pt-v2e) $ python -m dataset_scripts.ddd.ddd_extract_data.py -h
 usage: ddd_h5_extract_data.py [-h] [-i INPUT] -o OUTPUT_FOLDER
                               [--start_time START_TIME]
                               [--stop_time STOP_TIME] [--rotate180]
@@ -276,9 +273,9 @@ output/output-ddd-h5-data/rec1501350986.avi
 
 _ddd-v2e.py_ is like _v2e.py_ but it reads DDD .hdf5 recordings and extracts the real DVS events from the same part of the recording used for the synthesis of DVS events.
 
-You can try it like this:
+You can try it like this: 
 ```
-$ python ddd-v2e.py --input input/rec1501350986.hdf5 --slomo_model input/SuperSloMo39.ckpt --slowdown_factor 20 --start 70 --stop 73 --output_folder output/ddd20-v2e-short --dvs_aedat dvs --pos_thres=.2 --neg_thres=.2 --overwrite --dvs_vid_full_scale=2 --frame_rate=100
+$ python -m dataset_scripts.ddd.ddd-v2e.py --input input/rec1501350986.hdf5 --slomo_model input/SuperSloMo39.ckpt --slowdown_factor 20 --start 70 --stop 73 --output_folder output/ddd20-v2e-short --dvs_aedat dvs --pos_thres=.2 --neg_thres=.2 --overwrite --dvs_vid_full_scale=2 --frame_rate=100
 INFO:__main__:arguments:
 cutoff_hz:      300
 dvs_aedat2:     dvs
@@ -348,7 +345,7 @@ slomo.avi
 _ddd_find_thresholds.py_ estimates the correct thresholds of triggering ON and OFF events, you can use a synhronized DAVIS recording from the DDD dataset:
 
 ```
-$ python ddd_find_thresholds.py -h
+$ python  -m dataset_scripts.ddd.ddd_find_thresholds.py -h
 usage: ddd_find_thresholds.py [-h] [--start START] [--stop STOP] [-i I] [-o O]
                               [--slowdown_factor SLOWDOWN_FACTOR]
                               [--slomo_model SLOMO_MODEL] [--no_preview]
@@ -377,7 +374,7 @@ Run with no --input to open file dialog
 You can run it like this:
 
 ```bash
-python ddd_find_thresholds.py -i input\rec1501350986.hdf5 --start 25 --stop 35
+python  -m dataset_scripts.ddd.ddd_find_thresholds.py -i input\rec1501350986.hdf5 --start 25 --stop 35
 ```
 Make sure you use part of the recording where the input is changing. If you use the ROI option you can focus the estimation on parts of the scene that are definitely changing, to avoid counting just noise events. If you happen to select such a region, then _ddd_find_thresholds.py_ will find an artificially low threshold to generate enough events compared with the real DVS (if you don't set the correct _leak_rate_hz_ and _shot_noise_rate_hz_ parameters). 
 
@@ -422,7 +419,7 @@ After running _ddd-v2e.py_, _ddd_plot_event_counts.py_ reads the saved numpy fil
 
 Running it like below
 ```bash
-ddd_plot_event_counts.py --path output\ddd20-v2e-short --start 0 --stop 2 --x 0 345 --y 0 259
+python -m dataset_scripts.ddd.ddd_plot_event_counts.py --path output\ddd20-v2e-short --start 0 --stop 2 --x 0 345 --y 0 259
 ```
 produces the output
 ![real vs v2e DVS event counts](media/ddd-plot-event-counts.png)
