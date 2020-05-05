@@ -4,7 +4,6 @@ from pathlib import Path
 import numpy as np
 import argparse
 import os
-import matplotlib
 import cv2
 import logging
 
@@ -17,98 +16,11 @@ logging.addLevelName( logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelN
 logger=logging.getLogger(__name__)
 
 
-from v2e.v2e_utils import video_writer
+from v2e.v2e_utils import video_writer, select_events_in_roi, histogram_events_in_time_bins, DVS_WIDTH, DVS_HEIGHT
 
 # matplotlib.use('PS')
 
 from matplotlib import pyplot as plt
-
-DVS_WIDTH, DVS_HEIGHT = 346,260  # adjust for different recording
-
-
-def select(events, x, y):
-    """ Select the events at the region specified by x and y.
-    Parameters
-    ----------
-    events: np.ndarray, [timestamp, x, y, polarity]
-    x: int or tuple, x coordinate.
-    y: int or tuple, y coordinate.
-
-    Returns
-    -------
-    np.ndarray, with the same shape as events.
-    """
-    x_lim = DVS_WIDTH-1 # events[:, 1].max()
-    y_lim = DVS_HEIGHT-1 # events[:, 2].max()
-
-    if isinstance(x, int):
-        if x < 0 or x > x_lim:
-            raise ValueError("x is not in the valid range.")
-        x_region = (events[:, 1] == x)
-
-    elif isinstance(x, tuple):
-        if x[0] < 0 or x[1] < 0 or \
-           x[0] > x_lim or x[1] > x_lim or \
-           x[0] > x[1]:
-            raise ValueError("x is not in the valid range.")
-        x_region = np.logical_and(events[:, 1] >= x[0], events[:, 1] <= x[1])
-    else:
-        raise TypeError("x must be int or tuple.")
-
-    if isinstance(y, int):
-        if y < 0 or y > y_lim:
-            raise ValueError("y is not in the valid range.")
-        y_region = (events[:, 2] == y)
-
-    elif isinstance(y, tuple):
-        if y[0] < 0 or y[1] < 0 or \
-           y[0] > y_lim or y[1] > y_lim or \
-           y[0] > y[1]:
-            raise ValueError("y is not in the valid range.")
-        y_region = np.logical_and(events[:, 2] >= y[0], events[:, 2] <= y[1])
-    else:
-        raise TypeError("y must be int or tuple.")
-
-    region = np.logical_and(x_region, y_region)
-
-    return events[region]
-
-
-def counting(events, start=0, stop=3.5, time_bin_ms=50, polarity=None):
-    """ Count the amount of events in each bin.
-    Parameters
-    ----------
-    events: np.ndarray, [timestamp, x, y, polarity].
-    bin_num: int, default value is 20, the number of bins.
-    polarity: int or None. If int, it must be 1 or -1.
-
-    Returns
-    -------
-
-    """
-    time_bin_s=time_bin_ms*0.001
-
-    if start < 0 or stop < 0:
-        raise ValueError("start and stop must be int.")
-    if start + time_bin_s > stop:
-        raise ValueError("start must be less than (stop - time_bin_s).")
-    if polarity and polarity not in [1, -1]:
-        raise ValueError("polarity must be 1 or -1.")
-
-    ticks = np.arange(start, stop, time_bin_s)
-    bin_num = ticks.shape[0]
-    ts_cnt = np.zeros([bin_num - 1, 2])
-    for i in range(bin_num - 1):
-        condition = np.logical_and(events[:, 0] >= ticks[i],
-                                   events[:, 0] < ticks[i + 1])
-        if polarity:
-            condition = np.logical_and(condition, events[:, 3] == polarity)
-        cnt = events[condition].shape[0]
-        ts_cnt[i][0] = (ticks[i] + ticks[i + 1]) / 2
-        ts_cnt[i][1] = cnt
-
-    return ts_cnt
-
 
 if __name__ == "__main__":
 
@@ -120,9 +32,9 @@ if __name__ == "__main__":
     parser.add_argument("--time_bin_ms", type=float, default=50, help="the duration of time bins in ms")
     parser.add_argument("--start", required=True,type=float, help="start time in seconds")
     parser.add_argument("--stop", required=True,type=float, help="stop time in seconds")
-    parser.add_argument("--x", type=int, nargs=2, required=True, help="x, two integers, e.g. 10 20")
-    parser.add_argument("--y", type=int, nargs=2, required=True, help="y, two integers, e.g. 40 50")
-    parser.add_argument("--rotate180", type=bool, default=True, help="whether the video needs to be rotated")
+    parser.add_argument("--x", type=int, nargs=2, required=True, help="x ROI, two integers, e.g. 10 20")
+    parser.add_argument("--y", type=int, nargs=2, required=True, help="y ROI, two integers, e.g. 40 50")
+    parser.add_argument("--rotate180", type=bool, default=True, help="whether the video needs to be rotated 180 degrees")
 
     args = parser.parse_args()
 
@@ -188,14 +100,14 @@ if __name__ == "__main__":
     out.release()
     logger.info("finished writing {}.".format(outputVideoPath))
 
-    aps = select(events_aps, x, y)
-    dvs_v2e_npy = select(events_dvs, x, y)
+    aps = select_events_in_roi(events_aps, x, y)
+    dvs_v2e_npy = select_events_in_roi(events_dvs, x, y)
 
-    logger.info('counting events...')
-    aps_pos = counting(aps, time_bin_ms=time_bin_ms, polarity=1, start=start, stop=stop)
-    dvs_pos = counting(dvs_v2e_npy, time_bin_ms=time_bin_ms, polarity=1, start=start, stop=stop) # APS off events from v2e have polarity -1
-    aps_neg = counting(aps, time_bin_ms=time_bin_ms, polarity=-1, start=start, stop=stop)
-    dvs_neg = counting(dvs_v2e_npy, time_bin_ms=time_bin_ms, polarity=0, start=start, stop=stop) # note DVS off events have polarity 0
+    logger.info('histogram_events_in_time_bins events...')
+    aps_pos = histogram_events_in_time_bins(aps, time_bin_ms=time_bin_ms, polarity=1, start=start, stop=stop)
+    dvs_pos = histogram_events_in_time_bins(dvs_v2e_npy, time_bin_ms=time_bin_ms, polarity=1, start=start, stop=stop) # APS off events from v2e have polarity -1
+    aps_neg = histogram_events_in_time_bins(aps, time_bin_ms=time_bin_ms, polarity=-1, start=start, stop=stop)
+    dvs_neg = histogram_events_in_time_bins(dvs_v2e_npy, time_bin_ms=time_bin_ms, polarity=0, start=start, stop=stop) # note DVS off events have polarity 0
 
     fig = plt.figure(figsize=(8, 6))
     width = time_bin_s / 2

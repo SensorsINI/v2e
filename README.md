@@ -379,7 +379,7 @@ You can run it like this:
 ```bash
 python ddd_find_thresholds.py -i input\rec1501350986.hdf5 --start 25 --stop 35
 ```
-Make sure you use part of the recording where the input is changing.
+Make sure you use part of the recording where the input is changing. If you use the ROI option you can focus the estimation on parts of the scene that are definitely changing, to avoid counting just noise events. If you happen to select such a region, then _ddd_find_thresholds.py_ will find an artificially low threshold to generate enough events compared with the real DVS (if you don't set the correct _leak_rate_hz_ and _shot_noise_rate_hz_ parameters). 
 
 The program will take the DVS recording data, which starts at time 'start' and ends at time 'end', to calculate the best threshold values for positive and negative self separately.
 
@@ -390,9 +390,9 @@ A typical result from _ddd_find_thresholds.py_ is shown below. It plots the abso
 ### Obtaining acceptable results 
 For the best frame interpolation by SuperSloMo, the input video needs to satisfy the requirements below,
 
-- Daytime - for short exposure times to avoid blurry frames
-- Cloudy - for limited dynamic range, to ensure that the frames are not clipped
-- High frame rate - objects must not be aliased too much, i.e. they must not move too much between frames
+- Daytime - for short exposure times to avoid motion-blurred frames.
+- Cloudy - for limited dynamic range, to ensure that the frames are not clipped.
+- High frame rate - objects must not be aliased too much, i.e. they must not move too much between frames.
 
 If the video is underexposed, overexposed, has motion blur or aliasing, then the emulated DVS events will have poor realism.
 

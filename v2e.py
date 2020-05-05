@@ -31,6 +31,7 @@ from v2e.slomo import SuperSloMo
 from v2e.emulator import EventEmulator
 from v2e.v2e_utils import inputVideoFileDialog
 
+
 import logging
 
 logging.basicConfig()
@@ -133,7 +134,7 @@ if __name__ == "__main__":
         logger.warning('num frames is less than 2, probably cannot be determined from cv2.CAP_PROP_FRAME_COUNT')
 
     check_lowpass(cutoff_hz,srcFps*slowdown_factor,logger)
-    slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview,rotate=rotate180)
+    slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview, rotate180=rotate180)
 
     srcTotalDuration= (srcNumFrames - 1) * srcFrameIntervalS
     start_frame=int(srcNumFrames * (start_time / srcTotalDuration)) if start_time else 0

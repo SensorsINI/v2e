@@ -41,7 +41,7 @@ class SuperSloMo(object):
         slowdown_factor,
         batch_size=1,
         video_path=None,
-        rotate=False,
+        rotate180=False,
         vid_orig=None,
         vid_slomo=None,
             preview=False
@@ -59,8 +59,8 @@ class SuperSloMo(object):
             batch size.
         video_path: str or None,
             str if videos need to be stored else None
-        rotate: bool,
-            True if frames need to be rotated else False
+        rotate180: bool,
+            True if frames need to be rotated 180 deg, else False
          vid_orig: str or None,
             name of output original (input) video at slo motion rate
         """
@@ -75,7 +75,7 @@ class SuperSloMo(object):
         self.batch_size = batch_size
         self.sf = slowdown_factor
         self.video_path = video_path
-        self.rotate = rotate
+        self.rotate = rotate180
         self.preview=preview
         self.preview_resized=False
         self.vid_orig = vid_orig,

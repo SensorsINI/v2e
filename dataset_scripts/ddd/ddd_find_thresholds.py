@@ -9,7 +9,7 @@ from tqdm import tqdm
 from v2e.emulator import EventEmulator
 from v2e.slomo import SuperSloMo
 from v2e.ddd20_utils.ddd_h5_reader import DDD20ReaderMultiProcessing, DDD20SimpleReader
-from v2e.v2e_utils import inputVideoFileDialog, inputDDDFileDialog
+from v2e.v2e_utils import inputVideoFileDialog, inputDDDFileDialog, select_events_in_roi, DVS_WIDTH, DVS_HEIGHT
 
 logging.basicConfig()
 root = logging.getLogger()
@@ -24,11 +24,14 @@ parser = argparse.ArgumentParser(description='ddd_find_thresholds.py: generate s
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--start", type=float, default=0.0, help="start point of video stream")
 parser.add_argument("--stop", type=float, default=5.0, help="stop point of video stream")
-parser.add_argument("-i", type=str, help="path of DDD .hdf5 file")
-parser.add_argument("-o", type=str, default='output/find_thresholds', help="path to where output is stored")
+parser.add_argument("-i", "--input", type=str, help="path of DDD .hdf5 file")
+parser.add_argument("-o", "--output_folder", type=str, default='output/find_thresholds', help="path to where output is stored")
 parser.add_argument("--slowdown_factor", type=int, default=10, help="slow motion factor")
 parser.add_argument("--slomo_model", type=str, default="input/SuperSloMo39.ckpt", help="path of slomo_model checkpoint.")
 parser.add_argument("--no_preview", action="store_true", help="disable preview in cv2 windows for faster processing.")
+parser.add_argument("--x", type=int, nargs=2, default=None, help="x ROI, two integers, e.g. 10 20; if None, entire address space")
+parser.add_argument("--y", type=int, nargs=2, default=None, help="y ROI, two integers, e.g. 40 50; if None, entire address space")
+parser.add_argument("--rotate180", type=bool, default=True, help="whether the video needs to be rotated 180 degrees")
 args = parser.parse_args()
 
 if __name__ == "__main__":
@@ -37,22 +40,33 @@ if __name__ == "__main__":
     #     logger.warning('A Windows python multiprocessing threading problem means that the HDF5 reader will probably not work '
     #                    '\n you may get the infamous "TypeError: h5py objects cannot be pickled" bug')
 
-    if not args.i:
+    if not args.input:
         input_file = inputDDDFileDialog()
         if not input_file:
             logger.info('no file selected, quitting')
             quit()
     else:
-        input_file = args.i
+        input_file = args.input
 
+    rotate180 = args.rotate180
     preview=not args.no_preview
     assert os.path.exists(input_file)
     assert args.start == None or args.stop == None or args.start < args.stop
     assert os.path.exists(args.slomo_model)
 
+    if args.x==None: args.x=tuple(0,DVS_WIDTH)
+    if args.y==None: args.y=tuple(0,DVS_HEIGHT)
+
+    if not rotate180:
+        x = tuple(args.x)
+        y = tuple(args.y)
+    else:
+        x = tuple([DVS_WIDTH - 1 - args.x[1], DVS_WIDTH - 1 - args.x[0]])
+        y = tuple([DVS_HEIGHT - 1 - args.y[1], DVS_HEIGHT - 1 - args.y[0]])
+
     from pathlib import Path
 
-    outdir = args.o
+    outdir = args.output_folder
     Path(outdir).mkdir(parents=True, exist_ok=True)
 
     frames, dvsEvents = [], []
@@ -60,12 +74,13 @@ if __name__ == "__main__":
     frames, dvsEvents = dddReader.readEntire(startTimeS=args.start, stopTimeS=args.stop)
     if frames is None or dvsEvents is None: raise Exception('no frames or no events')
 
-    dvsOnEvents = dvsEvents[dvsEvents[:, 3] == 1].shape[0]
-    dvsOffEvents = dvsEvents.shape[0] - dvsOnEvents
+    dvsEvents=select_events_in_roi(dvsEvents,x,y)
+    dvsOnCount = np.count_nonzero((dvsEvents[:, 3] == 1))
+    dvsOffCount = dvsEvents.shape[0] - dvsOnCount
 
     with TemporaryDirectory() as interp_frames_dir:
         logger.info("intepolated frames folder: {}".format(interp_frames_dir))
-        slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor,preview=preview)
+        slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, preview=preview, rotate180=rotate180)
         slomo.interpolate(images=frames['frame'], output_folder=interp_frames_dir)  # writes all frames to interp_frames_folder
         frame_ts = slomo.get_interpolated_timestamps(frames["ts"])
         height, width = frames['frame'].shape[1:]
@@ -75,18 +90,19 @@ if __name__ == "__main__":
         neg_thres = -1.
 
         results = np.empty((0,3),float)
-        thresholds = np.arange(1, 0.2, -0.01)
+        thresholds = np.arange(1, 0.05, -0.01)
         on_diffs = np.zeros_like(thresholds)
         on_diffs[:]=np.nan
         off_diffs = np.zeros_like(thresholds)
         off_diffs[:]=np.nan
 
-        emulator = EventEmulator(output_folder=None, show_input=False)
+        emulator = EventEmulator(output_folder=None, show_input=False, rotate180=rotate180)
         k=0
         min_pos_diff=np.inf
         min_neg_diff=np.inf
 
         fig,ax=plt.subplots()
+        plt.rcParams.update({'font.size': 18})
         online, offline=ax.plot(thresholds, on_diffs, 'g-', thresholds, off_diffs, 'r-')
         online.set_label('On')
         offline.set_label('Off')
@@ -103,12 +119,16 @@ if __name__ == "__main__":
             emulator.neg_thres = threshold
             emulator.reset()
             for i in range(nFrames):
-                e = emulator.generate_events(frames['frame'][i], frame_ts[i], frame_ts[i + 1])
-                apsOnEvents += emulator.num_events_on
-                apsOffEvents += emulator.num_events_off
+                events_v2e = emulator.generate_events(frames['frame'][i], frame_ts[i], frame_ts[i + 1])
+                if not events_v2e is None:
+                    events_v2e=select_events_in_roi(events_v2e,x,y)
+                    onCount=np.count_nonzero(events_v2e[:,3]==1)
+                    offCount=events_v2e.shape[0]-onCount;
+                    apsOnEvents += onCount
+                    apsOffEvents += offCount
 
-            abs_pos_diff = np.abs(dvsOnEvents - apsOnEvents)
-            abs_neg_diff = np.abs(dvsOffEvents - apsOffEvents)
+            abs_pos_diff = np.abs(dvsOnCount - apsOnEvents)
+            abs_neg_diff = np.abs(dvsOffCount - apsOffEvents)
 
             if abs_pos_diff < min_pos_diff:
                 min_pos_diff=abs_pos_diff
@@ -144,4 +164,4 @@ if __name__ == "__main__":
     fig.savefig(path)
     logger.info('saved results to {}'.format(outdir))
 
-
+    plt.show()
