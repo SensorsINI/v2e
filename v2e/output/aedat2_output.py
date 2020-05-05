@@ -12,10 +12,9 @@ class AEDat2Output:
     outputs AEDAT-2.0 jAER format DVS data from v2e
     '''
 
-    def __init__(self, filepath: str, rotate180:bool=False):
+    def __init__(self, filepath: str):
         self.filepath = filepath
         self.file=None
-        self.rotate180 = rotate180
         # edit below to match your device from https://inivation.com/support/software/fileformat/#aedat-20
         CAMERA = 'Davis346BMono'  # edit for your desired output
         if CAMERA == 'Davis346BMono':
@@ -34,9 +33,6 @@ class AEDat2Output:
         else:
             raise ValueError('CAMERA type not found, add your camera to {}'.format(__name__))
 
-        if rotate180:
-            self.flipx=not self.flipx
-            self.flipy=not self.flipy
         self.numEventsWritten = 0
         self.numOnEvents=0
         self.numOffEvents=0

@@ -1,15 +1,18 @@
 import logging
 import os
+import sys
+
 import numpy as np
 import argparse
 from tempfile import TemporaryDirectory
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+from v2e import desktop
 from v2e.emulator import EventEmulator
 from v2e.slomo import SuperSloMo
 from v2e.ddd20_utils.ddd_h5_reader import DDD20ReaderMultiProcessing, DDD20SimpleReader
-from v2e.v2e_utils import inputVideoFileDialog, inputDDDFileDialog, select_events_in_roi, DVS_WIDTH, DVS_HEIGHT
+from v2e.v2e_utils import inputVideoFileDialog, inputDDDFileDialog, select_events_in_roi, DVS_WIDTH, DVS_HEIGHT, write_args_info
 
 logging.basicConfig()
 root = logging.getLogger()
@@ -57,20 +60,19 @@ if __name__ == "__main__":
     if args.x==None: args.x=tuple(0,DVS_WIDTH)
     if args.y==None: args.y=tuple(0,DVS_HEIGHT)
 
-    if not rotate180:
-        x = tuple(args.x)
-        y = tuple(args.y)
-    else:
-        x = tuple([DVS_WIDTH - 1 - args.x[1], DVS_WIDTH - 1 - args.x[0]])
-        y = tuple([DVS_HEIGHT - 1 - args.y[1], DVS_HEIGHT - 1 - args.y[0]])
+    # DDD recordings are mostly upside down. So if x and y refer to rotated input, then we should select real DVS events using rotated x and y coordinates, but when we generate frames with slomo using rotate180, these frames are rotated already, so we should select events from them using original x and y
+    x = tuple(args.x)
+    y = tuple(args.y)
+
+    write_args_info(args,args.output_folder)
 
     from pathlib import Path
 
-    outdir = args.output_folder
-    Path(outdir).mkdir(parents=True, exist_ok=True)
+    output_folder = args.output_folder
+    Path(output_folder).mkdir(parents=True, exist_ok=True)
 
     frames, dvsEvents = [], []
-    dddReader = DDD20SimpleReader(input_file)
+    dddReader = DDD20SimpleReader(input_file,rotate180=rotate180)
     frames, dvsEvents = dddReader.readEntire(startTimeS=args.start, stopTimeS=args.stop)
     if frames is None or dvsEvents is None: raise Exception('no frames or no events')
 
@@ -80,7 +82,7 @@ if __name__ == "__main__":
 
     with TemporaryDirectory() as interp_frames_dir:
         logger.info("intepolated frames folder: {}".format(interp_frames_dir))
-        slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, preview=preview, rotate180=rotate180)
+        slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, preview=preview)
         slomo.interpolate(images=frames['frame'], output_folder=interp_frames_dir)  # writes all frames to interp_frames_folder
         frame_ts = slomo.get_interpolated_timestamps(frames["ts"])
         height, width = frames['frame'].shape[1:]
@@ -96,7 +98,7 @@ if __name__ == "__main__":
         off_diffs = np.zeros_like(thresholds)
         off_diffs[:]=np.nan
 
-        emulator = EventEmulator(output_folder=None, show_input=False, rotate180=rotate180)
+        emulator = EventEmulator(output_folder=None, show_input=None) # 'baseLogFrame'
         k=0
         min_pos_diff=np.inf
         min_neg_diff=np.inf
@@ -123,7 +125,7 @@ if __name__ == "__main__":
                 if not events_v2e is None:
                     events_v2e=select_events_in_roi(events_v2e,x,y)
                     onCount=np.count_nonzero(events_v2e[:,3]==1)
-                    offCount=events_v2e.shape[0]-onCount;
+                    offCount=events_v2e.shape[0]-onCount
                     apsOnEvents += onCount
                     apsOffEvents += offCount
 
@@ -155,13 +157,23 @@ if __name__ == "__main__":
     print("thres_on={:.2f} thres_off={:.2f}".format(pos_thres, neg_thres))
 
     results=np.stack((thresholds,on_diffs,off_diffs),axis=0)
-    path = os.path.join(outdir, 'find_thresholds.npy')
+    path = os.path.join(output_folder, 'find_thresholds.npy')
     np.save(path, results)
 
-    path = os.path.join(outdir, 'find_thresholds.pdf')
+    path = os.path.join(output_folder, 'find_thresholds.pdf')
     fig.savefig(path)
-    path = os.path.join(outdir, 'find_thresholds.png')
+    path = os.path.join(output_folder, 'find_thresholds.png')
     fig.savefig(path)
-    logger.info('saved results to {}'.format(outdir))
+    logger.info('saved results to {}'.format(output_folder))
 
     plt.show()
+    try:
+        desktop.open(os.path.abspath(output_folder))
+    except Exception as e:
+        logger.warning('{}: could not open {} in desktop'.format(e, output_folder))
+    slomo.cleanup()
+    try:
+        quit()
+    finally:
+        sys.exit()
+

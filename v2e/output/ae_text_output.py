@@ -31,7 +31,7 @@ class DVSTextOutput:
         self.file = open(filepath, 'w')
         self._writeHeader()
         atexit.register(self.cleanup)
-        self.flipx=False # set both flipx and flipy to rotate
+        self.flipx=False # set both flipx and flipy to rotate TODO replace with rotate180
         self.flipy=False
         self.sizex=346
         self.sizey=260 # adjust to your needs

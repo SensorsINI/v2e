@@ -47,7 +47,7 @@ EVENT_TYPES = {
 etype_by_id = {v: k for k,v in EVENT_TYPES.items()}
 
 
-def unpack_events(p):
+def unpack_events(p, rotate180=True):
     '''
     Extract events from binary data,
     returns list of event tuples.
@@ -60,6 +60,9 @@ def unpack_events(p):
     pol = data >> 1 & 0b1
     y = data >> 2 & 0b111111111111111
     x = data >> 17
+    if rotate180:
+        x=DVS_SHAPE[1]-x-1
+        y=DVS_SHAPE[0]-y-1
     return ts[0] * 1e-6, np.array([ts, x, y, pol]).T
 
 def unpack_header(header_raw):
@@ -72,7 +75,7 @@ def unpack_header(header_raw):
     obj['etype'] = etype_by_id.get(obj['etype'], obj['etype'])
     return obj
 
-def unpack_frame(p):
+def unpack_frame(p, rotate180=True):
     '''
     Extract image from binary data, returns timestamp and 2d np.array.
     '''
@@ -80,9 +83,12 @@ def unpack_frame(p):
         return False
     img_head = np.fromstring(p['dvs_data'][:36], dtype=np.uint32)
     img_data = np.fromstring(p['dvs_data'][36:], dtype=np.uint16)
-    return img_head[2] * 1e-6, img_data.reshape(DVS_SHAPE)
+    img_data=img_data.reshape(DVS_SHAPE)
+    if rotate180:
+        img_data=np.rot90(img_data,k=2)
+    return img_head[2] * 1e-6, img_data
 
-def unpack_special(p):
+def unpack_special(p, rotate180=True):
     '''
     Extract special event data (only return type id).
     '''
@@ -103,14 +109,14 @@ unpack_func = {
         }
 
 
-def unpack_data(d):
+def unpack_data(d, rotate180=True):
     '''
     Unpack data for given caer packet,
     return False if event type does not exist.
     '''
     _get_data = unpack_func.get(d['etype'])
     if _get_data:
-        d['timestamp'], d['data'] = _get_data(d)
+        d['timestamp'], d['data'] = _get_data(d,rotate180)
         return d
     return False
 

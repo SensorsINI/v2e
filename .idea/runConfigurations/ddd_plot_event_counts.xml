@@ -10,7 +10,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/dataset_scripts/ddd/ddd_plot_event_counts.py" />
-    <option name="PARAMETERS" value="--path output/ddd20-v2e-long --start=0 --stop=10 --x 310 320 --y 100 110 --time_bin_ms=100" />
+    <option name="PARAMETERS" value="--path output/ddd20-v2e-long --start=0 --stop=10 --x 310 320 --y 100 110 --time_bin_ms=200" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

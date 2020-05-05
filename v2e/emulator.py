@@ -65,8 +65,7 @@ class EventEmulator(object):
             dvs_h5: str = None,
             dvs_aedat2: str = None,
             dvs_text: str = None,
-            rotate180: bool = False,
-            show_input: str = None  # change as you like to see 'logBaseFrame','lpLogFrame', 'diff_frame'
+            show_input: str = None  # change as you like to see 'baseLogFrame','lpLogFrame', 'diff_frame'
             # dvs_rosbag=None
     ):
         """
@@ -80,15 +79,18 @@ class EventEmulator(object):
             nominal threshold of triggering negative event in log intensity.
         sigma_thres: float, default 0.03
             std deviation of threshold in log intensity.
-            cutoff_hz: float,
+        cutoff_hz: float,
             3dB cutoff frequency in Hz of DVS photoreceptor
-            leak_rate_hz: float
+        leak_rate_hz: float
             leak event rate per pixel in Hz, from junction leakage in reset switch
+        shot_noise_rate_hz: float
+            shot noise rate in Hz
         seed: int, default=0
             seed for random threshold variations, fix it to nonzero value to get same mismatch every time
         dvs_aedat2, dvs_h5, dvs_text: str
             names of output data files or None
-
+        show_input: str,
+            None or 'baseLogFrame','lpLogFrame', 'diff_frame'
         """
 
         logger.info("ON/OFF log_e temporal contrast thresholds: {} / {} +/- {}".format(pos_thres, neg_thres, sigma_thres))
@@ -104,7 +106,6 @@ class EventEmulator(object):
         self.shot_noise_rate_hz = shot_noise_rate_hz
         self.output_width = None
         self.output_height = None  # set on first frame
-        self.rotate180 = rotate180
         self.show_input = show_input
         if seed>0:
             np.random.seed(seed)
@@ -137,7 +138,7 @@ class EventEmulator(object):
                 path = os.path.join(self.output_folder, dvs_aedat2)
                 path = checkAddSuffix(path, '.aedat')
                 logger.info('opening AEDAT-2.0 output file ' + path)
-                self.dvs_aedat2 = AEDat2Output(path, rotate180)
+                self.dvs_aedat2 = AEDat2Output(path)
             if dvs_text:
                 path = checkAddSuffix(path, '.txt')
                 path = os.path.join(self.output_folder, dvs_text)
@@ -170,8 +171,8 @@ class EventEmulator(object):
     def _show(self, inp: np.ndarray):
         min = np.min(inp)
         img = ((inp - min) / (np.max(inp) - min))
-        if self.rotate180: img = np.rot90(img, k=2)
         cv2.imshow(__name__, img)
+        cv2.waitKey(30)
 
     def generate_events(self, new_frame: np.ndarray, t_start: float, t_end: float) -> np.ndarray:
         """Compute events in new frame.
@@ -556,8 +557,6 @@ class EventFrameRenderer(object):
             out.write(cv2.cvtColor((img * 255).astype(np.uint8), cv2.COLOR_GRAY2BGR))
             if self.preview:
                 cv2.namedWindow(__name__, cv2.WINDOW_NORMAL)
-                if self.rotate:
-                    np.rot90(img, k=2)
                 cv2.imshow(__name__, img)
                 if not self.preview_resized:
                     cv2.resizeWindow(__name__, 800, 600)

@@ -79,6 +79,25 @@ def check_lowpass(cutoffhz, fs, logger):
     else:
         logger.info(' Lowpass cutoff is {}Hz with sample rate {}Hz (sample interval {}ms),\nIt has tau={}ms and mixing factor eps={:5.3f}'.format(eng(cutoffhz), eng(fs), eng(dt*1000), eng(tau*1000), eps))
 
+def write_args_info(args, path):
+    '''
+    Writes arguments to logger and file named from startup __main__
+    Parameters
+    ----------
+    args: parser.parse_args()
+
+    Returns
+    -------
+    nothing
+    '''
+    import __main__ as main
+    arguments_list = 'arguments:\n'
+    for arg, value in args._get_kwargs():
+        arguments_list += "{}:\t{}\n".format(arg, value)
+    logger.info(arguments_list)
+    argsFilename = main.__file__.strip('.py') + '-args.txt'
+    with open(os.path.join(path, argsFilename), "w") as f:
+        f.write(arguments_list)
 
 def inputVideoFileDialog():
     return _inputFileDialog([("Video/Data files", ".avi .mp4 .wmv"),('Any type','*')])

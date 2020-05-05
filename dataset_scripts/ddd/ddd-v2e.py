@@ -25,7 +25,7 @@ from v2e.output.aedat2_output import AEDat2Output
 from v2e.renderer import EventEmulator, EventRenderer
 from v2e.slomo import SuperSloMo
 from v2e.v2e_utils import OUTPUT_VIDEO_FPS, all_images, \
-    read_image, checkAddSuffix, v2e_args, inputDDDFileDialog, check_lowpass
+    read_image, checkAddSuffix, v2e_args, inputDDDFileDialog, check_lowpass, write_args_info
 import v2e.desktop as desktop
 
 logging.basicConfig()
@@ -80,13 +80,7 @@ if __name__ == "__main__":
         logger.error('set neither or both of output_width and output_height')
         quit()
 
-    arguments_list = 'arguments:\n'
-    for arg, value in args._get_kwargs():
-        arguments_list += "{}:\t{}\n".format(arg, value)
-    logger.info(arguments_list)
-
-    with open(os.path.join(args.output_folder, "info.txt"), "w") as f:
-        f.write(arguments_list)
+    write_args_info(args,output_folder)
 
     dvsFps=args.frame_rate
     start_time=args.start_time
@@ -125,15 +119,15 @@ if __name__ == "__main__":
         quit()
 
     logger.info('opening output files')
-    slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview, rotate180=rotate180)
+    slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview)
     dvsVidReal=str(dvs_vid).replace('.avi','-real.avi')
     dvsVidFake=str(dvs_vid).replace('.avi','-fake.avi')
-    emulator = EventEmulator(pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz,  shot_noise_rate_hz=shot_noise_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text,rotate180=rotate180)
-    eventRendererReal = EventRenderer(frame_rate_hz=dvsFps, output_path=output_folder, dvs_vid=dvsVidReal, preview=preview, rotate180=rotate180, full_scale_count=dvs_vid_full_scale)
-    eventRendererFake = EventRenderer(frame_rate_hz=dvsFps, output_path=output_folder, dvs_vid=dvsVidFake, preview=preview, rotate180=rotate180, full_scale_count=dvs_vid_full_scale)
+    emulator = EventEmulator(pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz,  shot_noise_rate_hz=shot_noise_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
+    eventRendererReal = EventRenderer(frame_rate_hz=dvsFps, output_path=output_folder, dvs_vid=dvsVidReal, preview=preview, full_scale_count=dvs_vid_full_scale)
+    eventRendererFake = EventRenderer(frame_rate_hz=dvsFps, output_path=output_folder, dvs_vid=dvsVidFake, preview=preview, full_scale_count=dvs_vid_full_scale)
     realDvsAeDatOutput=None
 
-    davisData= DDD20SimpleReader(input_file)
+    davisData= DDD20SimpleReader(input_file, rotate180=rotate180)
 
     startPacket=davisData.search(timeS=start_time) if start_time else davisData.firstPacketNumber
     if startPacket  is None: raise ValueError('cannot find relative start time ' + str(start_time) + 's within recording')
@@ -175,7 +169,7 @@ if __name__ == "__main__":
                 allEventsReal=np.concatenate((allEventsReal,events))
             if not realDvsAeDatOutput and dvs_aedat2:
                 filepath=checkAddSuffix(os.path.join(output_folder, dvs_aedat2),'.aedat').replace('.aedat','-real.aedat')
-                realDvsAeDatOutput = AEDat2Output(filepath,rotate180=rotate180)
+                realDvsAeDatOutput = AEDat2Output(filepath)
             if realDvsAeDatOutput: realDvsAeDatOutput.appendEvents(events)
             # prepend saved events if there are some
             events=np.vstack((savedEvents,events))

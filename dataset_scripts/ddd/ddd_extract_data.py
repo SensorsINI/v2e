@@ -102,7 +102,7 @@ if __name__ == "__main__":
 
     atexit.register(cleanup)
 
-    davisData=DDD20SimpleReader(input_file)
+    davisData=DDD20SimpleReader(input_file, rotate180=rotate180)
 
     realDvsAeDatOutput=None
     videoWriter=None
@@ -130,7 +130,7 @@ if __name__ == "__main__":
             if not realDvsAeDatOutput:
                 filename=PurePath(input_file).name.replace('.hdf5','.aedat')
                 filepath=os.path.join(output_folder, filename)
-                realDvsAeDatOutput = AEDat2Output(filepath,rotate180=rotate180)
+                realDvsAeDatOutput = AEDat2Output(filepath)
             realDvsAeDatOutput.appendEvents(events)
 
         elif packet['etype']== ddd_h5_reader.DDD20SimpleReader.ETYPE_APS:
@@ -142,7 +142,6 @@ if __name__ == "__main__":
                     filename = PurePath(input_file).name.replace('.hdf5', '.avi')
                     filepath = os.path.join(output_folder, filename)
                     videoWriter = video_writer(filepath,height=h, width=w)
-                if rotate180: img=np.rot90(img,k=2)
                 videoWriter.write(cv2.cvtColor(img, cv2.COLOR_GRAY2BGR))
 
     totalTime=(time.time() - time_run_started)

@@ -41,7 +41,6 @@ class SuperSloMo(object):
         slowdown_factor,
         batch_size=1,
         video_path=None,
-        rotate180=False,
         vid_orig=None,
         vid_slomo=None,
             preview=False
@@ -59,8 +58,6 @@ class SuperSloMo(object):
             batch size.
         video_path: str or None,
             str if videos need to be stored else None
-        rotate180: bool,
-            True if frames need to be rotated 180 deg, else False
          vid_orig: str or None,
             name of output original (input) video at slo motion rate
         """
@@ -75,7 +72,6 @@ class SuperSloMo(object):
         self.batch_size = batch_size
         self.sf = slowdown_factor
         self.video_path = video_path
-        self.rotate = rotate180
         self.preview=preview
         self.preview_resized=False
         self.vid_orig = vid_orig,
@@ -277,11 +273,9 @@ class SuperSloMo(object):
                             str(frameCounter + self.sf * batchIndex) + ".png")
                         img_resize.save(save_path)
                         if self.preview:
-                            name=str(self.vid_slomo)
+                            name=str(__file__)
                             cv2.namedWindow(name, cv2.WINDOW_NORMAL)
                             gray = np.uint8(img_resize)
-                            if self.rotate:
-                                gray=np.rot90(gray,k=2)
                             cv2.imshow(name, gray)
                             if not self.preview_resized:
                                 cv2.resizeWindow(name, 800, 600)
@@ -301,8 +295,6 @@ class SuperSloMo(object):
             if self.ori_writer:
                 for i in range(0,num2write):  #tqdm(range(0,num2write-1), desc='slomo--write-orig-vid',unit='fr'):
                     frame=images[i]
-                    if self.rotate:
-                        frame = np.rot90(frame, k=2)
                     for _ in range(self.sf):    # duplicate frames to match speed of slomo video
                         self.ori_writer.write(cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
                         self.numOrigVideoFramesWritten+=1
@@ -315,8 +307,6 @@ class SuperSloMo(object):
             if self.slomo_writer:
                 for path in frame_paths: #tqdm(frame_paths,desc='slomo-write-slomo-vid',unit='fr'):
                     frame = self.__read_image(path)
-                    if self.rotate:
-                        frame = np.rot90(frame, k=2)
                     self.slomo_writer.write(cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
                     self.numSlomoVideoFramesWritten+=1
                      # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):

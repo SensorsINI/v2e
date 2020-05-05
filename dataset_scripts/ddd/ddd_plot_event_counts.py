@@ -7,6 +7,8 @@ import os
 import cv2
 import logging
 
+from v2e import desktop
+
 logging.basicConfig()
 root = logging.getLogger()
 root.setLevel(logging.INFO)
@@ -16,7 +18,7 @@ logging.addLevelName( logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelN
 logger=logging.getLogger(__name__)
 
 
-from v2e.v2e_utils import video_writer, select_events_in_roi, histogram_events_in_time_bins, DVS_WIDTH, DVS_HEIGHT
+from v2e.v2e_utils import video_writer, select_events_in_roi, histogram_events_in_time_bins, DVS_WIDTH, DVS_HEIGHT, write_args_info
 
 # matplotlib.use('PS')
 
@@ -30,8 +32,8 @@ if __name__ == "__main__":
 
     parser.add_argument("--path", type=str, required=True, help="path to numpy input files and for storing output")
     parser.add_argument("--time_bin_ms", type=float, default=50, help="the duration of time bins in ms")
-    parser.add_argument("--start", required=True,type=float, help="start time in seconds")
-    parser.add_argument("--stop", required=True,type=float, help="stop time in seconds")
+    parser.add_argument("--start", required=True,type=float, help="start time in seconds relative to start of numpy data file (might not be same as recording)")
+    parser.add_argument("--stop", required=True,type=float, help="stop time in seconds relative to start of numpy data file (might not be same as recording)")
     parser.add_argument("--x", type=int, nargs=2, required=True, help="x ROI, two integers, e.g. 10 20")
     parser.add_argument("--y", type=int, nargs=2, required=True, help="y ROI, two integers, e.g. 40 50")
     parser.add_argument("--rotate180", type=bool, default=True, help="whether the video needs to be rotated 180 degrees")
@@ -56,7 +58,7 @@ if __name__ == "__main__":
     dvs_v2e_npy = os.path.join(path, "dvs_v2e.npy")
     dvs_real_npy = os.path.join(path, "dvs_real.npy")
     if not Path(dvs_v2e_npy).exists() or not Path(dvs_real_npy).exists():
-        logger.error('numpy event files {} or {} not accessible'.format(dvs_v2e_npy, dvs_real_npy))
+        logger.error('numpy event files {} or {} not accessible\nDid you run ddd-v2e.py first?'.format(dvs_v2e_npy, dvs_real_npy))
         sys.exit(1)
 
     events_aps = np.load(dvs_v2e_npy)
@@ -71,19 +73,17 @@ if __name__ == "__main__":
 
     logger.info("Input video {}: width: {} \t height: {}".format(dvs_video_real_avi,width, height))
 
-    if not rotate180:
-        x = tuple(args.x)
-        y = tuple(args.y)
-    else:
-        x = tuple([DVS_WIDTH - 1 - args.x[1], DVS_WIDTH - 1 - args.x[0]])
-        y = tuple([DVS_HEIGHT - 1 - args.y[1], DVS_HEIGHT - 1 - args.y[0]])
+    x = tuple(args.x)
+    y = tuple(args.y)
+
+    write_args_info(args,path)
 
     ts0=np.min((events_dvs[0][0],events_aps[0][0]))
 
     start = (ts0+args.start)
     stop = (args.stop+ts0)
     i = 0
-    logger.info('writing video output with ROI labeled')
+    logger.info('writing video output file {} with ROI labeled'.format(outputVideoPath))
     while(cap.isOpened()):
         ret, img = cap.read()
         if ret: # and i >= start and i <= stop:
@@ -138,4 +138,12 @@ if __name__ == "__main__":
     plt.savefig(os.path.join(path, "ddd-plot-event-counts.png"))
     logger.info('plots written to ddd-plot-event-counts.* in folder {}'.format(path))
     plt.show()
+    try:
+        desktop.open(os.path.abspath(path))
+    except Exception as e:
+        logger.warning('{}: could not open {} in desktop'.format(e, path))
+    try:
+        quit()
+    finally:
+        sys.exit()
 

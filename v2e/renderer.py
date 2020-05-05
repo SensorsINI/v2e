@@ -25,7 +25,6 @@ class EventRenderer(object):
             self,
             frame_rate_hz=None, # caller must supply this on construction
             full_scale_count=3,
-            rotate180=False,
             output_path:str=None,
             dvs_vid:str=None,
             preview:bool=False
@@ -48,7 +47,6 @@ class EventRenderer(object):
             show preview in cv2 window
         """
         self.output_path = output_path
-        self.rotate = rotate180
         self.width = None
         self.height = None  # must be set by specific renderers, which might only know it once they have data
         self.video_output_file_name = dvs_vid
@@ -166,8 +164,6 @@ class EventRenderer(object):
                 # img output is 0-1 range
                 img = (self.currentFrame + self.full_scale_count) / float(self.full_scale_count * 2)
                 self.currentFrame=None # done with this frame, allocate new one in next loop
-                if self.rotate:
-                    img = np.rot90(img, k=2) # does 180 deg with k=2
                 if (returnedFrames is not None):
                     returnedFrames = np.concatenate((returnedFrames, img[np.newaxis,...])) # put new frame under previous ones
                 else:

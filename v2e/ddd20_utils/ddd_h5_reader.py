@@ -28,19 +28,18 @@ class DDD20SimpleReader(object):
     ETYPE_APS = 'frame_event'
     ETYPE_IMU = 'imu6_event'
 
-    def __init__(self, fname):
+    def __init__(self, fname, rotate180=True):
         """Init
 
         Parameters
         ----------
         fname: str
             path of input hdf5 file.
-        startTimeS: float
-            start time of the stream in seconds from start of recording.
-        stopTimeS: float
-            stop time of the stream in seconds from start of recording.
+        rotate180: bool, True
+            rotate input 180 deg (both frames and events)
         """
         logger.info('making reader for DDD recording '+str(fname))
+        self.rotate180=rotate180
         self.f_in =h5py.File(fname, 'r')
         logger.info(str(fname)+' contains following keys')
         hasDavisData=False
@@ -122,7 +121,7 @@ class DDD20SimpleReader(object):
         packet.update(caer.unpack_header(packet['dvs_header']))  # update the dict?
         # dat0 = dat[0]  # timestamp of the packet?
         packet['dvs_data'] = dat[2]  # put the data payload, dvs_data refers to DAVIS camera data, can be frames or IMU data too
-        packet = caer.unpack_data(packet)  # use caer to unpack it, store it back to data, which gets timestamp and cooked data
+        packet = caer.unpack_data(packet, self.rotate180)  # use caer to unpack it, store it back to data, which gets timestamp and cooked data
 
         # # print some info
         # if data:  # if could not unpack, is False
@@ -171,7 +170,7 @@ class DDD20SimpleReader(object):
             if not d:
                 continue # some packet type we can't parse
             if d['etype'] == 'special_event':
-                unpack_data(d)
+                unpack_data(d,self.rotate180)
                 # this is a timestamp reset
                 if any(d['data'] == 0):
                     print('ts reset detected, setting offset', timestamp)
@@ -180,7 +179,7 @@ class DDD20SimpleReader(object):
                 continue
             if d['etype'] == 'frame_event':
                 ts = d['timestamp'] + t_offset
-                frame = filter_frame(unpack_data(d))
+                frame = filter_frame(unpack_data(d,self.rotate180))
                 data = np.array(
                     [(ts, frame)],
                     dtype=np.dtype(
@@ -192,7 +191,7 @@ class DDD20SimpleReader(object):
                 current = ts
                 continue
             if d['etype'] == 'polarity_event':
-                unpack_data(d)
+                unpack_data(d,self.rotate180)
                 data = d["data"]
                 data = np.hstack(
                     (data[:, 0][:, None] * 1e-6 + t_offset,
@@ -221,7 +220,7 @@ class DDD20ReaderMultiProcessing(object):
     @latest update: 2019-May-31
     """
 
-    def __init__(self, fname, startTimeS=None, stopTimeS=None):
+    def __init__(self, fname, startTimeS=None, stopTimeS=None): # todo add rotate180 to mp reader
         """Init
 
         Parameters

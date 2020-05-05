@@ -25,7 +25,7 @@ from tqdm import tqdm
 
 import v2e.desktop as desktop
 from v2e.v2e_utils import all_images, read_image, OUTPUT_VIDEO_FPS, \
-    v2e_args, check_lowpass
+    v2e_args, check_lowpass, write_args_info
 from v2e.renderer import EventRenderer
 from v2e.slomo import SuperSloMo
 from v2e.emulator import EventEmulator
@@ -47,13 +47,15 @@ parser = argparse.ArgumentParser(description='v2e: generate simulated DVS events
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser=v2e_args(parser)
-parser.add_argument("--rotate180", type=bool, default=False,
-                    help="rotate all output 180 deg.")
+parser.add_argument("--rotate180", type=bool, default=False, help="rotate all output 180 deg.")
 # https://kislyuk.github.io/argcomplete/#global-completion
 # Shellcode (only necessary if global completion is not activated - see Global completion below), to be put in e.g. .bashrc:
 # eval "$(register-python-argcomplete v2e.py)"
 argcomplete.autocomplete(parser)
 args = parser.parse_args()
+
+
+
 
 if __name__ == "__main__":
     overwrite=args.overwrite
@@ -83,13 +85,8 @@ if __name__ == "__main__":
         logger.error('set neither or both of output_width and output_height')
         quit()
 
-    arguments_list = 'arguments:\n'
-    for arg, value in args._get_kwargs():
-        arguments_list += "{}:\t{}\n".format(arg, value)
-    logger.info(arguments_list)
 
-    with open(os.path.join(args.output_folder, "info.txt"), "w") as f:
-        f.write(arguments_list)
+    write_args_info(args,output_folder)
 
     start_time=args.start_time
     stop_time=args.stop_time
@@ -134,7 +131,7 @@ if __name__ == "__main__":
         logger.warning('num frames is less than 2, probably cannot be determined from cv2.CAP_PROP_FRAME_COUNT')
 
     check_lowpass(cutoff_hz,srcFps*slowdown_factor,logger)
-    slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview, rotate180=rotate180)
+    slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview)
 
     srcTotalDuration= (srcNumFrames - 1) * srcFrameIntervalS
     start_frame=int(srcNumFrames * (start_time / srcTotalDuration)) if start_time else 0
@@ -160,7 +157,7 @@ if __name__ == "__main__":
                  )
 
     emulator = EventEmulator(pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, shot_noise_rate_hz=shot_noise_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
-    eventRenderer = EventRenderer(frame_rate_hz=dvsFps,output_path=output_folder, dvs_vid=dvs_vid, preview=preview, rotate180=rotate180, full_scale_count=dvs_vid_full_scale)
+    eventRenderer = EventRenderer(frame_rate_hz=dvsFps,output_path=output_folder, dvs_vid=dvs_vid, preview=preview, full_scale_count=dvs_vid_full_scale)
 
     frame0 = None
     frame1 = None  # rotating buffers for slomo
