@@ -80,6 +80,9 @@ class DDD20SimpleReader(object):
             fname, self.numPackets, self.firstTimeS, self.lastTimeS, self.durationS
         ))
 
+        self.lastSearchTime=None # cache last search speed up search
+        self.lastSearchPacketNumber=None
+
         # logger.info('Sample DAVIS data is the following')
         # i=0
         # for dat in self.davisData:
@@ -146,6 +149,9 @@ class DDD20SimpleReader(object):
 
         """
         logger.info('searching for time {}'.format(timeS))
+        start=self.firstPacketNumber
+        if self.lastSearchTime is not None and self.lastSearchPacketNumber is not None and self.lastSearchTime<timeS:
+            start=self.lastSearchPacketNumber
         for k in tqdm(range(self.firstPacketNumber,self.numPackets),unit='packet',desc='ddd-h5-search'):
             data=self.readPacket(k)
             if not data: # maybe cannot parse this particular type of packet (e.g. imu6)
@@ -153,6 +159,8 @@ class DDD20SimpleReader(object):
             t=data['timestamp']
             if t>=self.firstTimeS+timeS:
                 logger.info('\nfound start time '+str(timeS)+' at packet '+str(k))
+                self.lastSearchTime=timeS
+                self.lastSearchPacketNumber=k
                 return k
         logger.warning('\ncould not find start time '+str(timeS)+' before end of file')
         return False

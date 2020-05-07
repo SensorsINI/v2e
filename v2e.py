@@ -25,7 +25,7 @@ from tqdm import tqdm
 
 import v2e.desktop as desktop
 from v2e.v2e_utils import all_images, read_image, OUTPUT_VIDEO_FPS, \
-    v2e_args, check_lowpass, write_args_info
+    v2e_args, check_lowpass, write_args_info, v2e_quit
 from v2e.renderer import EventRenderer
 from v2e.slomo import SuperSloMo
 from v2e.emulator import EventEmulator
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     f=not overwrite and os.path.exists(output_folder) and os.listdir(output_folder)
     if f:
         logger.error('output folder {} already exists\n it holds files {}\n - use --overwrite'.format(os.path.abspath(output_folder),f))
-        quit()
+        v2e_quit()
 
     if not os.path.exists(output_folder):
         logger.info('making output folder {}'.format(output_folder))
@@ -68,21 +68,24 @@ if __name__ == "__main__":
 
     if (args.output_width != None) ^ (args.output_width != None):
         logger.error('provide both or neither of output_width and output_height')
-        quit()
+        v2e_quit()
     input_file = args.input
     if not input_file:
         input_file = inputVideoFileDialog()
         if not input_file:
             logger.info('no file selected, quitting')
-            quit()
+            v2e_quit()
 
     output_width: int = args.output_width
     output_height: int = args.output_height
     if (output_width is None) ^ (output_height is None):
         logger.error('set neither or both of output_width and output_height')
-        quit()
+        v2e_quit()
 
-    write_args_info(args,output_folder)
+    # input file checking
+    if not input_file or not Path(input_file).exists():
+        logger.error('input file {} does not exist'.format(input_file))
+        v2e_quit()
 
     start_time=args.start_time
     stop_time=args.stop_time
@@ -107,13 +110,10 @@ if __name__ == "__main__":
     rotate180=args.rotate180
     batch_size=args.batch_size
 
+    write_args_info(args,output_folder)
+
     import time
     time_run_started = time.time()
-
-    # input file checking
-    if not input_file or not Path(input_file).exists():
-        logger.error('input file {} does not exist'.format(input_file))
-        quit()
 
     logger.info("opening video input " + input_file)
 
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     srcFps = cap.get(cv2.CAP_PROP_FPS)
     if srcFps == 0:
         logger.error('source {} fps is 0'.format(input_file))
-        quit()
+        v2e_quit()
     srcFrameIntervalS = 1. / srcFps
     slomoTimestampResolutionS = srcFrameIntervalS / slowdown_factor
     # https://stackoverflow.com/questions/25359288/how-to-know-total-number-of-frame-in-a-file-with-cv2-in-python
@@ -247,7 +247,7 @@ if __name__ == "__main__":
     cap.release()
     if num_frames == 0:
         logger.error('no frames read from file')
-        quit()
+        v2e_quit()
     totalTime=(time.time() - time_run_started)
     framePerS=num_frames/totalTime
     sPerFrame=1/framePerS
@@ -265,9 +265,5 @@ if __name__ == "__main__":
         logger.warning('{}: could not open {} in desktop'.format(e, output_folder))
     eventRenderer.cleanup()
     slomo.cleanup()
-    try:
-        quit()
-    finally:
-        sys.exit()
-
+    v2e_quit()
 

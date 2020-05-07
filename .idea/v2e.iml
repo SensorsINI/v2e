@@ -5,6 +5,10 @@
     <orderEntry type="jdk" jdkName="Python 3.7 (pt-v2e)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
+  <component name="PackageRequirementsSettings">
+    <option name="removeUnused" value="true" />
+    <option name="keepMatchingSpecifier" value="false" />
+  </component>
   <component name="PyDocumentationSettings">
     <option name="format" value="NUMPY" />
     <option name="myDocStringFormat" value="NumPy" />

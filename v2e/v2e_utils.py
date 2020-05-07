@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import cv2
 import glob
@@ -67,6 +69,13 @@ def v2e_args(parser):
     #     quit(1)
 
     return parser
+
+def v2e_quit():
+    try:
+        quit() # not defined in pydev console, e.g. running in pycharm
+    finally:
+        sys.exit()
+
 
 def check_lowpass(cutoffhz, fs, logger):
     import numpy as np
