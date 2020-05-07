@@ -54,9 +54,6 @@ parser.add_argument("--rotate180", type=bool, default=False, help="rotate all ou
 argcomplete.autocomplete(parser)
 args = parser.parse_args()
 
-
-
-
 if __name__ == "__main__":
     overwrite=args.overwrite
     output_folder=args.output_folder
@@ -85,7 +82,6 @@ if __name__ == "__main__":
         logger.error('set neither or both of output_width and output_height')
         quit()
 
-
     write_args_info(args,output_folder)
 
     start_time=args.start_time
@@ -96,6 +92,8 @@ if __name__ == "__main__":
     sigma_thres = args.sigma_thres
     cutoff_hz=args.cutoff_hz
     leak_rate_hz=args.leak_rate_hz
+    if leak_rate_hz>0 and sigma_thres==0:
+        logger.warning('leak_rate_hz>0 but sigma_thres==0, so all leak events will be synchronous')
     shot_noise_rate_hz=args.shot_noise_rate_hz
     dvs_vid = args.dvs_vid
     dvs_vid_full_scale = args.dvs_vid_full_scale
@@ -107,6 +105,7 @@ if __name__ == "__main__":
     vid_slomo = args.vid_slomo
     preview=not args.no_preview
     rotate180=args.rotate180
+    batch_size=args.batch_size
 
     import time
     time_run_started = time.time()
@@ -131,7 +130,7 @@ if __name__ == "__main__":
         logger.warning('num frames is less than 2, probably cannot be determined from cv2.CAP_PROP_FRAME_COUNT')
 
     check_lowpass(cutoff_hz,srcFps*slowdown_factor,logger)
-    slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview)
+    slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview, batch_size=batch_size) # only works with batch_size=1 now
 
     srcTotalDuration= (srcNumFrames - 1) * srcFrameIntervalS
     start_frame=int(srcNumFrames * (start_time / srcTotalDuration)) if start_time else 0
@@ -159,8 +158,6 @@ if __name__ == "__main__":
     emulator = EventEmulator(pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, shot_noise_rate_hz=shot_noise_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
     eventRenderer = EventRenderer(frame_rate_hz=dvsFps,output_path=output_folder, dvs_vid=dvs_vid, preview=preview, full_scale_count=dvs_vid_full_scale)
 
-    frame0 = None
-    frame1 = None  # rotating buffers for slomo
     ts0 = 0
     ts1 = srcFrameIntervalS  # timestamps of src frames
     num_frames = 0
@@ -172,45 +169,51 @@ if __name__ == "__main__":
         for i in range(start_frame):
             ret, _ = cap.read()
             if not ret: raise ValueError('something wrong, got to end of file before reaching start_frame')
+
     logger.info('processing frames {} to {} from video input'.format(start_frame,stop_frame))
-    for frameNumber in tqdm(range(start_frame,stop_frame),unit='fr',desc='v2e'):
-    # while (cap.isOpened()):
-        if cap.isOpened():
-            ret, frame = cap.read()
-        else:
-            break
-        if not ret:
-            break
-        num_frames += 1
-        if frame1 is None: # first frame, just initialize sizes
-            logger.info('input frames have shape {}'.format(frame.shape))
-            inputHeight = frame.shape[0]
-            inputWidth = frame.shape[1]
-            inputChannels= frame.shape[2]
-            if (output_width is None) and (output_height is None):
-                output_width = inputWidth
-                output_height = inputHeight
-                logger.warning('output size ({}x{}) was set automatically to input video size\n    Are you sure you want this? It might be slow.\n    Consider using --output_width and --output_height'.format(output_width,output_height))
-        if output_height and output_width and (inputHeight != output_height or inputWidth != output_width):
-            dim = (output_width, output_height)
-            (fx, fy) = (float(output_width) / inputWidth, float(output_height) / inputHeight)
-            frame = cv2.resize(src=frame, dsize=dim, fx=fx, fy=fy, interpolation=cv2.INTER_AREA)
-        if  inputChannels == 3: # color
-            if frame1 is None: # print info once
-                logger.info('converting input frames from RGB color to luma')
-#todo would break resize if input is gray frames
-            # convert RGB frame into luminance.
-            frame=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # much faster
-                # frame = (0.2126 * frame[:, :, 0] +
-                #          0.7152 * frame[:, :, 1] +
-                #          0.0722 * frame[:, :, 2])
-        frame0 = frame1  # new first frame is old 2nd frame
-        frame1 = frame.astype(np.uint8)  # new 2nd frame is latest input
-        if frame0 is None:
-            continue  # didn't get two frames yet
+    batchFrames = []
+    # step over input by batch_size steps
+    for frameNumber in tqdm(range(start_frame,stop_frame,batch_size),unit='fr',desc='v2e'):
+         # each time add batch_size frames to previous frame which we made first frame at end of interpolating and generating events
+        for i in range(batch_size):
+            if cap.isOpened():
+                ret, inputVideoFrame = cap.read()
+            else:
+                break
+            if not ret:
+                break
+            num_frames += 1
+            if len(batchFrames)==0: # first frame, just initialize sizes
+                logger.info('input frames have shape {}'.format(inputVideoFrame.shape))
+                inputHeight = inputVideoFrame.shape[0]
+                inputWidth = inputVideoFrame.shape[1]
+                inputChannels= inputVideoFrame.shape[2]
+                if (output_width is None) and (output_height is None):
+                    output_width = inputWidth
+                    output_height = inputHeight
+                    logger.warning('output size ({}x{}) was set automatically to input video size\n    Are you sure you want this? It might be slow.\n    Consider using --output_width and --output_height'.format(output_width,output_height))
+            if output_height and output_width and (inputHeight != output_height or inputWidth != output_width):
+                dim = (output_width, output_height)
+                (fx, fy) = (float(output_width) / inputWidth, float(output_height) / inputHeight)
+                inputVideoFrame = cv2.resize(src=inputVideoFrame, dsize=dim, fx=fx, fy=fy, interpolation=cv2.INTER_AREA)
+            if  inputChannels == 3: # color
+                if len(batchFrames)==0: # print info once
+                    logger.info('converting input frames from RGB color to luma')
+            #todo would break resize if input is gray frames
+                # convert RGB frame into luminance.
+                inputVideoFrame=cv2.cvtColor(inputVideoFrame, cv2.COLOR_BGR2GRAY) # much faster
+                    # frame = (0.2126 * frame[:, :, 0] +
+                    #          0.7152 * frame[:, :, 1] +
+                    #          0.0722 * frame[:, :, 2])
+            batchFrames.append(inputVideoFrame)
+        if len(batchFrames)<2:
+            continue # need at least 2 frames
+
         with TemporaryDirectory() as interpFramesFolder:
-            twoFrames = np.stack([frame0, frame1], axis=0)
-            slomo.interpolate(twoFrames, interpFramesFolder)  # interpolated frames are stored to tmpfolder as 1.png, 2.png, etc
+            slomoInputFrames=batchFrames[0].astype(np.uint8) # make input to slomo
+            for f in batchFrames[1:]:
+                slomoInputFrames = np.stack((slomoInputFrames,f.astype(np.uint8)), axis=0)
+            slomo.interpolate(slomoInputFrames, interpFramesFolder)  # interpolated frames are stored to tmpfolder as 1.png, 2.png, etc
             interpFramesFilenames = all_images(interpFramesFolder)  # read back to memory
             n = len(interpFramesFilenames)  # number of interpolated frames, will be 1 if slowdown_factor==1
             events = np.empty((0, 4), float)
@@ -236,6 +239,9 @@ if __name__ == "__main__":
             eventRenderer.render_events_to_frames(events, height=output_height, width=output_width)
             ts0 = ts1
             ts1 += srcFrameIntervalS
+
+        batchFrames=[inputVideoFrame] # save last frame of input as 1st frame of new batch
+
 
 
     cap.release()

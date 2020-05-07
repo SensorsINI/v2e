@@ -29,9 +29,9 @@ def v2e_args(parser):
                         help="threshold in log_e intensity change to trigger a negative event.")
     parser.add_argument("--sigma_thres", type=float, default=0.03,
                         help="1-std deviation threshold variation in log_e intensity change.")
-    parser.add_argument("--cutoff_hz", type=float, default=300,
+    parser.add_argument("--cutoff_hz", type=float, default=0,
                         help="photoreceptor second-order IIR lowpass filter cutoff-off 3dB frequency in Hz - see https://ieeexplore.ieee.org/document/4444573")
-    parser.add_argument("--leak_rate_hz", type=float, default=0.05,
+    parser.add_argument("--leak_rate_hz", type=float, default=0,
                         help="leak event rate per pixel in Hz - see https://ieeexplore.ieee.org/abstract/document/7962235")
     parser.add_argument("--shot_noise_rate_hz", type=float, default=0,
                         help="Temporal noise rate of ON+OFF events in darkest parts of scene; reduced in brightest parts. ")
@@ -55,6 +55,7 @@ def v2e_args(parser):
     parser.add_argument("--vid_slomo", type=str, default="video_slomo.avi", help="output slomo of src video slowed down by slowdown_factor.")
     parser.add_argument("--no_preview", action="store_true", help="disable preview in cv2 windows for faster processing.")
     parser.add_argument("--overwrite", action="store_true", help="overwrites files in existing folder (checks existence of non-empty output_folder).")
+    parser.add_argument("--batch_size", type=int, default=1, help="batch size for SuperSloMo. May only support batch_size=1.")
 
     # # perform basic checks, however this fails if script adds more arguments later
     # args = parser.parse_args()
@@ -95,7 +96,8 @@ def write_args_info(args, path):
     for arg, value in args._get_kwargs():
         arguments_list += "{}:\t{}\n".format(arg, value)
     logger.info(arguments_list)
-    argsFilename = main.__file__.strip('.py') + '-args.txt'
+    basename=os.path.basename(main.__file__)
+    argsFilename = basename.strip('.py') + '-args.txt'
     with open(os.path.join(path, argsFilename), "w") as f:
         f.write(arguments_list)
 

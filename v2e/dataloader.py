@@ -70,7 +70,12 @@ class Frames(data.Dataset):
         """Return the size of the dataset.
             @Return: int.
         """
-
+        # from SuperSloMo github: https://github.com/avinashpaliwal/Super-SloMo/blob/a3be3dbc363f48f2cdaafc7224597dbd5a0d9370/dataloader.py#L412
+        #
+        # Using `-1` so that dataloader accesses only upto
+        # frames [N-1, N] and not [N, N+1] which because frame
+        # N+1 doesn't exist.
+        # ??? why is array 1 less than number of images? Is it to avoid double processing the last frame of batch?
         return self.array.shape[0] - 1
 
     def __repr__(self):

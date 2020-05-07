@@ -6,6 +6,8 @@ import numpy as np
 import argparse
 from tempfile import TemporaryDirectory
 import matplotlib.pyplot as plt
+import matplotlib
+# matplotlib.use("TkAgg") # use in pycharm to avoid scientific mode plot?
 from tqdm import tqdm
 
 from v2e import desktop
@@ -23,12 +25,12 @@ logging.addLevelName(logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelNa
 logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser(description='ddd_find_thresholds.py: generate simulated DVS events from video with sweep of thresholds to compare with real DVS to find optimal thresholds.',
-                                 epilog='Run with no --input to open file dialog', allow_abbrev=True,
+                                 epilog='Run with no --input to open file dialog.\nIf slomo.avi aleady exists in output_folder, script will load frames from there rather than regenerating them with SuperSloMo.', allow_abbrev=True,
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--start", type=float, default=0.0, help="start point of video stream")
 parser.add_argument("--stop", type=float, default=5.0, help="stop point of video stream")
 parser.add_argument("-i", "--input", type=str, help="path of DDD .hdf5 file")
-parser.add_argument("-o", "--output_folder", type=str, default='output/find_thresholds', help="path to where output is stored")
+parser.add_argument("-o", "--output_folder", type=str,required=True, help="path to where output is stored (usually previous output folder from ddd_v2e.py)")
 parser.add_argument("--slowdown_factor", type=int, default=10, help="slow motion factor")
 parser.add_argument("--slomo_model", type=str, default="input/SuperSloMo39.ckpt", help="path of slomo_model checkpoint.")
 parser.add_argument("--no_preview", action="store_true", help="disable preview in cv2 windows for faster processing.")
@@ -71,10 +73,22 @@ if __name__ == "__main__":
     output_folder = args.output_folder
     Path(output_folder).mkdir(parents=True, exist_ok=True)
 
+    slomoVideoFile=os.path.join(output_folder,'slomo.avi')
+    if Path(slomoVideoFile).exists():
+        logger.info('{} already exists, will use frames from it'.format(slomoVideoFile))
+    else:
+        slomoVideoFile=None
+
     frames, dvsEvents = [], []
     dddReader = DDD20SimpleReader(input_file,rotate180=rotate180)
     frames, dvsEvents = dddReader.readEntire(startTimeS=args.start, stopTimeS=args.stop)
     if frames is None or dvsEvents is None: raise Exception('no frames or no events')
+
+    # debug
+    ff=frames[0]['frame'].flatten()
+    b=np.arange(0,256,1)
+    plt.hist(ff,b)
+    plt.show()
 
     dvsEvents=select_events_in_roi(dvsEvents,x,y)
     dvsOnCount = np.count_nonzero((dvsEvents[:, 3] == 1))

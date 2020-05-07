@@ -41,8 +41,8 @@ class SuperSloMo(object):
         slowdown_factor,
         batch_size=1,
         video_path=None,
-        vid_orig=None,
-        vid_slomo=None,
+        vid_orig='original.avi',
+        vid_slomo='slomo.avi',
             preview=False
     ):
         """
@@ -57,9 +57,11 @@ class SuperSloMo(object):
         batch_size: int,
             batch size.
         video_path: str or None,
-            str if videos need to be stored else None
-         vid_orig: str or None,
-            name of output original (input) video at slo motion rate
+            str path to folder where you want videos of original and slomo video to be stored, else None
+        vid_orig: str or None,
+            name of output original (input) video at slo motion rate, needs video_path to be set too
+        vid_slomo: str or None,
+            name of slomo video file, needs video_path to be set too
         """
 
         if torch.cuda.is_available():
@@ -74,8 +76,8 @@ class SuperSloMo(object):
         self.video_path = video_path
         self.preview=preview
         self.preview_resized=False
-        self.vid_orig = vid_orig,
-        self.vid_slomo = vid_slomo,
+        self.vid_orig = vid_orig
+        self.vid_slomo = vid_slomo
 
         # initialize the Transform instances.
         self.to_tensor, self.to_image = self.__transform()
@@ -200,16 +202,16 @@ class SuperSloMo(object):
             self.model_loaded=True
 
         # construct AVI video output writer now that we know the frame size
-        if self.video_path is not None and not self.ori_writer:
+        if self.video_path is not None and self.vid_orig is not None and not self.ori_writer:
             self.ori_writer = video_writer(
-                os.path.join(self.video_path, "original.avi"),
+                os.path.join(self.video_path, self.vid_orig),
                 ori_dim[1],
                 ori_dim[0]
             )
 
-        if self.video_path is not None and not self.slomo_writer:
+        if self.video_path is not None and self.vid_slomo is not None and not self.slomo_writer:
             self.slomo_writer = video_writer(
-                os.path.join(self.video_path, "slomo.avi"),
+                os.path.join(self.video_path, self.vid_slomo),
                 ori_dim[1],
                 ori_dim[0]
             )
@@ -219,9 +221,8 @@ class SuperSloMo(object):
         with torch.no_grad():
             # logger.debug("using " + str(output_folder) + " to store interpolated frames")
             nImages=images.shape[0]
-            disableTqdm=nImages<3
+            disableTqdm=nImages<=max(self.batch_size,4)
             for _, (frame0, frame1) in enumerate(tqdm(video_frame_loader, desc='slomo-interp',unit='fr',disable=disableTqdm), 0):
-            # for _, (frame0, frame1) in enumerate(video_frame_loader, 0):
 
                 I0 = frame0.to(self.device)
                 I1 = frame1.to(self.device)

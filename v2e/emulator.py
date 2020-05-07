@@ -90,7 +90,7 @@ class EventEmulator(object):
         dvs_aedat2, dvs_h5, dvs_text: str
             names of output data files or None
         show_input: str,
-            None or 'baseLogFrame','lpLogFrame', 'diff_frame'
+            None or 'new_frame' 'baseLogFrame','lpLogFrame', 'diff_frame'
         """
 
         logger.info("ON/OFF log_e temporal contrast thresholds: {} / {} +/- {}".format(pos_thres, neg_thres, sigma_thres))
@@ -250,8 +250,10 @@ class EventEmulator(object):
         diff_frame = self.lpLogFrame1 - self.baseLogFrame
 
         if self.show_input:
-            if self.show_input == 'baseLogFrame':
-                self._show(self.baseLogFrame)
+            if self.show_input == 'new_frame':
+                self._show(new_frame)
+            elif self.show_input == 'lpLogFrame':
+                self._show(self.lpLogFrame1)
             elif self.show_input == 'lpLogFrame':
                 self._show(self.lpLogFrame1)
             elif self.show_input == 'diff_frame':
@@ -333,27 +335,14 @@ class EventEmulator(object):
             if num_events > 0:
                 events.append(events_tmp)
 
-
-            if i == 0:  # update the base frame only once, after we know how many events per pixel
-                # add to memorized brightness values just the events we emitted.
-                # don't add the remainder. the next aps frame might have sufficient value
-                # to trigger another event or it might not,
-                # but we are correct in not storing the current frame brightness
-                if num_pos_events > 0:
-                    self.baseLogFrame[pos_cord] += \
-                        pos_evts_frame[pos_cord] * self.pos_thres[pos_cord]
-                if num_neg_events > 0:
-                    self.baseLogFrame[neg_cord] -= \
-                        neg_evts_frame[neg_cord] * self.neg_thres[neg_cord]  # neg_thres is >0
-
                 if self.shot_noise_rate_hz>0:
                     # NOISE: add temporal noise here by simple Poisson process that has a base noise rate self.shot_noise_rate_hz.
                     # If there is such noise event, then we output event from each such pixel
 
                     # the shot noise rate varies with intensity: for lowest intensity the rate rises to parameter.
                     # the noise is reduced by factor SHOT_NOISE_INTEN_FACTOR for brightest intensities
-                    SHOT_NOISE_INTEN_FACTOR=0.1
-                    shotNoiseFactor=((self.shot_noise_rate_hz/2)*deltaTime) *((SHOT_NOISE_INTEN_FACTOR-1)*inten01+1)
+                    SHOT_NOISE_INTEN_FACTOR=0.25
+                    shotNoiseFactor=((self.shot_noise_rate_hz/2)*deltaTime/num_iters) *((SHOT_NOISE_INTEN_FACTOR-1)*inten01+1)
                                                                     # =1 for inten=0 and SHOT_NOISE_INTEN_FACTOR for inten=1
 
                     rand01=np.random.uniform(size=self.baseLogFrame.shape) # draw samples
@@ -394,6 +383,20 @@ class EventEmulator(object):
                         self.baseLogFrame[shotOffCord] += \
                             shotOffCord[shotOffCord] * self.neg_thres[shotOffCord]
                     # end temporal noise
+
+
+            if i == 0:  # update the base frame only once, after we know how many events per pixel
+                # add to memorized brightness values just the events we emitted.
+                # don't add the remainder. the next aps frame might have sufficient value
+                # to trigger another event or it might not,
+                # but we are correct in not storing the current frame brightness
+                if num_pos_events > 0:
+                    self.baseLogFrame[pos_cord] += \
+                        pos_evts_frame[pos_cord] * self.pos_thres[pos_cord]
+                if num_neg_events > 0:
+                    self.baseLogFrame[neg_cord] -= \
+                        neg_evts_frame[neg_cord] * self.neg_thres[neg_cord]  # neg_thres is >0
+
 
         if len(events) > 0:
             events = np.vstack(events)

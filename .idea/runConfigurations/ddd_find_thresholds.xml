@@ -10,7 +10,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/dataset_scripts/ddd/ddd_find_thresholds.py" />
-    <option name="PARAMETERS" value="--input=input/rec1501350986.hdf5 --start=25 --stop=27 --x 310 320 --y 100 110" />
+    <option name="PARAMETERS" value="--input=input/rec1501350986.hdf5 -o output/ddd20-v2e-long --start=25 --stop=27 --x 310 320 --y 100 110" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />
