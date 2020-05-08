@@ -6,8 +6,7 @@
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PackageRequirementsSettings">
-    <option name="removeUnused" value="true" />
-    <option name="keepMatchingSpecifier" value="false" />
+    <option name="requirementsPath" value="E:\Dropbox\GitHub\SensorsINI\v2e\requirements.txt" />
   </component>
   <component name="PyDocumentationSettings">
     <option name="format" value="NUMPY" />

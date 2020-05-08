@@ -100,11 +100,10 @@ usage: v2e.py [-h] [-i INPUT] [--start_time START_TIME]
               [--frame_rate FRAME_RATE] [--dvs_vid DVS_VID]
               [--dvs_vid_full_scale DVS_VID_FULL_SCALE] [--dvs_h5 DVS_H5]
               [--dvs_aedat2 DVS_AEDAT2] [--dvs_text DVS_TEXT]
-              [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO] [--no_preview]
-              [--overwrite] [--rotate180 ROTATE180]
-
+              [--dvs_numpy DVS_NUMPY] [--vid_orig VID_ORIG]
+              [--vid_slomo VID_SLOMO] [--no_preview] [--overwrite]
+              [--batch_size BATCH_SIZE] [--rotate180 ROTATE180]
 v2e: generate simulated DVS events from video.
-
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT, --input INPUT
@@ -128,11 +127,11 @@ optional arguments:
                         photoreceptor second-order IIR lowpass filter cutoff-
                         off 3dB frequency in Hz - see
                         https://ieeexplore.ieee.org/document/4444573 (default:
-                        300)
+                        0)
   --leak_rate_hz LEAK_RATE_HZ
                         leak event rate per pixel in Hz - see
                         https://ieeexplore.ieee.org/abstract/document/7962235
-                        (default: 0.05)
+                        (default: 0)
   --shot_noise_rate_hz SHOT_NOISE_RATE_HZ
                         Temporal noise rate of ON+OFF events in darkest parts
                         of scene; reduced in brightest parts. (default: 0)
@@ -170,6 +169,11 @@ optional arguments:
   --dvs_text DVS_TEXT   output DVS events as text file with one event per line
                         [timestamp (float s), x, y, polarity (0,1)]. (default:
                         None)
+  --dvs_numpy DVS_NUMPY
+                        accumulates DVS events to memory and writes final
+                        numpy data file with this name holding vector of
+                        events. WARNING: memory use is unbounded. (default:
+                        None)
   --vid_orig VID_ORIG   output src video at same rate as slomo video (with
                         duplicated frames). (default: video_orig.avi)
   --vid_slomo VID_SLOMO
@@ -179,9 +183,11 @@ optional arguments:
                         (default: False)
   --overwrite           overwrites files in existing folder (checks existence
                         of non-empty output_folder). (default: False)
+  --batch_size BATCH_SIZE
+                        batch size for SuperSloMo. May only support
+                        batch_size=1. (default: 1)
   --rotate180 ROTATE180
                         rotate all output 180 deg. (default: False)
-
 Run with no --input to open file dialog
 
 
