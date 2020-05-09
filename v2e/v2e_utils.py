@@ -22,42 +22,55 @@ def v2e_args(parser):
         prepend='../../'
     else:
         prepend=''
-    parser.add_argument("-i", "--input", type=str, help="input video file; leave empty for file chooser dialog.")
-    parser.add_argument("--start_time", type=float, default=None, help="start at this time in seconds in video.")
-    parser.add_argument("--stop_time", type=float, default=None, help="stop at this time in seconds in video.")
-    parser.add_argument("--pos_thres", type=float, default=0.21,
+
+
+    modelGroup=parser.add_argument_group('Model')
+    modelGroup.add_argument("--pos_thres", type=float, default=0.21,
                         help="threshold in log_e intensity change to trigger a positive event.")
-    parser.add_argument("--neg_thres", type=float, default=0.17,
+    modelGroup.add_argument("--neg_thres", type=float, default=0.17,
                         help="threshold in log_e intensity change to trigger a negative event.")
-    parser.add_argument("--sigma_thres", type=float, default=0.03,
+    modelGroup.add_argument("--sigma_thres", type=float, default=0.03,
                         help="1-std deviation threshold variation in log_e intensity change.")
-    parser.add_argument("--cutoff_hz", type=float, default=0,
+    modelGroup.add_argument("--cutoff_hz", type=float, default=0,
                         help="photoreceptor second-order IIR lowpass filter cutoff-off 3dB frequency in Hz - see https://ieeexplore.ieee.org/document/4444573")
-    parser.add_argument("--leak_rate_hz", type=float, default=0,
+    modelGroup.add_argument("--leak_rate_hz", type=float, default=0,
                         help="leak event rate per pixel in Hz - see https://ieeexplore.ieee.org/abstract/document/7962235")
-    parser.add_argument("--shot_noise_rate_hz", type=float, default=0,
+    modelGroup.add_argument("--shot_noise_rate_hz", type=float, default=0,
                         help="Temporal noise rate of ON+OFF events in darkest parts of scene; reduced in brightest parts. ")
-    parser.add_argument("--slowdown_factor", type=int, default=10,
+
+
+    sloMoGroup=parser.add_argument_group('SloMo upsampling')
+    sloMoGroup.add_argument("--slomo_model", type=str, default=prepend+"input/SuperSloMo39.ckpt", help="path of slomo_model checkpoint.")
+    sloMoGroup.add_argument("--batch_size", type=int, default=1, help="batch size for SuperSloMo. May only support batch_size=1.")
+    sloMoGroup.add_argument("--no_preview", action="store_true", help="disable preview in cv2 windows for faster processing.")
+    sloMoGroup.add_argument("--slowdown_factor", type=int, default=10,
                         help="slow motion factor; if the input video has frame rate fps, then the DVS events will have time resolution of 1/(fps*slowdown_factor).")
-    parser.add_argument("--output_height", type=int, default=260,
-                        help="height of output DVS data in pixels. If None, same as input video.")
-    parser.add_argument("--output_width", type=int, default=346,
-                        help="width of output DVS data in pixels. If None, same as input video.")
-    parser.add_argument("--slomo_model", type=str, default=prepend+"input/SuperSloMo39.ckpt", help="path of slomo_model checkpoint.")
-    parser.add_argument("-o", "--output_folder", type=str, required=True, help="folder to store outputs.")
-    parser.add_argument("--frame_rate", type=int, default=300,
-                        help="equivalent frame rate of --dvs_vid output video; the events will be accummulated as this sample rate; DVS frames will be accumulated for duration 1/frame_rate")
-    parser.add_argument("--dvs_vid", type=str, default="dvs-video.avi", help="output DVS events as AVI video at frame_rate.")
-    parser.add_argument("--dvs_vid_full_scale", type=int, default=3, help="set full scale count for DVS videos to be this many ON or OFF events.")
-    parser.add_argument("--dvs_h5", type=str, default=None, help="output DVS events as hdf5 event database.")
-    parser.add_argument("--dvs_aedat2", type=str, default=None, help="output DVS events as DAVIS346 camera AEDAT-2.0 event file for jAER; one file for real and one file for v2e events.")
-    parser.add_argument("--dvs_text", type=str, default=None, help="output DVS events as text file with one event per line [timestamp (float s), x, y, polarity (0,1)].")
-    parser.add_argument("--dvs_numpy", type=str, default=None, help="accumulates DVS events to memory and writes final numpy data file with this name holding vector of events. WARNING: memory use is unbounded.")
-    parser.add_argument("--vid_orig", type=str, default="video_orig.avi", help="output src video at same rate as slomo video (with duplicated frames).")
-    parser.add_argument("--vid_slomo", type=str, default="video_slomo.avi", help="output slomo of src video slowed down by slowdown_factor.")
-    parser.add_argument("--no_preview", action="store_true", help="disable preview in cv2 windows for faster processing.")
+
+    inGroup=parser.add_argument_group('Input')
+    inGroup.add_argument("-i", "--input", type=str, help="input video file; leave empty for file chooser dialog.")
+    inGroup.add_argument("--start_time", type=float, default=None, help="start at this time in seconds in video.")
+    inGroup.add_argument("--stop_time", type=float, default=None, help="stop at this time in seconds in video.")
+
+    outGroup=parser.add_argument_group('Output')
+    outGroup.add_argument("-o", "--output_folder", type=str, required=True, help="folder to store outputs.")
     parser.add_argument("--overwrite", action="store_true", help="overwrites files in existing folder (checks existence of non-empty output_folder).")
-    parser.add_argument("--batch_size", type=int, default=1, help="batch size for SuperSloMo. May only support batch_size=1.")
+    outGroup.add_argument("--frame_rate", type=int, default=300,
+                        help="equivalent frame rate of --dvs_vid output video; the events will be accummulated as this sample rate; DVS frames will be accumulated for duration 1/frame_rate")
+    outGroup.add_argument("--output_height", type=int, default=260,
+                        help="height of output DVS data in pixels. If None, same as input video.")
+    outGroup.add_argument("--output_width", type=int, default=346,
+                        help="width of output DVS data in pixels. If None, same as input video.")
+
+    outGroup.add_argument("--dvs_vid", type=str, default="dvs-video.avi", help="output DVS events as AVI video at frame_rate.")
+    outGroup.add_argument("--dvs_vid_full_scale", type=int, default=3, help="set full scale count for DVS videos to be this many ON or OFF events.")
+    outGroup.add_argument("--dvs_h5", type=str, default=None, help="output DVS events as hdf5 event database.")
+    outGroup.add_argument("--dvs_aedat2", type=str, default=None, help="output DVS events as DAVIS346 camera AEDAT-2.0 event file for jAER; one file for real and one file for v2e events.")
+    outGroup.add_argument("--dvs_text", type=str, default=None, help="output DVS events as text file with one event per line [timestamp (float s), x, y, polarity (0,1)].")
+    outGroup.add_argument("--dvs_numpy", type=str, default=None, help="accumulates DVS events to memory and writes final numpy data file with this name holding vector of events. WARNING: memory use is unbounded.")
+    outGroup.add_argument("--vid_orig", type=str, default="video_orig.avi", help="output src video at same rate as slomo video (with duplicated frames).")
+    outGroup.add_argument("--vid_slomo", type=str, default="video_slomo.avi", help="output slomo of src video slowed down by slowdown_factor.")
+
+
 
     # # perform basic checks, however this fails if script adds more arguments later
     # args = parser.parse_args()

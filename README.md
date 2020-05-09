@@ -89,31 +89,28 @@ _v2e.py_ reads a standard video (e.g. in .avi, .mp4, .mov, or .wmv) and generate
 ```
 (base)$ conda activate pt-v2e # activate your workspace
 (pt-v2e)$ python v2e.py -h
-usage: v2e.py [-h] [-i INPUT] [--start_time START_TIME]
-              [--stop_time STOP_TIME] [--pos_thres POS_THRES]
-              [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
-              [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
+usage: v2e.py [-h] [--pos_thres POS_THRES] [--neg_thres NEG_THRES]
+              [--sigma_thres SIGMA_THRES] [--cutoff_hz CUTOFF_HZ]
+              [--leak_rate_hz LEAK_RATE_HZ]
               [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ]
-              [--slowdown_factor SLOWDOWN_FACTOR]
+              [--slomo_model SLOMO_MODEL] [--batch_size BATCH_SIZE]
+              [--no_preview] [--slowdown_factor SLOWDOWN_FACTOR] [-i INPUT]
+              [--start_time START_TIME] [--stop_time STOP_TIME] -o
+              OUTPUT_FOLDER [--overwrite] [--frame_rate FRAME_RATE]
               [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
-              [--slomo_model SLOMO_MODEL] -o OUTPUT_FOLDER
-              [--frame_rate FRAME_RATE] [--dvs_vid DVS_VID]
-              [--dvs_vid_full_scale DVS_VID_FULL_SCALE] [--dvs_h5 DVS_H5]
-              [--dvs_aedat2 DVS_AEDAT2] [--dvs_text DVS_TEXT]
-              [--dvs_numpy DVS_NUMPY] [--vid_orig VID_ORIG]
-              [--vid_slomo VID_SLOMO] [--no_preview] [--overwrite]
-              [--batch_size BATCH_SIZE] [--rotate180 ROTATE180]
+              [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
+              [--dvs_h5 DVS_H5] [--dvs_aedat2 DVS_AEDAT2]
+              [--dvs_text DVS_TEXT] [--dvs_numpy DVS_NUMPY]
+              [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO]
+              [--rotate180 ROTATE180]
 v2e: generate simulated DVS events from video.
 optional arguments:
   -h, --help            show this help message and exit
-  -i INPUT, --input INPUT
-                        input video file; leave empty for file chooser dialog.
-                        (default: None)
-  --start_time START_TIME
-                        start at this time in seconds in video. (default:
-                        None)
-  --stop_time STOP_TIME
-                        stop at this time in seconds in video. (default: None)
+  --overwrite           overwrites files in existing folder (checks existence
+                        of non-empty output_folder). (default: False)
+  --rotate180 ROTATE180
+                        rotate all output 180 deg. (default: False)
+Model:
   --pos_thres POS_THRES
                         threshold in log_e intensity change to trigger a
                         positive event. (default: 0.21)
@@ -135,19 +132,29 @@ optional arguments:
   --shot_noise_rate_hz SHOT_NOISE_RATE_HZ
                         Temporal noise rate of ON+OFF events in darkest parts
                         of scene; reduced in brightest parts. (default: 0)
+SloMo upsampling:
+  --slomo_model SLOMO_MODEL
+                        path of slomo_model checkpoint. (default:
+                        input/SuperSloMo39.ckpt)
+  --batch_size BATCH_SIZE
+                        batch size for SuperSloMo. May only support
+                        batch_size=1. (default: 1)
+  --no_preview          disable preview in cv2 windows for faster processing.
+                        (default: False)
   --slowdown_factor SLOWDOWN_FACTOR
                         slow motion factor; if the input video has frame rate
                         fps, then the DVS events will have time resolution of
                         1/(fps*slowdown_factor). (default: 10)
-  --output_height OUTPUT_HEIGHT
-                        height of output DVS data in pixels. If None, same as
-                        input video. (default: 260)
-  --output_width OUTPUT_WIDTH
-                        width of output DVS data in pixels. If None, same as
-                        input video. (default: 346)
-  --slomo_model SLOMO_MODEL
-                        path of slomo_model checkpoint. (default:
-                        input/SuperSloMo39.ckpt)
+Input:
+  -i INPUT, --input INPUT
+                        input video file; leave empty for file chooser dialog.
+                        (default: None)
+  --start_time START_TIME
+                        start at this time in seconds in video. (default:
+                        None)
+  --stop_time STOP_TIME
+                        stop at this time in seconds in video. (default: None)
+Output:
   -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
                         folder to store outputs. (default: None)
   --frame_rate FRAME_RATE
@@ -155,6 +162,12 @@ optional arguments:
                         events will be accummulated as this sample rate; DVS
                         frames will be accumulated for duration 1/frame_rate
                         (default: 300)
+  --output_height OUTPUT_HEIGHT
+                        height of output DVS data in pixels. If None, same as
+                        input video. (default: 260)
+  --output_width OUTPUT_WIDTH
+                        width of output DVS data in pixels. If None, same as
+                        input video. (default: 346)
   --dvs_vid DVS_VID     output DVS events as AVI video at frame_rate.
                         (default: dvs-video.avi)
   --dvs_vid_full_scale DVS_VID_FULL_SCALE
@@ -179,15 +192,6 @@ optional arguments:
   --vid_slomo VID_SLOMO
                         output slomo of src video slowed down by
                         slowdown_factor. (default: video_slomo.avi)
-  --no_preview          disable preview in cv2 windows for faster processing.
-                        (default: False)
-  --overwrite           overwrites files in existing folder (checks existence
-                        of non-empty output_folder). (default: False)
-  --batch_size BATCH_SIZE
-                        batch size for SuperSloMo. May only support
-                        batch_size=1. (default: 1)
-  --rotate180 ROTATE180
-                        rotate all output 180 deg. (default: False)
 Run with no --input to open file dialog
 
 
