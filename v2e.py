@@ -48,6 +48,7 @@ parser = argparse.ArgumentParser(description='v2e: generate simulated DVS events
 
 parser=v2e_args(parser)
 parser.add_argument("--rotate180", type=bool, default=False, help="rotate all output 180 deg.")
+
 # https://kislyuk.github.io/argcomplete/#global-completion
 # Shellcode (only necessary if global completion is not activated - see Global completion below), to be put in e.g. .bashrc:
 # eval "$(register-python-argcomplete v2e.py)"
@@ -110,7 +111,13 @@ if __name__ == "__main__":
     rotate180=args.rotate180
     batch_size=args.batch_size
 
-    write_args_info(args,output_folder)
+    infofile=write_args_info(args,output_folder)
+
+    fh=logging.FileHandler(infofile)
+    fh.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
 
     import time
     time_run_started = time.time()
@@ -130,6 +137,8 @@ if __name__ == "__main__":
         logger.warning('num frames is less than 2, probably cannot be determined from cv2.CAP_PROP_FRAME_COUNT')
 
     check_lowpass(cutoff_hz,srcFps*slowdown_factor,logger)
+
+
     slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo, preview=preview, batch_size=batch_size) # only works with batch_size=1 now
 
     srcTotalDuration= (srcNumFrames - 1) * srcFrameIntervalS
@@ -155,8 +164,12 @@ if __name__ == "__main__":
                          dvsNumFrames, EngNumber(dvsDuration), EngNumber(dvsPlaybackDuration))
                  )
 
-    emulator = EventEmulator(pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz, shot_noise_rate_hz=shot_noise_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
-    eventRenderer = EventRenderer(frame_rate_hz=dvsFps,output_path=output_folder, dvs_vid=dvs_vid, preview=preview, full_scale_count=dvs_vid_full_scale)
+    emulator = EventEmulator(pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz, leak_rate_hz=leak_rate_hz, shot_noise_rate_hz=shot_noise_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
+
+    if args.dvs_params:
+        emulator.set_dvs_params(args.dvs_params)
+
+    eventRenderer = EventRenderer(frame_rate_hz=dvsFps, output_path=output_folder, dvs_vid=dvs_vid, preview=preview, full_scale_count=dvs_vid_full_scale)
 
     ts0 = 0
     ts1 = srcFrameIntervalS  # timestamps of src frames

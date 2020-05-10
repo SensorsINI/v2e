@@ -24,16 +24,18 @@ def v2e_args(parser):
         prepend=''
 
 
-    modelGroup=parser.add_argument_group('Model')
-    modelGroup.add_argument("--pos_thres", type=float, default=0.21,
+    modelGroup=parser.add_argument_group('DVS model')
+    modelGroup.add_argument("--dvs_params", type=str, default='clean',
+                        help="Easy optional setting of parameters for DVS model: 'clean', 'noisy'")
+    modelGroup.add_argument("--pos_thres", type=float, default=0.2,
                         help="threshold in log_e intensity change to trigger a positive event.")
-    modelGroup.add_argument("--neg_thres", type=float, default=0.17,
+    modelGroup.add_argument("--neg_thres", type=float, default=0.2,
                         help="threshold in log_e intensity change to trigger a negative event.")
     modelGroup.add_argument("--sigma_thres", type=float, default=0.03,
                         help="1-std deviation threshold variation in log_e intensity change.")
     modelGroup.add_argument("--cutoff_hz", type=float, default=0,
                         help="photoreceptor second-order IIR lowpass filter cutoff-off 3dB frequency in Hz - see https://ieeexplore.ieee.org/document/4444573")
-    modelGroup.add_argument("--leak_rate_hz", type=float, default=0,
+    modelGroup.add_argument("--leak_rate_hz", type=float, default=0.01,
                         help="leak event rate per pixel in Hz - see https://ieeexplore.ieee.org/abstract/document/7962235")
     modelGroup.add_argument("--shot_noise_rate_hz", type=float, default=0,
                         help="Temporal noise rate of ON+OFF events in darkest parts of scene; reduced in brightest parts. ")
@@ -55,7 +57,7 @@ def v2e_args(parser):
 
     outGroup=parser.add_argument_group('Output')
     outGroup.add_argument("-o", "--output_folder", type=str, required=True, help="folder to store outputs.")
-    parser.add_argument("--overwrite", action="store_true", help="overwrites files in existing folder (checks existence of non-empty output_folder).")
+    outGroup.add_argument("--overwrite", action="store_true", help="overwrites files in existing folder (checks existence of non-empty output_folder).")
 
     outGroup.add_argument("--frame_rate", type=int, default=300,
                         help="equivalent frame rate of --dvs_vid output video; the events will be accummulated as this sample rate; DVS frames will be accumulated for duration 1/frame_rate")
@@ -65,13 +67,11 @@ def v2e_args(parser):
                         help="width of output DVS data in pixels. If None, same as input video.")
 
     outGroup.add_argument("--dvs_vid", type=str, default="dvs-video.avi", help="output DVS events as AVI video at frame_rate.")
-    outGroup.add_argument("--dvs_vid_full_scale", type=int, default=3, help="set full scale count for DVS videos to be this many ON or OFF events.")
+    outGroup.add_argument("--dvs_vid_full_scale", type=int, default=2, help="set full scale event count histogram count for DVS videos to be this many ON or OFF events for full white or black.")
     outGroup.add_argument("--dvs_h5", type=str, default=None, help="output DVS events as hdf5 event database.")
     outGroup.add_argument("--dvs_aedat2", type=str, default=None, help="output DVS events as DAVIS346 camera AEDAT-2.0 event file for jAER; one file for real and one file for v2e events.")
     outGroup.add_argument("--dvs_text", type=str, default=None, help="output DVS events as text file with one event per line [timestamp (float s), x, y, polarity (0,1)].")
     outGroup.add_argument("--dvs_numpy", type=str, default=None, help="accumulates DVS events to memory and writes final numpy data file with this name holding vector of events. WARNING: memory use is unbounded.")
-
-
 
     # # perform basic checks, however this fails if script adds more arguments later
     # args = parser.parse_args()
@@ -103,7 +103,7 @@ def check_lowpass(cutoffhz, fs, logger):
     else:
         logger.info(' Lowpass cutoff is {}Hz with sample rate {}Hz (sample interval {}ms),\nIt has tau={}ms and mixing factor eps={:5.3f}'.format(eng(cutoffhz), eng(fs), eng(dt*1000), eng(tau*1000), eps))
 
-def write_args_info(args, path):
+def write_args_info(args, path)-> str:
     '''
     Writes arguments to logger and file named from startup __main__
     Parameters
@@ -112,7 +112,7 @@ def write_args_info(args, path):
 
     Returns
     -------
-    nothing
+    full path to file
     '''
     import __main__ as main
     arguments_list = 'arguments:\n'
@@ -121,8 +121,10 @@ def write_args_info(args, path):
     logger.info(arguments_list)
     basename=os.path.basename(main.__file__)
     argsFilename = basename.strip('.py') + '-args.txt'
-    with open(os.path.join(path, argsFilename), "w") as f:
+    filepath=os.path.join(path, argsFilename)
+    with open(filepath, "w") as f:
         f.write(arguments_list)
+    return filepath
 
 def inputVideoFileDialog():
     return _inputFileDialog([("Video/Data files", ".avi .mp4 .wmv"),('Any type','*')])

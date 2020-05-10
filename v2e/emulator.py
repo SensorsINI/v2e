@@ -9,6 +9,8 @@ Compute events from input frames.
 """
 
 import os
+import sys
+
 import cv2
 import numpy as np
 import logging
@@ -21,6 +23,7 @@ from v2e.output.ae_text_output import DVSTextOutput
 # import rosbag # not yet for python 3
 
 logger = logging.getLogger(__name__)
+
 
 
 def lin_log(x, threshold=20):
@@ -53,8 +56,8 @@ class EventEmulator(object):
 
     def __init__(
             self,
-            pos_thres=0.21,
-            neg_thres=0.17,
+            pos_thres=0.2,
+            neg_thres=0.2,
             sigma_thres=0.03,
             cutoff_hz=0,
             leak_rate_hz=0.1,
@@ -148,6 +151,10 @@ class EventEmulator(object):
     def _init(self, firstFrameLinear):
         logger.debug('initializing random temporal contrast thresholds from from base frame')
         self.baseLogFrame = lin_log(firstFrameLinear)  # base_frame are memorized lin_log pixel values
+        # If leak is non-zero, then initialize each pixel memorized value some fraction of on threshold below to create leak
+        # events from the start; otherwise leak would only gradually grow over time as pixels spike.
+        if self.leak_rate_hz>0:
+            self.baseLogFrame-=np.random.uniform(0,self.pos_thres,firstFrameLinear.shape)
         self.lpLogFrame0 = np.copy(self.baseLogFrame)  # initialize first stage of 2nd order IIR to first input
         self.lpLogFrame1 = np.copy(self.baseLogFrame)  # 2nd stage is initialized to same, so diff will be zero for first frame
         # take the variance of threshold into account.
@@ -156,6 +163,31 @@ class EventEmulator(object):
         self.pos_thres[self.pos_thres < 0.01] = 0.01
         self.neg_thres = np.random.normal(self.neg_thres, self.sigma_thres, firstFrameLinear.shape)
         self.neg_thres[self.neg_thres < 0.01] = 0.01
+
+
+    def set_dvs_params(self, model: str):
+        if model == 'clean':
+            self.pos_thres = 0.2
+            self.neg_thres = 0.2
+            self.sigma_thres = 0.02
+            self.cutoff_hz = 0
+            self.leak_rate_hz = 0
+            self.shot_noise_rate_hz = 0  # rate in hz of temporal noise events
+            self.refractory_period_s = 0  # todo not yet modeled
+
+        elif model == 'noisy':
+            self.pos_thres = 0.2
+            self.neg_thres = 0.2
+            self.sigma_thres = 0.05
+            self.cutoff_hz = 30
+            self.leak_rate_hz = 0.1
+            self.shot_noise_rate_hz = 0.1  # rate in hz of temporal noise events
+            self.refractory_period_s = 0  # todo not yet modeled
+
+        else:
+            logger.error("dvs_params {} not known: use 'clean' or 'noisy'".format(model))
+            sys.exit(1)
+        logger.info("set DVS model params with option '{}'".format(model))
 
     def reset(self):
         '''resets so that next use will reinitialize the base frame
