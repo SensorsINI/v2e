@@ -89,34 +89,35 @@ _v2e.py_ reads a standard video (e.g. in .avi, .mp4, .mov, or .wmv) and generate
 ```
 (base)$ conda activate pt-v2e # activate your workspace
 (pt-v2e)$ python v2e.py -h
-usage: v2e.py [-h] [--pos_thres POS_THRES] [--neg_thres NEG_THRES]
-              [--sigma_thres SIGMA_THRES] [--cutoff_hz CUTOFF_HZ]
-              [--leak_rate_hz LEAK_RATE_HZ]
+usage: v2e.py [-h] [--dvs_params DVS_PARAMS] [--pos_thres POS_THRES]
+              [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
+              [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
               [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ]
               [--slomo_model SLOMO_MODEL] [--batch_size BATCH_SIZE]
-              [--no_preview] [--slowdown_factor SLOWDOWN_FACTOR] [-i INPUT]
+              [--no_preview] [--slowdown_factor SLOWDOWN_FACTOR]
+              [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO] [-i INPUT]
               [--start_time START_TIME] [--stop_time STOP_TIME] -o
               OUTPUT_FOLDER [--overwrite] [--frame_rate FRAME_RATE]
               [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
               [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
               [--dvs_h5 DVS_H5] [--dvs_aedat2 DVS_AEDAT2]
               [--dvs_text DVS_TEXT] [--dvs_numpy DVS_NUMPY]
-              [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO]
               [--rotate180 ROTATE180]
 v2e: generate simulated DVS events from video.
 optional arguments:
   -h, --help            show this help message and exit
-  --overwrite           overwrites files in existing folder (checks existence
-                        of non-empty output_folder). (default: False)
   --rotate180 ROTATE180
                         rotate all output 180 deg. (default: False)
-Model:
+DVS model:
+  --dvs_params DVS_PARAMS
+                        Easy optional setting of parameters for DVS model:
+                        'clean', 'noisy' (default: clean)
   --pos_thres POS_THRES
                         threshold in log_e intensity change to trigger a
-                        positive event. (default: 0.21)
+                        positive event. (default: 0.2)
   --neg_thres NEG_THRES
                         threshold in log_e intensity change to trigger a
-                        negative event. (default: 0.17)
+                        negative event. (default: 0.2)
   --sigma_thres SIGMA_THRES
                         1-std deviation threshold variation in log_e intensity
                         change. (default: 0.03)
@@ -128,7 +129,7 @@ Model:
   --leak_rate_hz LEAK_RATE_HZ
                         leak event rate per pixel in Hz - see
                         https://ieeexplore.ieee.org/abstract/document/7962235
-                        (default: 0)
+                        (default: 0.01)
   --shot_noise_rate_hz SHOT_NOISE_RATE_HZ
                         Temporal noise rate of ON+OFF events in darkest parts
                         of scene; reduced in brightest parts. (default: 0)
@@ -145,6 +146,11 @@ SloMo upsampling:
                         slow motion factor; if the input video has frame rate
                         fps, then the DVS events will have time resolution of
                         1/(fps*slowdown_factor). (default: 10)
+  --vid_orig VID_ORIG   output src video at same rate as slomo video (with
+                        duplicated frames). (default: video_orig.avi)
+  --vid_slomo VID_SLOMO
+                        output slomo of src video slowed down by
+                        slowdown_factor. (default: video_slomo.avi)
 Input:
   -i INPUT, --input INPUT
                         input video file; leave empty for file chooser dialog.
@@ -157,6 +163,8 @@ Input:
 Output:
   -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
                         folder to store outputs. (default: None)
+  --overwrite           overwrites files in existing folder (checks existence
+                        of non-empty output_folder). (default: False)
   --frame_rate FRAME_RATE
                         equivalent frame rate of --dvs_vid output video; the
                         events will be accummulated as this sample rate; DVS
@@ -171,8 +179,9 @@ Output:
   --dvs_vid DVS_VID     output DVS events as AVI video at frame_rate.
                         (default: dvs-video.avi)
   --dvs_vid_full_scale DVS_VID_FULL_SCALE
-                        set full scale count for DVS videos to be this many ON
-                        or OFF events. (default: 3)
+                        set full scale event count histogram count for DVS
+                        videos to be this many ON or OFF events for full white
+                        or black. (default: 2)
   --dvs_h5 DVS_H5       output DVS events as hdf5 event database. (default:
                         None)
   --dvs_aedat2 DVS_AEDAT2
@@ -187,11 +196,6 @@ Output:
                         numpy data file with this name holding vector of
                         events. WARNING: memory use is unbounded. (default:
                         None)
-  --vid_orig VID_ORIG   output src video at same rate as slomo video (with
-                        duplicated frames). (default: video_orig.avi)
-  --vid_slomo VID_SLOMO
-                        output slomo of src video slowed down by
-                        slowdown_factor. (default: video_slomo.avi)
 Run with no --input to open file dialog
 
 
@@ -217,6 +221,8 @@ The [v2e site](https://sites.google.com/view/video2events/home) shows these vide
 ## Model parameters
 
 The DVS ON and OFF threshold nominal values are set by _pos_thres_ and _neg_thres_. The pixel to pixel variation is set by _sigma_thres_. The pixel cutoff frequency in Hz is set by _cutoff_hz_. The leak event rate is set by _leak_rate_hz_. 
+
+The _-dvs_params_ argument sets reasonable DVS model parameters for high and low light conditions.
 
 See our technical paper for futher information about these parameters.
  
@@ -350,7 +356,7 @@ slomo.avi
 ```
 
 
-## Calibrate the Thresholds
+## Estimate DVS Event Thresholds
 
 _ddd_find_thresholds.py_ estimates the correct thresholds of triggering ON and OFF events, you can use a synhronized DAVIS recording from the DDD dataset:
 
@@ -393,6 +399,8 @@ The program will take the DVS recording data, which starts at time 'start' and e
 A typical result from _ddd_find_thresholds.py_ is shown below. It plots the absolute difference in ON and OFF event counts between the real and v2e data. ON counts are green and OFF counts are red. The smallest difference between real and v2e DVS event counts is found at about 0.3. It means that this recording use a DVS threshold of about 0.3 log_e units, or about +35% and -25% intensity change.
 
 ![find_threshold_plot](media/find_thresholds.png)
+
+We have observed that some DDD videos suggest extremely low DVS thresholds by using _ddd_find_thresholds.py_. We believe it is because the DAVIS recording APS frames nonlinearly represent intensity, i.g. the APS values tend to saturate with intensity. It means that _ddd_find_thresholds.py_  estimates unrealistically-low DVS thresholds (7%-9%), so that v2e generates sufficient DVS events to match the real event counts.
 
 ### Obtaining acceptable results 
 For the best frame interpolation by SuperSloMo, the input video needs to satisfy the requirements below,
