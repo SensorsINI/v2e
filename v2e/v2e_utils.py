@@ -133,10 +133,13 @@ def inputDDDFileDialog():
     return _inputFileDialog([("DDD recordings", ".hdf5"),('Any type','*')])
 
 def _inputFileDialog(types):
+    from pathlib import Path
     root = tk.Tk()
     root.tk.call('tk', 'scaling', 4.0)  # doesn't help on hdpi screen
     root.withdraw()
-    os.chdir('./input')
+    indir='./input'
+    if Path(indir).is_dir():
+        os.chdir(indir)
     filetypes=types
     filepath = filedialog.askopenfilename(filetypes=filetypes)
     os.chdir('..')
@@ -214,6 +217,36 @@ def read_image(path: str) -> np.ndarray:
     img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
     img = img.astype(np.float)
     return img
+
+
+def read_aedat_txt_events(fname: str):
+    """
+    reads txt data DVS events
+    Parameters
+    ----------
+    fname:str
+        filename
+    Returns
+    -------
+        np.ndarray with each row having ts,x,y,pol
+        ts is in seconds
+        pol is 0,1
+    """
+    import pandas as pd
+    import numpy as np
+    dat = pd.read_table(fname,
+                        sep=' ',  # field separator
+                        comment='#',  # comment
+                        skipinitialspace=False,
+                        skip_blank_lines=True,
+                        error_bad_lines=False,
+                        warn_bad_lines=True,
+                        encoding='utf-8',
+                        names=['t', 'x', 'y', 'p'],
+                        dtype={'a': np.float64, 'b': np.int32, 'c': np.int32, 'd': np.int32}
+                        )
+
+    return np.array(dat.values) # array[N,4] with each row having ts, x, y, pol. ts is in float seconds. pol is 0,1
 
 
 def select_events_in_roi(events, x, y):
@@ -300,3 +333,4 @@ def histogram_events_in_time_bins(events, start=0, stop=3.5, time_bin_ms=50, pol
         ts_cnt[i][1] = cnt
 
     return ts_cnt
+
