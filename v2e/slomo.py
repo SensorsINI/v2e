@@ -224,6 +224,8 @@ class SuperSloMo(object):
             disableTqdm=nImages<=max(self.batch_size,4)
             for _, (frame0, frame1) in enumerate(tqdm(video_frame_loader, desc='slomo-interp',unit='fr',disable=disableTqdm), 0):
 
+                print("[YH Debug]", frame0.size(), frame1.size(), self.batch_size)
+
                 I0 = frame0.to(self.device)
                 I1 = frame1.to(self.device)
 
