@@ -222,12 +222,14 @@ class SuperSloMo(object):
             # logger.debug("using " + str(output_folder) + " to store interpolated frames")
             nImages=images.shape[0]
             disableTqdm=nImages<=max(self.batch_size,4)
-            for _, (frame0, frame1) in enumerate(tqdm(video_frame_loader, desc='slomo-interp',unit='fr',disable=disableTqdm), 0):
-
-                print("[YH Debug]", frame0.size(), frame1.size(), self.batch_size)
+            for _, (frame0, frame1) in enumerate(
+                    tqdm(video_frame_loader, desc='slomo-interp',
+                         unit='fr', disable=disableTqdm), 0):
 
                 I0 = frame0.to(self.device)
                 I1 = frame1.to(self.device)
+                # actual number of frames, account for <batch_size
+                num_batch_frames = I0.shape[0]
 
                 flowOut = self.flow_estimator(torch.cat((I0, I1), dim=1))
                 F_0_1 = flowOut[:, :2, :, :]
@@ -266,7 +268,7 @@ class SuperSloMo(object):
                            (wCoeff[0] * V_t_0 + wCoeff[1] * V_t_1)
 
                     # Save intermediate frame
-                    for batchIndex in range(self.batch_size):
+                    for batchIndex in range(num_batch_frames):
 
                         img = self.to_image(Ft_p[batchIndex].cpu().detach())
                         img_resize = img.resize(ori_dim, Image.BILINEAR)
@@ -276,15 +278,15 @@ class SuperSloMo(object):
                             str(frameCounter + self.sf * batchIndex) + ".png")
                         img_resize.save(save_path)
                         if self.preview:
-                            name=str(__file__)
+                            name = str(__file__)
                             cv2.namedWindow(name, cv2.WINDOW_NORMAL)
                             gray = np.uint8(img_resize)
                             cv2.imshow(name, gray)
                             if not self.preview_resized:
                                 cv2.resizeWindow(name, 800, 600)
-                                self.preview_resized=True
-                            cv2.waitKey(1)  # wait minimally since interp takes time anyhow
-
+                                self.preview_resized = True
+                            # wait minimally since interp takes time anyhow
+                            cv2.waitKey(1)
                     frameCounter += 1
 
                 # Set counter accounting for batching of frames

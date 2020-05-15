@@ -57,7 +57,7 @@ parser.add_argument(
     help="rotate all output 180 deg.")
 
 # https://kislyuk.github.io/argcomplete/#global-completion
-# Shellcode (only necessary if global completion is not activated - 
+# Shellcode (only necessary if global completion is not activated -
 # see Global completion below), to be put in e.g. .bashrc:
 # eval "$(register-python-argcomplete v2e.py)"
 argcomplete.autocomplete(parser)
@@ -123,6 +123,7 @@ if __name__ == "__main__":
     vid_slomo = args.vid_slomo
     preview = not args.no_preview
     rotate180 = args.rotate180
+    segment_size = args.segment_size
     batch_size = args.batch_size
 
     infofile = write_args_info(args, output_folder)
@@ -222,11 +223,12 @@ if __name__ == "__main__":
     batchFrames = []
     # step over input by batch_size steps
     for frameNumber in tqdm(
-            range(start_frame, stop_frame, batch_size), unit='fr', desc='v2e'):
+            range(start_frame, stop_frame, segment_size),
+            unit='fr', desc='v2e'):
         # each time add batch_size frames to previous frame
         # which we made first frame at end of interpolating and
         # generating events
-        for i in range(batch_size):
+        for i in range(segment_size):
             if cap.isOpened():
                 ret, inputVideoFrame = cap.read()
             else:
@@ -275,10 +277,8 @@ if __name__ == "__main__":
 
         with TemporaryDirectory() as interpFramesFolder:
             # make input to slomo
-            slomoInputFrames = batchFrames[0].astype(np.uint8)
-            for f in batchFrames[1:]:
-                slomoInputFrames = np.stack(
-                    (slomoInputFrames, f.astype(np.uint8)), axis=0)
+            slomoInputFrames = np.asarray(batchFrames)
+
             # interpolated frames are stored to tmpfolder as 1.png, 2.png, etc
             slomo.interpolate(slomoInputFrames, interpFramesFolder)
             # read back to memory

@@ -43,6 +43,7 @@ def v2e_args(parser):
 
     sloMoGroup=parser.add_argument_group('SloMo upsampling')
     sloMoGroup.add_argument("--slomo_model", type=str, default=prepend+"input/SuperSloMo39.ckpt", help="path of slomo_model checkpoint.")
+    sloMoGroup.add_argument("--segment_size", type=int, default=32, help="segment size for SuperSloMo. Video will be processed segment by segment")
     sloMoGroup.add_argument("--batch_size", type=int, default=1, help="batch size for SuperSloMo. May only support batch_size=1.")
     sloMoGroup.add_argument("--no_preview", action="store_true", help="disable preview in cv2 windows for faster processing.")
     sloMoGroup.add_argument("--slowdown_factor", type=int, default=10,
