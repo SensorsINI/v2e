@@ -23,29 +23,37 @@ We encourage you to fork v2e and suggest pulls to improve the functionality.
 ```
 python==3.7.7
 Ubuntu 18.04 or Windows 10x64
-CUDA GPU
+CUDA GPU 
 ```
+(if you have not used CUDA on your GPU, you might need to install it from https://developer.nvidia.com/cuda-downloads)
+
 Code includes pycharm project files for your convenience.
 
-We highly recommend running the code in virtual environment. Conda is always your best friend. :)
+We highly recommend running the code in virtual environment. Conda is always your best friend. :).
+See https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#create-env-from-file
 
-For conda users, you can first make an env with pip in it, then install with pip. The torch and opencv-python packages are not available in conda.  Make sure this pip is first in your PATH.
 
+For conda users, you can create your _v2e_ environment and install everything to it with
 ```bash
-conda create -n pt-v2e python=3.7 pip
-conda activate pt-v2e
+conda env create -f environment.yml
 ```
 
-## Install Dependencies
+You can then update everything in your _v2e_ conda environment with the following:
 
 ```bash
-conda install pip
-which pip # check to make sure your conda pip is first in path
-pip install -r requirements.txt
+conda create -n v2e python=3.7 pip
+conda activate v2e
+conda env update --prefix ./v2e --file environment.yml
+```
+
+To save your conda environment, use
+```bash
+conda env export --from-history >myenvironment.yml
 ```
 
 ## Install the Package
 
+Install v2e will make it available on your python path.
 
 1. For developers, you should install the package with `develop` (in your virtual environment):
 
@@ -61,8 +69,7 @@ See https://stackoverflow.com/questions/19048732/python-setup-py-develop-vs-inst
     ```bash
     pip install .
     ```
-
-
+   
 ## Usage
 
 _v2e_ serves multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for generating DVS events from conventional video and from specific datasets.
