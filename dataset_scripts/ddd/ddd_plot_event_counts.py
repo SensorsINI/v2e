@@ -18,7 +18,8 @@ logging.addLevelName( logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelN
 logger=logging.getLogger(__name__)
 
 
-from v2e.v2e_utils import video_writer, select_events_in_roi, histogram_events_in_time_bins, DVS_WIDTH, DVS_HEIGHT, write_args_info
+from v2e.v2e_utils import video_writer, select_events_in_roi, histogram_events_in_time_bins, DVS_WIDTH, DVS_HEIGHT
+from v2e.v2e_args import write_args_info
 
 # matplotlib.use('PS')
 

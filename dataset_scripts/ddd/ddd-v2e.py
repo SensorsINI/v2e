@@ -25,7 +25,8 @@ from v2e.output.aedat2_output import AEDat2Output
 from v2e.renderer import EventEmulator, EventRenderer
 from v2e.slomo import SuperSloMo
 from v2e.v2e_utils import OUTPUT_VIDEO_FPS, all_images, \
-    read_image, checkAddSuffix, v2e_args, inputDDDFileDialog, check_lowpass, write_args_info
+    read_image, checkAddSuffix, inputDDDFileDialog, check_lowpass
+from v2e.v2e_args import v2e_args, write_args_info
 import v2e.desktop as desktop
 
 logging.basicConfig()

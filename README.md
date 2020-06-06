@@ -100,13 +100,14 @@ usage: v2e.py [-h] [--dvs_params DVS_PARAMS] [--pos_thres POS_THRES]
               [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
               [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
               [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ]
-              [--slomo_model SLOMO_MODEL] [--batch_size BATCH_SIZE]
-              [--no_preview] [--slowdown_factor SLOWDOWN_FACTOR]
-              [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO] [-i INPUT]
-              [--start_time START_TIME] [--stop_time STOP_TIME] -o
-              OUTPUT_FOLDER [--overwrite] [--frame_rate FRAME_RATE]
-              [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
+              [--slomo_model SLOMO_MODEL] [--segment_size SEGMENT_SIZE]
+              [--batch_size BATCH_SIZE] [--no_preview]
+              [--slowdown_factor SLOWDOWN_FACTOR] [--vid_orig VID_ORIG]
+              [--vid_slomo VID_SLOMO] [-i INPUT] [--start_time START_TIME]
+              [--stop_time STOP_TIME] -o OUTPUT_FOLDER [--overwrite]
               [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
+              [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
+              [--dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]]
               [--dvs_h5 DVS_H5] [--dvs_aedat2 DVS_AEDAT2]
               [--dvs_text DVS_TEXT] [--dvs_numpy DVS_NUMPY]
               [--rotate180 ROTATE180]
@@ -144,6 +145,9 @@ SloMo upsampling:
   --slomo_model SLOMO_MODEL
                         path of slomo_model checkpoint. (default:
                         input/SuperSloMo39.ckpt)
+  --segment_size SEGMENT_SIZE
+                        segment size for SuperSloMo. Video will be processed
+                        segment by segment (default: 1)
   --batch_size BATCH_SIZE
                         batch size for SuperSloMo. May only support
                         batch_size=1. (default: 1)
@@ -167,28 +171,31 @@ Input:
                         None)
   --stop_time STOP_TIME
                         stop at this time in seconds in video. (default: None)
-Output:
+Output: General:
   -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
                         folder to store outputs. (default: None)
   --overwrite           overwrites files in existing folder (checks existence
                         of non-empty output_folder). (default: False)
-  --frame_rate FRAME_RATE
-                        equivalent frame rate of --dvs_vid output video; the
-                        events will be accummulated as this sample rate; DVS
-                        frames will be accumulated for duration 1/frame_rate
-                        (default: 300)
-  --output_height OUTPUT_HEIGHT
-                        height of output DVS data in pixels. If None, same as
-                        input video. (default: 260)
-  --output_width OUTPUT_WIDTH
-                        width of output DVS data in pixels. If None, same as
-                        input video. (default: 346)
+Output: DVS video:
   --dvs_vid DVS_VID     output DVS events as AVI video at frame_rate.
                         (default: dvs-video.avi)
   --dvs_vid_full_scale DVS_VID_FULL_SCALE
                         set full scale event count histogram count for DVS
                         videos to be this many ON or OFF events for full white
                         or black. (default: 2)
+  --output_height OUTPUT_HEIGHT
+                        height of output DVS data in pixels. If None, same as
+                        input video. (default: 260)
+  --output_width OUTPUT_WIDTH
+                        width of output DVS data in pixels. If None, same as
+                        input video. (default: 346)
+  --dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]
+                        mode to finish DVS event integration: duration time:
+                        accumulation time in seconds; count n: count n events
+                        per frame; area_event N M: frame ends when any area of
+                        M x M pixels fills with N events (default:
+                        ('duration', '0.01'))
+Output: DVS events:
   --dvs_h5 DVS_H5       output DVS events as hdf5 event database. (default:
                         None)
   --dvs_aedat2 DVS_AEDAT2
@@ -237,15 +244,27 @@ See our technical paper for futher information about these parameters.
  The _frame_rate_ parameter sets the output frame rate of DVS movies. It does not affect the generated DVS events, only how they are rendered to make the AVI movies.
  
  The timestep resolution of the generated DVS events is set by combining the source frame rate and _slowdown_factor_ parameters. For example, if the source video is at 30Hz frame rate and _slowdown_factor_ is 20, then the DVS events will have timestamp resolution of 1/(30*20)s=1/600s=1.66ms.
- 
+
+## DVS frame exposure modes
+
+The DVS allows arbritrary frame rates. _v2e_ provides 3 methods to 'expose' DVS video frames, which are selected by the
+--dvs_exposure argument:
+ 1. _duration_ _T_: Constant-Duration - Each frame has constant duration _T_.
+ 2. _count_ _N_: Constant-Count - each frame has the same number _N_ of DVS events, as first described in Delbruck, Tobi. 2008. “Frame-Free Dynamic Digital Vision.” In Proceedings of Intl. Symp. on Secure-Life Electronics, Advanced Electronics for Quality Life and Society, 1:21–26. Tokyo, Japan: Tokyo. https://drive.google.com/open?id=0BzvXOhBHjRheTS1rSVlZN0l2MDg..
+ 3. _area_event_ _N_ _M_: Area-Event - frames are accumulated until any block of *M*x*M* pixels fills up with _N_ events, as first described in Liu, Min, and T. Delbruck. 2018. “Adaptive Time-Slice Block-Matching Optical Flow Algorithm for Dynamic Vision Sensors.” In Proceedings of British Machine Vision Conference (BMVC 2018). Newcastle upon Tyne, UK: Proceedings of BMVC 2018. https://doi.org/10.5167/uzh-168589.
+
+_Constant-Duration_ is like normal video, i.e. sampled at regular, ideally Nyquist rate. _Constant-Count_ frames have the same number of pixel brightness change events per frame. But if the scene is very textured (i.e. busy) then frame can get very brief, while parts of the input with only a small object moving can have very long frames.
+_Area-Event_ compensates for this effect to some extent by concluding exposure when any block of pixels fills with a constant count.
+
 ## DAVIS camera conversion Dataset
 
-v2e can convert recordings from [DDD17](https://docs.google.com/document/d/1HM0CSmjO8nOpUeTvmPjopcBcVCk7KXvLUuiZFS6TWSg/pub) which is the first public end-to-end training dataset 
+v2e can convert recordings from
+ [DDD20](https://sites.google.com/view/davis-driving-dataset-2020/home) and the original [DDD17](https://docs.google.com/document/d/1HM0CSmjO8nOpUeTvmPjopcBcVCk7KXvLUuiZFS6TWSg/pub) 
+which are the first public end-to-end training datasets 
 of automotive driving using a DAVIS event + frame camera. It lets you compare the real DVS data with the conversion. 
 This dataset is maintained by the Sensors Research Group of Institute of Neuroinformatics. 
-Please go to the datasets website [[link]](http://sensors.ini.uzh.ch/databases.html) of Sensors Group  for details about downloading _DDD17_.
 
-For your convenience, we put one recording from _DDD20_ (our newer DDD dataset) of 800s of
+For your convenience, we offer via google drive one recording from _DDD20_ (our newer DDD dataset) of 800s of
 Los Angeles street driving. 
 The file is _aug04/rec1501902136.hdf5_ [[link]](https://drive.google.com/open?id=1KIaHsn72ZpVBZR6SGeFcd2lILyZoD2-5)
   in Google Drive for you to try it with v2e (***Warning:*** 2GB 7z compressed, 5.4 GB uncompressed).

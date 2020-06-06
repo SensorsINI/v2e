@@ -14,7 +14,8 @@ from v2e import desktop
 from v2e.emulator import EventEmulator
 from v2e.slomo import SuperSloMo
 from v2e.ddd20_utils.ddd_h5_reader import DDD20ReaderMultiProcessing, DDD20SimpleReader
-from v2e.v2e_utils import inputVideoFileDialog, inputDDDFileDialog, select_events_in_roi, DVS_WIDTH, DVS_HEIGHT, write_args_info
+from v2e.v2e_utils import inputVideoFileDialog, inputDDDFileDialog, select_events_in_roi, DVS_WIDTH, DVS_HEIGHT
+from v2e.v2e_args import write_args_info
 
 logging.basicConfig()
 root = logging.getLogger()

@@ -24,6 +24,8 @@ import v2e.model as model
 from PIL import Image
 import logging
 import atexit
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="torch.nn.functional") # https://github.com/fastai/fastai/issues/2370
 
 logger = logging.getLogger(__name__)
 
