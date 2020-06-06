@@ -58,7 +58,9 @@ def v2e_args(parser):
                         help="height of output DVS data in pixels. If None, same as input video.")
     outGroupDvsVideo.add_argument("--output_width", type=int, default=346,
                         help="width of output DVS data in pixels. If None, same as input video.")
-    outGroupDvsVideo.add_argument("--dvs_exposure", nargs='+', type=str, default=("duration","0.01"), help="mode to finish DVS event integration: duration time: accumulation time in seconds; count n: count n events per frame; area_event N M: frame ends when any area of M x M pixels fills with N events")
+    outGroupDvsVideo.add_argument("--frame_rate", type=int,
+                                  help="implies --dvs_exposure duration 1/framerate.  Equivalent frame rate of --dvs_vid output video; the events will be accummulated as this sample rate; DVS frames will be accumulated for duration 1/frame_rate")
+    outGroupDvsVideo.add_argument("--dvs_exposure", nargs='+', type=str, help="mode to finish DVS event integration: duration time: accumulation time in seconds; count n: count n events per frame; area_event N M: frame ends when any area of M x M pixels fills with N events")
 
     dvsEventOutputGroup = parser.add_argument_group('Output: DVS events')
     dvsEventOutputGroup.add_argument("--dvs_h5", type=str, default=None, help="output DVS events as hdf5 event database.")
@@ -103,8 +105,17 @@ def write_args_info(args, path)-> str:
 
 
 def v2e_check_dvs_exposure_args(args):
+    if not args.frame_rate and not args.dvs_exposure:
+        raise ValueError('either define --frame_rate or --dvs_exposure. See extended usage.')
 
-    dvs_exposure=args.dvs_exposure
+    if args.frame_rate and args.dvs_exposure:
+        raise ValueError('either define --frame_rate or --dvs_exposure. See extended usage.')
+
+    if args.frame_rate:
+        dvs_exposure=('duration',1./float(args.frame_rate))
+        logger.info('--frame_rate option implies constant duration DVS frames')
+    else:
+        dvs_exposure=args.dvs_exposure
     exposure_mode=None
     exposure_val=None
     area_dimension=None
@@ -129,5 +140,13 @@ def v2e_check_dvs_exposure_args(args):
              area_dimension=int(dvs_exposure[2])
         except:
             raise ValueError('area_count must be N M, where N is event count and M is area dimension in pixels')
+    s='DVS frame expsosure mode {}'.format(exposure_mode)
+    if exposure_mode==ExposureMode.DURATION:
+        s=s+': frame rate {}'.format(1./exposure_val)
+    elif exposure_mode==ExposureMode.COUNT:
+        s=s+': {} events/frame'.format(exposure_val)
+    elif exposure_mode==ExposureMode.AREA_COUNT:
+        s=s+': {} events per {}x{} pixel area'.format(exposure_val,area_dimension,area_dimension)
 
+    logger.info(s)
     return exposure_mode, exposure_val, area_dimension
