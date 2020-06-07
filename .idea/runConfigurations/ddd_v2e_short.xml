@@ -10,7 +10,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/dataset_scripts/ddd/ddd-v2e.py" />
-    <option name="PARAMETERS" value="--input input/rec1501350986.hdf5 --slowdown_factor 10 --start 70 --stop 73 --output_folder ../../output/ddd20-v2e-short --dvs_aedat dvs --pos_thres=.3 --neg_thres=.3 --overwrite --dvs_vid_full_scale=2 --frame_rate=100" />
+    <option name="PARAMETERS" value="--input input/rec1501350986.hdf5 --slowdown_factor 10 --start 70 --stop 73 --output_folder ../../output/ddd20-v2e-short --dvs_aedat dvs --pos_thres=.3 --neg_thres=.3 --overwrite --dvs_vid_full_scale=2 --dvs_exposure duration 0.01" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

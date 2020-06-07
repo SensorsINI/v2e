@@ -22,11 +22,11 @@ if platform.startswith('linux'):
 from v2e.ddd20_utils import ddd_h5_reader
 from v2e.ddd20_utils.ddd_h5_reader import DDD20SimpleReader
 from v2e.output.aedat2_output import AEDat2Output
-from v2e.renderer import EventEmulator, EventRenderer
+from v2e.renderer import EventEmulator, EventRenderer, ExposureMode
 from v2e.slomo import SuperSloMo
 from v2e.v2e_utils import OUTPUT_VIDEO_FPS, all_images, \
-    read_image, checkAddSuffix, inputDDDFileDialog, check_lowpass
-from v2e.v2e_args import v2e_args, write_args_info
+    read_image, checkAddSuffix, inputDDDFileDialog, check_lowpass, v2e_quit
+from v2e.v2e_args import v2e_args, write_args_info, v2e_check_dvs_exposure_args
 import v2e.desktop as desktop
 
 logging.basicConfig()
@@ -81,9 +81,14 @@ if __name__ == "__main__":
         logger.error('set neither or both of output_width and output_height')
         quit()
 
+    exposure_mode, exposure_val, area_dimension = v2e_check_dvs_exposure_args(args)
+    if not exposure_mode==ExposureMode.DURATION:
+        raise ValueError('only dvs_exposure=duration is currently supported (mode {} not allowed)'.format(exposure_mode))
+
     write_args_info(args,output_folder)
 
-    dvsFps=args.frame_rate
+
+    dvsFps=1./exposure_val
     start_time=args.start_time
     stop_time=args.stop_time
     slowdown_factor = args.slowdown_factor
@@ -124,8 +129,8 @@ if __name__ == "__main__":
     dvsVidReal=str(dvs_vid).replace('.avi','-real.avi')
     dvsVidFake=str(dvs_vid).replace('.avi','-fake.avi')
     emulator = EventEmulator(pos_thres=pos_thres, neg_thres=neg_thres, sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,leak_rate_hz=leak_rate_hz,  shot_noise_rate_hz=shot_noise_rate_hz, output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_text=dvs_text)
-    eventRendererReal = EventRenderer(frame_rate_hz=dvsFps, output_path=output_folder, dvs_vid=dvsVidReal, preview=preview, full_scale_count=dvs_vid_full_scale)
-    eventRendererFake = EventRenderer(frame_rate_hz=dvsFps, output_path=output_folder, dvs_vid=dvsVidFake, preview=preview, full_scale_count=dvs_vid_full_scale)
+    eventRendererReal = EventRenderer(exposure_mode=exposure_mode, exposure_value=exposure_val,area_dimension=area_dimension, output_path=output_folder, dvs_vid=dvsVidReal, preview=preview, full_scale_count=dvs_vid_full_scale)
+    eventRendererFake = EventRenderer(exposure_mode=exposure_mode, exposure_value=exposure_val,area_dimension=area_dimension, output_path=output_folder, dvs_vid=dvsVidFake, preview=preview, full_scale_count=dvs_vid_full_scale)
     realDvsAeDatOutput=None
 
     davisData= DDD20SimpleReader(input_file, rotate180=rotate180)
@@ -138,7 +143,6 @@ if __name__ == "__main__":
     if not stop_time: stop_time=davisData.durationS
 
     srcDurationToBeProcessed=stop_time-start_time
-    dvsFps = args.frame_rate
     dvsNumFrames = int(np.math.floor(dvsFps * srcDurationToBeProcessed))
     if dvsNumFrames==0: dvsNumFrames=1                  # we need at least 1
     dvsDuration = srcDurationToBeProcessed
@@ -252,4 +256,4 @@ if __name__ == "__main__":
     eventRendererFake.cleanup()
     eventRendererReal.cleanup()
     slomo.cleanup()
-    quit()
+    v2e_quit()
