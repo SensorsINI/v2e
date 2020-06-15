@@ -220,7 +220,7 @@ if __name__ == "__main__":
         exposure_mode=exposure_mode, exposure_value=exposure_val,area_dimension=area_dimension)
 
     ts0 = 0
-    ts1 = srcFrameIntervalS  # timestamps of src frames
+    ts1 = min(srcFrameIntervalS*segment_size, srcTotalDuration)  # timestamps of src frames
     num_frames = 0
     inputHeight = None
     inputWidth = None
@@ -331,7 +331,7 @@ if __name__ == "__main__":
             eventRenderer.render_events_to_frames(
                 events, height=output_height, width=output_width)
             ts0 = ts1
-            ts1 += srcFrameIntervalS
+            ts1 += min(srcFrameIntervalS*segment_size, srcTotalDuration)
 
         # save last frame of input as 1st frame of new batch
         batchFrames = [inputVideoFrame]
