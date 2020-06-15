@@ -107,6 +107,7 @@ usage: v2e.py [-h] [--dvs_params DVS_PARAMS] [--pos_thres POS_THRES]
               [--stop_time STOP_TIME] -o OUTPUT_FOLDER [--overwrite]
               [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
               [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
+              [--frame_rate FRAME_RATE]
               [--dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]]
               [--dvs_h5 DVS_H5] [--dvs_aedat2 DVS_AEDAT2]
               [--dvs_text DVS_TEXT] [--dvs_numpy DVS_NUMPY]
@@ -146,11 +147,13 @@ SloMo upsampling:
                         path of slomo_model checkpoint. (default:
                         input/SuperSloMo39.ckpt)
   --segment_size SEGMENT_SIZE
-                        segment size for SuperSloMo. Video will be processed
-                        segment by segment (default: 1)
+                        segment size for SuperSloMo. Video is split to chunks
+                        of this many frames, and within each segment, batch
+                        mode CNN inference of optic flow takes place. Video
+                        will be processed segment by segment. (default: 1)
   --batch_size BATCH_SIZE
-                        batch size for SuperSloMo. May only support
-                        batch_size=1. (default: 1)
+                        batch size in frames for SuperSloMo. Must be less than
+                        or equal to seqment_size. (default: 1)
   --no_preview          disable preview in cv2 windows for faster processing.
                         (default: False)
   --slowdown_factor SLOWDOWN_FACTOR
@@ -189,12 +192,17 @@ Output: DVS video:
   --output_width OUTPUT_WIDTH
                         width of output DVS data in pixels. If None, same as
                         input video. (default: 346)
+  --frame_rate FRAME_RATE
+                        implies --dvs_exposure duration 1/framerate.
+                        Equivalent frame rate of --dvs_vid output video; the
+                        events will be accummulated as this sample rate; DVS
+                        frames will be accumulated for duration 1/frame_rate
+                        (default: None)
   --dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]
                         mode to finish DVS event integration: duration time:
                         accumulation time in seconds; count n: count n events
                         per frame; area_event N M: frame ends when any area of
-                        M x M pixels fills with N events (default:
-                        ('duration', '0.01'))
+                        M x M pixels fills with N events (default: None)
 Output: DVS events:
   --dvs_h5 DVS_H5       output DVS events as hdf5 event database. (default:
                         None)
@@ -211,7 +219,6 @@ Output: DVS events:
                         events. WARNING: memory use is unbounded. (default:
                         None)
 Run with no --input to open file dialog
-
 
 ```
 You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.
@@ -249,12 +256,13 @@ See our technical paper for futher information about these parameters.
 
 The DVS allows arbritrary frame rates. _v2e_ provides 3 methods to 'expose' DVS video frames, which are selected by the
 --dvs_exposure argument:
- 1. _duration_ _T_: Constant-Duration - Each frame has constant duration _T_.
- 2. _count_ _N_: Constant-Count - each frame has the same number _N_ of DVS events, as first described in Delbruck, Tobi. 2008. “Frame-Free Dynamic Digital Vision.” In Proceedings of Intl. Symp. on Secure-Life Electronics, Advanced Electronics for Quality Life and Society, 1:21–26. Tokyo, Japan: Tokyo. https://drive.google.com/open?id=0BzvXOhBHjRheTS1rSVlZN0l2MDg..
- 3. _area_event_ _N_ _M_: Area-Event - frames are accumulated until any block of *M*x*M* pixels fills up with _N_ events, as first described in Liu, Min, and T. Delbruck. 2018. “Adaptive Time-Slice Block-Matching Optical Flow Algorithm for Dynamic Vision Sensors.” In Proceedings of British Machine Vision Conference (BMVC 2018). Newcastle upon Tyne, UK: Proceedings of BMVC 2018. https://doi.org/10.5167/uzh-168589.
+ 1. **Constant-Duration**: _--dvs_exposure _duration_ _T__:  - Each frame has constant duration _T_.
+ 2. **Constant-Count**: _--dvs_exposure_count_ _N_:  - each frame has the same number _N_ of DVS events, as first described in Delbruck, Tobi. 2008. “Frame-Free Dynamic Digital Vision.” In Proceedings of Intl. Symp. on Secure-Life Electronics, Advanced Electronics for Quality Life and Society, 1:21–26. Tokyo, Japan: Tokyo. https://drive.google.com/open?id=0BzvXOhBHjRheTS1rSVlZN0l2MDg..
+ 3. **Area-Event**: _--dvs_exposure_ _area_event_ _N_ _M_:  - frames are accumulated until any block of *M*x*M* pixels fills up with _N_ events, as first described in Liu, Min, and T. Delbruck. 2018. “Adaptive Time-Slice Block-Matching Optical Flow Algorithm for Dynamic Vision Sensors.” In Proceedings of British Machine Vision Conference (BMVC 2018). Newcastle upon Tyne, UK: Proceedings of BMVC 2018. https://doi.org/10.5167/uzh-168589.
 
-_Constant-Duration_ is like normal video, i.e. sampled at regular, ideally Nyquist rate. _Constant-Count_ frames have the same number of pixel brightness change events per frame. But if the scene is very textured (i.e. busy) then frame can get very brief, while parts of the input with only a small object moving can have very long frames.
-_Area-Event_ compensates for this effect to some extent by concluding exposure when any block of pixels fills with a constant count.
+ - _Constant-Duration_ is like normal video, i.e. sampled at regular, ideally Nyquist rate. 
+ - _Constant-Count_ frames have the same number of pixel brightness change events per frame. But if the scene is very textured (i.e. busy) then frame can get very brief, while parts of the input with only a small object moving can have very long frames.
+ - _Area-Event_ compensates for this effect to some extent by concluding exposure when any block of pixels fills with a constant count.
 
 ## DAVIS camera conversion Dataset
 
