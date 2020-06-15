@@ -127,7 +127,8 @@ if __name__ == "__main__":
     rotate180 = args.rotate180
     segment_size = args.segment_size
     batch_size = args.batch_size
-    exposure_mode,exposure_val,area_dimension=v2e_check_dvs_exposure_args(args)
+    exposure_mode, exposure_val, area_dimension = \
+        v2e_check_dvs_exposure_args(args)
 
     infofile = write_args_info(args, output_folder)
 
@@ -173,36 +174,39 @@ if __name__ == "__main__":
     srcNumFramesToBeProccessed = stop_frame-start_frame+1
     srcDurationToBeProcessed = srcNumFramesToBeProccessed/srcFps
 
-    if exposure_mode==ExposureMode.DURATION:
+    if exposure_mode == ExposureMode.DURATION:
         dvsFps = 1./exposure_val
         dvsNumFrames = np.math.floor(dvsFps * srcDurationToBeProcessed)
         dvsDuration = dvsNumFrames / dvsFps
         dvsPlaybackDuration = dvsNumFrames / OUTPUT_VIDEO_FPS
-        logger.info('\n\n{} has {} frames with duration {}s, '
-                    '\nsource video is {}fps (frame interval {}s),'
-                    '\n slomo will have {}fps,'
-                    '\n events will have timestamp resolution {}s,'
-                    '\n v2e DVS video will have {}fps (accumulation time {}s), '
-                    '\n DVS video will have {} frames with duration {}s '
-                    'and playback duration {}s\n'
-                    .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
-                            EngNumber(srcFps), EngNumber(srcFrameIntervalS),
-                            EngNumber(srcFps * slowdown_factor),
-                            EngNumber(slomoTimestampResolutionS),
-                            EngNumber(dvsFps), EngNumber(1 / dvsFps),
-                            dvsNumFrames, EngNumber(dvsDuration),
-                            EngNumber(dvsPlaybackDuration)))
+        logger.info(
+            '\n\n{} has {} frames with duration {}s, '
+            '\nsource video is {}fps (frame interval {}s),'
+            '\n slomo will have {}fps,'
+            '\n events will have timestamp resolution {}s,'
+            '\n v2e DVS video will have {}fps (accumulation time {}s), '
+            '\n DVS video will have {} frames with duration {}s '
+            'and playback duration {}s\n'
+            .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
+                    EngNumber(srcFps), EngNumber(srcFrameIntervalS),
+                    EngNumber(srcFps * slowdown_factor),
+                    EngNumber(slomoTimestampResolutionS),
+                    EngNumber(dvsFps), EngNumber(1 / dvsFps),
+                    dvsNumFrames, EngNumber(dvsDuration),
+                    EngNumber(dvsPlaybackDuration)))
     else:
-        logger.info('\n\n{} has {} frames with duration {}s, '
-                    '\nsource video is {}fps (frame interval {}s),'
-                    '\n slomo will have {}fps,'
-                    '\n events will have timestamp resolution {}s,'
-                    '\n v2e DVS video will have constant count frames with {} events), '
-                    .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
-                            EngNumber(srcFps), EngNumber(srcFrameIntervalS),
-                            EngNumber(srcFps * slowdown_factor),
-                            EngNumber(slomoTimestampResolutionS),
-                            exposure_val))
+        logger.info(
+            '\n\n{} has {} frames with duration {}s, '
+            '\nsource video is {}fps (frame interval {}s),'
+            '\n slomo will have {}fps,'
+            '\n events will have timestamp resolution {}s,'
+            '\n v2e DVS video will have constant count '
+            'frames with {} events), '
+            .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
+                    EngNumber(srcFps), EngNumber(srcFrameIntervalS),
+                    EngNumber(srcFps * slowdown_factor),
+                    EngNumber(slomoTimestampResolutionS),
+                    exposure_val))
 
     emulator = EventEmulator(
         pos_thres=pos_thres, neg_thres=neg_thres,
@@ -217,10 +221,13 @@ if __name__ == "__main__":
     eventRenderer = EventRenderer(
         output_path=output_folder,
         dvs_vid=dvs_vid, preview=preview, full_scale_count=dvs_vid_full_scale,
-        exposure_mode=exposure_mode, exposure_value=exposure_val,area_dimension=area_dimension)
+        exposure_mode=exposure_mode,
+        exposure_value=exposure_val,
+        area_dimension=area_dimension)
 
     ts0 = 0
-    ts1 = min(srcFrameIntervalS*segment_size, srcTotalDuration)  # timestamps of src frames
+    ts1 = min(srcFrameIntervalS*segment_size,
+              srcTotalDuration)  # timestamps of src frames
     num_frames = 0
     inputHeight = None
     inputWidth = None
@@ -267,7 +274,7 @@ if __name__ == "__main__":
                         'input video size\n    Are you sure you want this? '
                         'It might be slow.\n    Consider using '
                         '--output_width and --output_height'
-                            .format(output_width, output_height))
+                        .format(output_width, output_height))
             if output_height and output_width and \
                     (inputHeight != output_height or
                      inputWidth != output_width):
@@ -345,21 +352,22 @@ if __name__ == "__main__":
     sPerFrame = 1/framePerS
     throughputStr = (str(EngNumber(framePerS))+'fr/s') \
         if framePerS > 1 else (str(EngNumber(sPerFrame))+'s/fr')
-    logger.info('done processing {} frames in {}s ({})\n see output folder {}'
-        .format(
-        num_frames,
-        EngNumber(totalTime),
-        throughputStr,
-        output_folder))
+    logger.info(
+        'done processing {} frames in {}s ({})\n see output folder {}'
+        .format(num_frames,
+                EngNumber(totalTime),
+                throughputStr,
+                output_folder))
     logger.info('generated total {} events ({} on, {} off)'
                 .format(EngNumber(emulator.num_events_total),
                         EngNumber(emulator.num_events_on),
                         EngNumber(emulator.num_events_off)))
     logger.info(
         'avg event rate {}Hz ({}Hz on, {}Hz off)'
-            .format(EngNumber(emulator.num_events_total/srcDurationToBeProcessed),
-                    EngNumber(emulator.num_events_on/srcDurationToBeProcessed),
-                    EngNumber(emulator.num_events_off/srcDurationToBeProcessed)))
+        .format(
+            EngNumber(emulator.num_events_total/srcDurationToBeProcessed),
+            EngNumber(emulator.num_events_on/srcDurationToBeProcessed),
+            EngNumber(emulator.num_events_off/srcDurationToBeProcessed)))
     try:
         desktop.open(os.path.abspath(output_folder))
     except Exception as e:
