@@ -34,8 +34,8 @@ def v2e_args(parser):
 
     sloMoGroup=parser.add_argument_group('SloMo upsampling')
     sloMoGroup.add_argument("--slomo_model", type=str, default=prepend+"input/SuperSloMo39.ckpt", help="path of slomo_model checkpoint.")
-    sloMoGroup.add_argument("--segment_size", type=int, default=1, help="segment size for SuperSloMo. Video will be processed segment by segment")
-    sloMoGroup.add_argument("--batch_size", type=int, default=1, help="batch size for SuperSloMo. May only support batch_size=1.")
+    sloMoGroup.add_argument("--segment_size", type=int, default=1, help="segment size for SuperSloMo. Video is split to chunks of this many frames, and within each segment, batch mode CNN inference of optic flow takes place. Video will be processed segment by segment.")
+    sloMoGroup.add_argument("--batch_size", type=int, default=1, help="batch size in frames for SuperSloMo. Must be less than or equal to seqment_size.")
     sloMoGroup.add_argument("--no_preview", action="store_true", help="disable preview in cv2 windows for faster processing.")
     sloMoGroup.add_argument("--slowdown_factor", type=int, default=10,
                         help="slow motion factor; if the input video has frame rate fps, then the DVS events will have time resolution of 1/(fps*slowdown_factor).")
