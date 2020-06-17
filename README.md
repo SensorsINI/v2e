@@ -4,6 +4,8 @@ Python torch + opencv code to go from conventional stroboscopic video frames wit
 
 See the [v2e home page](https://sites.google.com/view/video2events/home) for videos and further information.
 
+Vote for [new v2e features](https://docs.google.com/forms/d/e/1FAIpQLSdJoIH3wBkPANWTng56VeXiItkh_fl5Lz3QwZIpQ6ut1AMFCw/viewform?usp=sf_link).
+
 ## Contact
 Yuhuang Hu (yuhuang.hu@ini.uzh.ch)
 Zhe He (hezhehz@live.cn)
