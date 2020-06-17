@@ -128,8 +128,10 @@ if __name__ == "__main__":
     segment_size = args.segment_size
     batch_size = args.batch_size
 
-    if batch_size>segment_size:
-        raise ValueError('batch_size={} and segment_size={} is not allowed; Use batch_size<=segment_size'.format(batch_size,segment_size))
+    if batch_size > segment_size:
+        raise ValueError(
+            'batch_size={} and segment_size={} is not allowed;'
+            'Use batch_size<=segment_size'.format(batch_size, segment_size))
 
     exposure_mode, exposure_val, area_dimension = \
         v2e_check_dvs_exposure_args(args)

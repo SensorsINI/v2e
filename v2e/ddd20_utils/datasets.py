@@ -119,4 +119,3 @@ class HDF5(mp.Process):
         self.q.close()
         self.q.join_thread()
         print('\nclosed output file')
-

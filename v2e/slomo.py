@@ -25,7 +25,11 @@ from PIL import Image
 import logging
 import atexit
 import warnings
-warnings.filterwarnings("ignore", category=UserWarning, module="torch.nn.functional") # https://github.com/fastai/fastai/issues/2370
+
+warnings.filterwarnings(
+    "ignore", category=UserWarning,
+    module="torch.nn.functional")
+# https://github.com/fastai/fastai/issues/2370
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +63,11 @@ class SuperSloMo(object):
         batch_size: int,
             batch size.
         video_path: str or None,
-            str path to folder where you want videos of original and slomo video to be stored, else None
+            str path to folder where you want videos of original and
+            slomo video to be stored, else None
         vid_orig: str or None,
-            name of output original (input) video at slo motion rate, needs video_path to be set too
+            name of output original (input) video at slo motion rate,
+            needs video_path to be set too
         vid_slomo: str or None,
             name of slomo video file, needs video_path to be set too
         """
@@ -76,28 +82,32 @@ class SuperSloMo(object):
         self.batch_size = batch_size
         self.sf = slowdown_factor
         self.video_path = video_path
-        self.preview=preview
-        self.preview_resized=False
+        self.preview = preview
+        self.preview_resized = False
         self.vid_orig = vid_orig
         self.vid_slomo = vid_slomo
 
         # initialize the Transform instances.
         self.to_tensor, self.to_image = self.__transform()
-        self.ori_writer=None
-        self.slomo_writer=None # will be constructed on first need
-        self.numOrigVideoFramesWritten=0
-        self.numSlomoVideoFramesWritten=0
+        self.ori_writer = None
+        self.slomo_writer = None  # will be constructed on first need
+        self.numOrigVideoFramesWritten = 0
+        self.numSlomoVideoFramesWritten = 0
 
         atexit.register(self.cleanup)
-        self.model_loaded=False
+        self.model_loaded = False
 
     def cleanup(self):
         logger.info("Closing video writers for original and slomo videos...")
         if self.ori_writer:
-            logger.info('closing original video AVI after writing {} frames'.format(self.numOrigVideoFramesWritten))
+            logger.info(
+                'closing original video AVI after '
+                'writing {} frames'.format(self.numOrigVideoFramesWritten))
             self.ori_writer.release()
         if self.slomo_writer:
-            logger.info('closing slomo video AVI after writing {} frames'.format(self.numSlomoVideoFramesWritten))
+            logger.info(
+                'closing slomo video AVI after '
+                'writing {} frames'.format(self.numSlomoVideoFramesWritten))
             self.slomo_writer.release()
         cv2.destroyAllWindows()
 
@@ -162,7 +172,9 @@ class SuperSloMo(object):
         interpolator: nn.Module
         """
         if not os.path.isfile(self.checkpoint):
-            raise FileNotFoundError('SuperSloMo model checkpoint ' + str(self.checkpoint) +' does not exist or is not readable')
+            raise FileNotFoundError(
+                'SuperSloMo model checkpoint '+str(self.checkpoint) +
+                ' does not exist or is not readable')
         logger.info('loading SuperSloMo model from ' + str(self.checkpoint))
 
         flow_estimator = model.UNet(2, 4)
@@ -179,39 +191,48 @@ class SuperSloMo(object):
                                 self.device)
         warper = warper.to(self.device)
 
-        # dict1 = torch.load(self.checkpoint, map_location='cpu') # fails intermittently on windows
+        # dict1 = torch.load(self.checkpoint, map_location='cpu')
+        # fails intermittently on windows
+
         dict1 = torch.load(self.checkpoint, map_location=self.device)
         interpolator.load_state_dict(dict1['state_dictAT'])
         flow_estimator.load_state_dict(dict1['state_dictFC'])
 
         return flow_estimator, warper, interpolator
 
-    def interpolate(self, images:np.ndarray,output_folder:str)->None:
+    def interpolate(self, images: np.ndarray, output_folder: str)->None:
         """Run interpolation. \
             Interpolated frames will be saved in folder self.output_path.
 
         Parameters
         ----------
         images: np.ndarray, [N, W, H]
-        output_folder:str, folder that stores the interpolated images, numbered 1:N*slowdown_factor
+        output_folder:str, folder that stores the interpolated images,
+            numbered 1:N*slowdown_factor
 
         """
-        if not output_folder: raise Exception('output_folder is None; it must be supplied to store the interpolated frames')
+        if not output_folder:
+            raise Exception(
+                'output_folder is None; it must be supplied to store '
+                'the interpolated frames')
 
         video_frame_loader, dim, ori_dim = self.__load_data(images)
         if not self.model_loaded:
-            self.flow_estimator, self.warper, self.interpolator = self.__model(dim)
-            self.model_loaded=True
+            (self.flow_estimator, self.warper,
+             self.interpolator) = self.__model(dim)
+            self.model_loaded = True
 
         # construct AVI video output writer now that we know the frame size
-        if self.video_path is not None and self.vid_orig is not None and not self.ori_writer:
+        if self.video_path is not None and self.vid_orig is not None and \
+                not self.ori_writer:
             self.ori_writer = video_writer(
                 os.path.join(self.video_path, self.vid_orig),
                 ori_dim[1],
                 ori_dim[0]
             )
 
-        if self.video_path is not None and self.vid_slomo is not None and not self.slomo_writer:
+        if self.video_path is not None and self.vid_slomo is not None and \
+                not self.slomo_writer:
             self.slomo_writer = video_writer(
                 os.path.join(self.video_path, self.vid_slomo),
                 ori_dim[1],
@@ -221,9 +242,11 @@ class SuperSloMo(object):
         frameCounter = 1
         # torch.cuda.empty_cache()
         with torch.no_grad():
-            # logger.debug("using " + str(output_folder) + " to store interpolated frames")
-            nImages=images.shape[0]
-            disableTqdm=nImages<=max(self.batch_size,4)
+            #  logger.debug(
+            #      "using " + str(output_folder) +
+            #      " to store interpolated frames")
+            nImages = images.shape[0]
+            disableTqdm = nImages <= max(self.batch_size, 4)
             for _, (frame0, frame1) in enumerate(
                     tqdm(video_frame_loader, desc='slomo-interp',
                          unit='fr', disable=disableTqdm), 0):
@@ -294,17 +317,21 @@ class SuperSloMo(object):
                 # Set counter accounting for batching of frames
                 frameCounter += self.sf * (self.batch_size - 1)
 
-
             # write input frames into video
-            # don't duplicate each frame if called using rotating buffer of two frames in a row
-            numin=images.shape[0]
-            num2write=1 if numin==2 else numin
+            # don't duplicate each frame if called using rotating buffer
+            # of two frames in a row
+            numin = images.shape[0]
+            num2write = 1 if numin == 2 else numin
             if self.ori_writer:
-                for i in range(0,num2write):  #tqdm(range(0,num2write-1), desc='slomo--write-orig-vid',unit='fr'):
-                    frame=images[i]
-                    for _ in range(self.sf):    # duplicate frames to match speed of slomo video
-                        self.ori_writer.write(cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
-                        self.numOrigVideoFramesWritten+=1
+                #  tqdm(range(0,num2write-1),
+                #       desc='slomo--write-orig-vid',unit='fr'):
+                for i in range(0, num2write):
+                    frame = images[i]
+                    # duplicate frames to match speed of slomo video
+                    for _ in range(self.sf):
+                        self.ori_writer.write(
+                            cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
+                        self.numOrigVideoFramesWritten += 1
                     # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
                     #     break
 
@@ -312,11 +339,13 @@ class SuperSloMo(object):
             # write slomo frames into video
             # will not duplicate frames if called in 2-frame loop (tobi thinks)
             if self.slomo_writer:
-                for path in frame_paths: #tqdm(frame_paths,desc='slomo-write-slomo-vid',unit='fr'):
+                # tqdm(frame_paths,desc='slomo-write-slomo-vid',unit='fr'):
+                for path in frame_paths:
                     frame = self.__read_image(path)
-                    self.slomo_writer.write(cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
-                    self.numSlomoVideoFramesWritten+=1
-                     # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
+                    self.slomo_writer.write(
+                        cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
+                    self.numSlomoVideoFramesWritten += 1
+                    # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
                     #     break
 
     def __all_images(self, data_path):
@@ -339,7 +368,11 @@ class SuperSloMo(object):
                               " 'png' format."))
         images_sorted = sorted(
                 images,
-                key=lambda line: int(line.split(os.sep)[-1].split('.')[0])) # only works for linux separators with /, use os.sep according to https://stackoverflow.com/questions/16010992/how-to-use-directory-separator-in-both-linux-and-windows-in-python
+                key=lambda line: int(line.split(os.sep)[-1].split('.')[0]))
+        # only works for linux separators with /,
+        # use os.sep according to
+        # https://stackoverflow.com/questions/16010992
+        # /how-to-use-directory-separator-in-both-linux-and-windows-in-python
         return images_sorted
 
     @staticmethod

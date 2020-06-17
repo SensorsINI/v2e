@@ -542,6 +542,7 @@ class MergedStream(mp.Process):
         self.q.put((0, {'etype': 'timestamp_reset'}))
         self.run_search.clear()
 
+
 def caer_event_from_row(row):
     '''
     Takes binary dvs data as input,
@@ -564,6 +565,3 @@ def _flush_q(q):
         except queue.Empty:
             if q.empty():
                 break
-
-
-

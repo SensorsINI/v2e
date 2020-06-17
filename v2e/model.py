@@ -338,7 +338,11 @@ def getFlowCoeff(indices, device):
     C11 = C00 = - (1 - (t[ind])) * (t[ind])
     C01 = (t[ind]) * (t[ind])
     C10 = (1 - (t[ind])) * (1 - (t[ind]))
-    return torch.Tensor(C00)[None, None, None, :].permute(3, 0, 1, 2).to(device), torch.Tensor(C01)[None, None, None, :].permute(3, 0, 1, 2).to(device), torch.Tensor(C10)[None, None, None, :].permute(3, 0, 1, 2).to(device), torch.Tensor(C11)[None, None, None, :].permute(3, 0, 1, 2).to(device)
+    return (
+        torch.Tensor(C00)[None, None, None, :].permute(3, 0, 1, 2).to(device),
+        torch.Tensor(C01)[None, None, None, :].permute(3, 0, 1, 2).to(device),
+        torch.Tensor(C10)[None, None, None, :].permute(3, 0, 1, 2).to(device),
+        torch.Tensor(C11)[None, None, None, :].permute(3, 0, 1, 2).to(device))
 
 
 def getWarpCoeff(indices, device):
@@ -374,4 +378,6 @@ def getWarpCoeff(indices, device):
     ind = indices.detach().numpy()
     C0 = 1 - t[ind]
     C1 = t[ind]
-    return torch.Tensor(C0)[None, None, None, :].permute(3, 0, 1, 2).to(device), torch.Tensor(C1)[None, None, None, :].permute(3, 0, 1, 2).to(device)
+    return (
+        torch.Tensor(C0)[None, None, None, :].permute(3, 0, 1, 2).to(device),
+        torch.Tensor(C1)[None, None, None, :].permute(3, 0, 1, 2).to(device))

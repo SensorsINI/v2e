@@ -8,19 +8,23 @@ import glob
 import tkinter as tk
 from tkinter import filedialog
 
-DVS_WIDTH, DVS_HEIGHT = 346,260  # adjust for different sensor than DAVIS346
+# adjust for different sensor than DAVIS346
+DVS_WIDTH, DVS_HEIGHT = 346, 260
 
-OUTPUT_VIDEO_FPS = 30.0 # playback frame rate specified for output video AVI file
+# playback frame rate specified for output video AVI file
+OUTPUT_VIDEO_FPS = 30.0
+
 # VIDEO_CODEC_FOURCC='RGBA' # uncompressed, >10MB for a few seconds of video
-OUTPUT_VIDEO_CODEC_FOURCC= 'XVID' # good codec, basically mp4 with simplest compression, packed in AVI, only 15kB for a few seconds
 
-logger=logging.getLogger(__name__)
-
+# good codec, basically mp4 with simplest compression, packed in AVI,
+# only 15kB for a few seconds
+OUTPUT_VIDEO_CODEC_FOURCC = 'XVID'
+logger = logging.getLogger(__name__)
 
 
 def v2e_quit():
     try:
-        quit() # not defined in pydev console, e.g. running in pycharm
+        quit()  # not defined in pydev console, e.g. running in pycharm
     finally:
         sys.exit()
 
@@ -28,40 +32,55 @@ def v2e_quit():
 def check_lowpass(cutoffhz, fs, logger):
     import numpy as np
     from engineering_notation import EngNumber as eng
-    if cutoffhz==0 or fs==0: return
+    if cutoffhz == 0 or fs == 0:
+        return
     tau = 1 / (2 * np.pi * cutoffhz)
     dt = 1 / fs
     eps = dt / tau
-    if eps>0.3:
-        logger.warning(' Lowpass cutoff is {}Hz with sample rate {}Hz (sample interval {}ms),\nbut this results in tau={}ms and mixing factor eps={:5.3f},\n which means your lowpass will filter few or even 1 samples'.format(eng(cutoffhz), eng(fs), eng(dt*1000), eng(tau*1000), eps))
+    if eps > 0.3:
+        logger.warning(
+            ' Lowpass cutoff is {}Hz with sample rate {}Hz '
+            '(sample interval {}ms),\nbut this results in tau={}ms '
+            'and mixing factor eps={:5.3f},\n which means your lowpass '
+            'will filter few or even 1 samples'.format(
+                eng(cutoffhz), eng(fs), eng(dt*1000), eng(tau*1000), eps))
     else:
-        logger.info(' Lowpass cutoff is {}Hz with sample rate {}Hz (sample interval {}ms),\nIt has tau={}ms and mixing factor eps={:5.3f}'.format(eng(cutoffhz), eng(fs), eng(dt*1000), eng(tau*1000), eps))
+        logger.info(
+            ' Lowpass cutoff is {}Hz with sample rate {}Hz '
+            '(sample interval {}ms),\nIt has tau={}ms and '
+            'mixing factor eps={:5.3f}'.format(
+                eng(cutoffhz), eng(fs), eng(dt*1000), eng(tau*1000), eps))
 
 
 def inputVideoFileDialog():
-    return _inputFileDialog([("Video/Data files", ".avi .mp4 .wmv"),('Any type','*')])
+    return _inputFileDialog(
+        [("Video/Data files", ".avi .mp4 .wmv"), ('Any type', '*')])
+
 
 def inputDDDFileDialog():
-    return _inputFileDialog([("DDD recordings", ".hdf5"),('Any type','*')])
+    return _inputFileDialog([("DDD recordings", ".hdf5"), ('Any type', '*')])
+
 
 def _inputFileDialog(types):
     from pathlib import Path
     root = tk.Tk()
     root.tk.call('tk', 'scaling', 4.0)  # doesn't help on hdpi screen
     root.withdraw()
-    indir='./input'
+    indir = './input'
     if Path(indir).is_dir():
         os.chdir(indir)
-    filetypes=types
+    filetypes = types
     filepath = filedialog.askopenfilename(filetypes=filetypes)
     os.chdir('..')
     return filepath
 
-def checkAddSuffix(path:str,suffix:str):
+
+def checkAddSuffix(path: str, suffix: str):
     if path.endswith(suffix):
         return path
     else:
         return os.path.splitext(path)[0]+suffix
+
 
 def video_writer(output_path, height, width):
     """ Return a video writer.
@@ -86,11 +105,15 @@ def video_writer(output_path, height, width):
                 fourcc,
                 OUTPUT_VIDEO_FPS,
                 (width, height))
-    logger.debug('opened {} with  {} https://www.fourcc.org/ codec, {}fps, and ({}x{}) size'.format(output_path, OUTPUT_VIDEO_CODEC_FOURCC, OUTPUT_VIDEO_FPS, width, height))
+    logger.debug(
+        'opened {} with {} https://www.fourcc.org/ codec, {}fps, '
+        'and ({}x{}) size'.format(
+            output_path, OUTPUT_VIDEO_CODEC_FOURCC, OUTPUT_VIDEO_FPS,
+            width, height))
     return out
 
 
-def all_images(data_path:str):
+def all_images(data_path):
     """Return path of all input images. Assume that the ascending order of
     file names is the same as the order of time sequence.
 
@@ -146,23 +169,27 @@ def read_aedat_txt_events(fname: str):
     """
     import pandas as pd
     import numpy as np
-    dat = pd.read_table(fname,
-                        sep=' ',  # field separator
-                        comment='#',  # comment
-                        skipinitialspace=False,
-                        skip_blank_lines=True,
-                        error_bad_lines=False,
-                        warn_bad_lines=True,
-                        encoding='utf-8',
-                        names=['t', 'x', 'y', 'p'],
-                        dtype={'a': np.float64, 'b': np.int32, 'c': np.int32, 'd': np.int32}
-                        )
+    dat = pd.read_table(
+        fname,
+        sep=' ',  # field separator
+        comment='#',  # comment
+        skipinitialspace=False,
+        skip_blank_lines=True,
+        error_bad_lines=False,
+        warn_bad_lines=True,
+        encoding='utf-8',
+        names=['t', 'x', 'y', 'p'],
+        dtype={'a': np.float64, 'b': np.int32, 'c': np.int32, 'd': np.int32})
 
-    return np.array(dat.values) # array[N,4] with each row having ts, x, y, pol. ts is in float seconds. pol is 0,1
+    # array[N,4] with each row having ts, x, y, pol.
+    # ts is in float seconds. pol is 0,1
+    return np.array(dat.values)
 
 
 def select_events_in_roi(events, x, y):
-    """ Select the events inside the region specified by x and y, including the x and y values.
+    """ Select the events inside the region specified by x and y.
+    including the x and y values.
+
     Parameters
     ----------
     events: np.ndarray, [timestamp, x, y, polarity]
@@ -173,8 +200,8 @@ def select_events_in_roi(events, x, y):
     -------
     np.ndarray, event just in ROI with the same shape as events.
     """
-    x_lim = DVS_WIDTH-1 # events[:, 1].max()
-    y_lim = DVS_HEIGHT-1 # events[:, 2].max()
+    x_lim = DVS_WIDTH-1  # events[:, 1].max()
+    y_lim = DVS_HEIGHT-1  # events[:, 2].max()
 
     if isinstance(x, int):
         if x < 0 or x > x_lim:
@@ -208,7 +235,9 @@ def select_events_in_roi(events, x, y):
     return events[region]
 
 
-def histogram_events_in_time_bins(events, start=0, stop=3.5, time_bin_ms=50, polarity=None):
+def histogram_events_in_time_bins(
+        events, start=0, stop=3.5,
+        time_bin_ms=50, polarity=None):
     """ Count the amount of events in each bin.
     Parameters
     ----------
@@ -222,7 +251,7 @@ def histogram_events_in_time_bins(events, start=0, stop=3.5, time_bin_ms=50, pol
     histogram of counts
 
     """
-    time_bin_s=time_bin_ms*0.001
+    time_bin_s = time_bin_ms*0.001
 
     if start < 0 or stop < 0:
         raise ValueError("start and stop must be int.")
@@ -244,4 +273,3 @@ def histogram_events_in_time_bins(events, start=0, stop=3.5, time_bin_ms=50, pol
         ts_cnt[i][1] = cnt
 
     return ts_cnt
-
