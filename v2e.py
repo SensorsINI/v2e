@@ -4,8 +4,8 @@ Python code for extracting frames from video file and synthesizing fake DVS
 events from this video after SuperSloMo has generated interpolated
 frames from the original video frames.
 
-@author: Tobi Delbruck Zhe He
-@contact: tobi@ini.uzh.ch, zhehe@student.ethz.ch
+@author: Tobi Delbruck, Yuhuang Hu, Zhe He
+@contact: tobi@ini.uzh.ch, yuhuang.hu@ini.uzh.ch, zhehe@student.ethz.ch
 @latest update: Apr 2020
 """
 # todo  add batch mode for slomo to speed up
