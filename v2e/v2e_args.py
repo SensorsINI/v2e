@@ -107,11 +107,11 @@ def v2e_args(parser):
         help="set full scale event count histogram count for DVS videos "
              "to be this many ON or OFF events for full white or black.")
     outGroupDvsVideo.add_argument(
-        "--output_height",
+        "--output_height", type=int, default=None,
         help="height of output DVS data in pixels. "
              "If None, same as input video.")
     outGroupDvsVideo.add_argument(
-        "--output_width",
+        "--output_width", type=int, default=None,
         help="width of output DVS data in pixels. "
              "If None, same as input video.")
     outGroupDvsVideo.add_argument(

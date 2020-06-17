@@ -218,6 +218,7 @@ class EventRenderer(object):
         histrange = [(0, v) for v in (self.height, self.width)]
 
         done = False
+        read_to_done = False
         # continue consuming events from input event_arr
         # until we are done with all these events,
         # output frames along the way
@@ -249,7 +250,7 @@ class EventRenderer(object):
 
             if end >= numEvents:
                 # we will return now after integrating remaining events
-                done = True
+                read_to_done = True
                 # reset to end of current events to integrate all of them
                 end = numEvents - 1
 
@@ -321,6 +322,8 @@ class EventRenderer(object):
                         cv2.resizeWindow(name, 800, 600)
                         self.preview_resized = True
                     cv2.waitKey(30)  # 30 hz playback
+
+            done = read_to_done
 
         return returnedFrames
 
