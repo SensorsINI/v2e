@@ -6,6 +6,9 @@ from v2e.renderer import ExposureMode
 
 logger = logging.getLogger(__name__)
 
+# there is no slow down when slowdown_factor = 1
+NO_SLOWDOWN = 1
+
 
 def v2e_args(parser):
     # check and add prefix if running script in subfolder

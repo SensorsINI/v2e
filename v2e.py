@@ -27,6 +27,7 @@ import v2e.desktop as desktop
 from v2e.v2e_utils import all_images, read_image, OUTPUT_VIDEO_FPS, \
     check_lowpass, v2e_quit
 from v2e.v2e_args import v2e_args, write_args_info, v2e_check_dvs_exposure_args
+from v2e.v2e_args import NO_SLOWDOWN
 from v2e.renderer import EventRenderer, ExposureMode
 from v2e.slomo import SuperSloMo
 from v2e.emulator import EventEmulator
@@ -166,11 +167,14 @@ if __name__ == "__main__":
 
     check_lowpass(cutoff_hz, srcFps*slowdown_factor, logger)
 
-    # only works with batch_size=1 now
-    slomo = SuperSloMo(
-        model=args.slomo_model, slowdown_factor=args.slowdown_factor,
-        video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo,
-        preview=preview, batch_size=batch_size)
+    # the SloMo model, set no SloMo model if no slowdown
+    if slowdown_factor != NO_SLOWDOWN:
+        slomo = SuperSloMo(
+            model=args.slomo_model, slowdown_factor=args.slowdown_factor,
+            video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo,
+            preview=preview, batch_size=batch_size)
+    else:
+        slomo = None
 
     srcTotalDuration = (srcNumFrames - 1) * srcFrameIntervalS
     start_frame = int(srcNumFrames * (start_time / srcTotalDuration)) \
@@ -309,13 +313,22 @@ if __name__ == "__main__":
             # make input to slomo
             slomoInputFrames = np.asarray(batchFrames)
 
-            # interpolated frames are stored to tmpfolder as 1.png, 2.png, etc
-            slomo.interpolate(slomoInputFrames, interpFramesFolder)
-            # read back to memory
-            interpFramesFilenames = all_images(interpFramesFolder)
-            # number of interpolated frames, will be 1 if slowdown_factor==1
-            n = len(interpFramesFilenames)
-            events = np.empty((0, 4), float)
+            # does not even bother save them if there is no slowdown
+            # because the memory should be able to handle
+            # tens of frames
+            if slowdown_factor != NO_SLOWDOWN:
+                # interpolated frames are stored to tmpfolder as
+                # 1.png, 2.png, etc
+                slomo.interpolate(slomoInputFrames, interpFramesFolder)
+                # read back to memory
+                interpFramesFilenames = all_images(interpFramesFolder)
+                n = len(interpFramesFilenames)
+
+            # number of frames
+            n = len(interpFramesFilenames) if slowdown_factor != NO_SLOWDOWN \
+                else slomoInputFrames.shape[0]
+
+            events = np.empty((0, 4), dtype=np.float32)
             # Interpolating the 2 frames f0 to f1 results in
             # n frames f0 fi0 fi1 ... fin-2 f1
             # The endpoint frames are same as input.
@@ -330,16 +343,17 @@ if __name__ == "__main__":
             # compute times of output integrated frames
             interpTimes = np.linspace(
                 start=ts0, stop=ts1, num=n+1, endpoint=False)
-            if n == 1:  # no slowdown
-                fr = read_image(interpFramesFilenames[0])
-                newEvents = emulator.generate_events(fr, ts0, ts1)
-            else:
-                for i in range(n):  # for each interpolated frame
-                    fr = read_image(interpFramesFilenames[i])
-                    newEvents = emulator.generate_events(
-                        fr, interpTimes[i], interpTimes[i + 1])
-                    if newEvents is not None and newEvents.shape[0] > 0:
-                        events = np.append(events, newEvents, axis=0)
+
+            # interpolate events
+            for i in range(n):  # for each interpolated frame
+                fr = read_image(interpFramesFilenames[i]) \
+                    if slowdown_factor != NO_SLOWDOWN else \
+                    slomoInputFrames[i]
+                newEvents = emulator.generate_events(
+                    fr, interpTimes[i], interpTimes[i + 1])
+                if newEvents is not None and newEvents.shape[0] > 0:
+                    events = np.append(events, newEvents, axis=0)
+
             events = np.array(events)  # remove first None element
             eventRenderer.render_events_to_frames(
                 events, height=output_height, width=output_width)

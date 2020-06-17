@@ -150,7 +150,7 @@ def read_image(path: str) -> np.ndarray:
     img: np.ndarray scaled 0-255
     """
     img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-    img = img.astype(np.float)
+    img = img.astype(np.float32)
     return img
 
 
