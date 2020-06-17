@@ -54,9 +54,9 @@ def v2e_args(parser):
     outGroupDvsVideo = parser.add_argument_group('Output: DVS video')
     outGroupDvsVideo.add_argument("--dvs_vid", type=str, default="dvs-video.avi", help="output DVS events as AVI video at frame_rate.")
     outGroupDvsVideo.add_argument("--dvs_vid_full_scale", type=int, default=2, help="set full scale event count histogram count for DVS videos to be this many ON or OFF events for full white or black.")
-    outGroupDvsVideo.add_argument("--output_height", type=int, default=260,
+    outGroupDvsVideo.add_argument("--output_height",
                         help="height of output DVS data in pixels. If None, same as input video.")
-    outGroupDvsVideo.add_argument("--output_width", type=int, default=346,
+    outGroupDvsVideo.add_argument("--output_width", 
                         help="width of output DVS data in pixels. If None, same as input video.")
     outGroupDvsVideo.add_argument("--frame_rate", type=int,
                                   help="implies --dvs_exposure duration 1/framerate.  Equivalent frame rate of --dvs_vid output video; the events will be accummulated as this sample rate; DVS frames will be accumulated for duration 1/frame_rate")
