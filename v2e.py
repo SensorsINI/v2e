@@ -13,15 +13,15 @@ frames from the original video frames.
 
 import argparse
 from pathlib import Path
+from shutil import rmtree
 
 import argcomplete
 import cv2
 import numpy as np
 import os
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, mkdtemp
 from engineering_notation import EngNumber  # only from pip
 from tqdm import tqdm
-
 
 import v2e.desktop as desktop
 from v2e.v2e_utils import all_images, read_image,  \
@@ -160,9 +160,66 @@ if __name__ == "__main__":
     if srcFps == 0:
         logger.error('source {} fps is 0'.format(input_file))
         v2e_quit()
+
+    # TODO: dump all the frames as individual files to a temp folder
+    # then the data loader can read individual file
+    source_frames_dir = mkdtemp()
+    inputWidth = cap.get(cv2.CV_CAP_PROP_FRAME_WIDTH)
+    inputHeight = cap.get(cv2.CV_CAP_PROP_FRAME_HEIGHT)
+    inputChannels = 3
+
+    if (output_width is None) and (output_height is None):
+        output_width = inputWidth
+        output_height = inputHeight
+        logger.warning(
+            'output size ({}x{}) was set automatically to '
+            'input video size\n    Are you sure you want this? '
+            'It might be slow.\n    Consider using '
+            '--output_width and --output_height'
+            .format(output_width, output_height))
+    inputFrameIndex = 0
+    while (cap.isOpened()):
+            # read frame
+            ret, inputVideoFrame = cap.read()
+
+            if output_height and output_width and \
+                    (inputHeight != output_height or
+                     inputWidth != output_width):
+                dim = (output_width, output_height)
+                (fx, fy) = (float(output_width)/inputWidth,
+                            float(output_height)/inputHeight)
+                inputVideoFrame = cv2.resize(
+                    src=inputVideoFrame, dsize=dim, fx=fx, fy=fy,
+                    interpolation=cv2.INTER_AREA)
+            if inputChannels == 3:  # color
+                if inputFrameIndex == 0:  # print info once
+                    logger.info(
+                        'converting input frames from RGB color to luma')
+                # TODO would break resize if input is gray frames
+                # convert RGB frame into luminance.
+                inputVideoFrame = cv2.cvtColor(
+                    inputVideoFrame, cv2.COLOR_BGR2GRAY)  # much faster
+            # save frame into numpy records
+            save_path = os.path.join(
+                source_frames_dir, str(inputVideoFrame).zfill(8)+".npy")
+            np.save(save_path, inputVideoFrame)
+            inputVideoFrame += 1
+
+    # TODO: slowdown_factor should be determined solely by slowmotion factor
+    # what's the relation between input_slowmotion_factor,
+    # timestamp_resolution and slowdown_factor?
+    # e.g.,
+    # fps = 10
+    # input_slowmotion_factor = 2
+    # timestamp_resolution = 2ms
+    # srcFrameIntervalS = 1/10/2 = 50ms
+    # slowdown_factor = 50ms/2 = 25
+    # frame_rate after sampling = 25*10 = 250 fps
+    # time resolution = 1/250 = 4ms
     srcFrameIntervalS = (1. / srcFps)/input_slowmotion_factor
 
-    slowdown_factor = int(srcFrameIntervalS/timestamp_resolution)
+    slowdown_factor = int(srcFrameIntervalS//timestamp_resolution)
+
     if slowdown_factor < 1:
         slowdown_factor = 1
         logger.warning(
@@ -288,112 +345,64 @@ if __name__ == "__main__":
             start_frame, stop_frame))
     batchFrames = []
     # step over input by batch_size steps
-    for frameNumber in tqdm(
-            range(start_frame, stop_frame, segment_size),
-            unit='fr', desc='v2e'):
-        # each time add batch_size frames to previous frame
-        # which we made first frame at end of interpolating and
-        # generating events
-        for i in range(segment_size):
-            if cap.isOpened():
-                ret, inputVideoFrame = cap.read()
-            else:
-                break
-            if not ret:
-                break
-            num_frames += 1
-            if len(batchFrames) == 0:  # first frame, just initialize sizes
-                logger.info(
-                    'input frames have shape {}'.format(inputVideoFrame.shape))
-                inputHeight = inputVideoFrame.shape[0]
-                inputWidth = inputVideoFrame.shape[1]
-                inputChannels = inputVideoFrame.shape[2]
-                if (output_width is None) and (output_height is None):
-                    output_width = inputWidth
-                    output_height = inputHeight
-                    logger.warning(
-                        'output size ({}x{}) was set automatically to '
-                        'input video size\n    Are you sure you want this? '
-                        'It might be slow.\n    Consider using '
-                        '--output_width and --output_height'
-                        .format(output_width, output_height))
-            if output_height and output_width and \
-                    (inputHeight != output_height or
-                     inputWidth != output_width):
-                dim = (output_width, output_height)
-                (fx, fy) = (float(output_width)/inputWidth,
-                            float(output_height)/inputHeight)
-                inputVideoFrame = cv2.resize(
-                    src=inputVideoFrame, dsize=dim, fx=fx, fy=fy,
-                    interpolation=cv2.INTER_AREA)
-            if inputChannels == 3:  # color
-                if len(batchFrames) == 0:  # print info once
-                    logger.info(
-                        'converting input frames from RGB color to luma')
-                # TODO would break resize if input is gray frames
-                # convert RGB frame into luminance.
-                inputVideoFrame = cv2.cvtColor(
-                    inputVideoFrame, cv2.COLOR_BGR2GRAY)  # much faster
-                # frame = (0.2126 * frame[:, :, 0] +
-                #          0.7152 * frame[:, :, 1] +
-                #          0.0722 * frame[:, :, 2])
-            batchFrames.append(inputVideoFrame)
-        if len(batchFrames) < 2:
-            continue  # need at least 2 frames
+    #  for frameNumber in tqdm(
+    #          range(start_frame, stop_frame, segment_size),
+    #          unit='fr', desc='v2e'):
 
-        with TemporaryDirectory() as interpFramesFolder:
-            # make input to slomo
-            slomoInputFrames = np.asarray(batchFrames)
+    with TemporaryDirectory() as interpFramesFolder:
+        # make input to slomo
+        #  slomoInputFrames = np.asarray(batchFrames)
 
-            # does not even bother save them if there is no slowdown
-            # because the memory should be able to handle
-            # tens of frames
-            if slowdown_factor != NO_SLOWDOWN:
-                # interpolated frames are stored to tmpfolder as
-                # 1.png, 2.png, etc
-                slomo.interpolate(slomoInputFrames, interpFramesFolder)
-                # read back to memory
-                interpFramesFilenames = all_images(interpFramesFolder)
+        # does not even bother save them if there is no slowdown
+        # because the memory should be able to handle
+        # tens of frames
+        if slowdown_factor != NO_SLOWDOWN:
+            # interpolated frames are stored to tmpfolder as
+            # 1.png, 2.png, etc
+            slomo.interpolate(source_frames_dir, interpFramesFolder)
+            # read back to memory
+            interpFramesFilenames = all_images(interpFramesFolder)
+        else:
+            pass
+            # TODO: resave numpy records into interpolation folder
 
-            # number of frames
-            n = len(interpFramesFilenames) if slowdown_factor != NO_SLOWDOWN \
-                else slomoInputFrames.shape[0]
+        # number of frames
+        n = len(interpFramesFilenames) if slowdown_factor != NO_SLOWDOWN \
+            else srcNumFrames
 
-            events = np.empty((0, 4), dtype=np.float32)
-            # Interpolating the 2 frames f0 to f1 results in
-            # n frames f0 fi0 fi1 ... fin-2 f1
-            # The endpoint frames are same as input.
-            # If we pass these to emulator repeatedly,
-            # then the f1 frame from past loop is the same as
-            # the f0 frame in the next iteration.
-            # For emulation, we should pass in to the emulator
-            # only up to the last interpolated frame,
-            # since the next iteration will pass in the f1
-            # from previous iteration.
+        events = np.empty((0, 4), dtype=np.float32)
+        # Interpolating the 2 frames f0 to f1 results in
+        # n frames f0 fi0 fi1 ... fin-2 f1
+        # The endpoint frames are same as input.
+        # If we pass these to emulator repeatedly,
+        # then the f1 frame from past loop is the same as
+        # the f0 frame in the next iteration.
+        # For emulation, we should pass in to the emulator
+        # only up to the last interpolated frame,
+        # since the next iteration will pass in the f1
+        # from previous iteration.
 
-            # compute times of output integrated frames
-            interpTimes = np.linspace(
-                start=ts0, stop=ts1, num=n+1, endpoint=False)
+        # compute times of output integrated frames
+        interpTimes = np.linspace(
+            start=ts0, stop=ts1, num=n+1, endpoint=False)
 
-            # interpolate events
-            for i in range(n):  # for each interpolated frame
-                fr = read_image(interpFramesFilenames[i]) \
-                    if slowdown_factor != NO_SLOWDOWN else \
-                    slomoInputFrames[i]
-                newEvents = emulator.generate_events(fr, interpTimes[i])
-                if newEvents is not None and newEvents.shape[0] > 0:
-                    events = np.append(events, newEvents, axis=0)
+        # interpolate events
+        for i in range(n):  # for each interpolated frame
+            fr = read_image(interpFramesFilenames[i])
+            newEvents = emulator.generate_events(fr, interpTimes[i])
+            if newEvents is not None and newEvents.shape[0] > 0:
+                events = np.append(events, newEvents, axis=0)
 
-            events = np.array(events)  # remove first None element
-            eventRenderer.render_events_to_frames(
-                events, height=output_height, width=output_width)
-            ts0 = ts1
-            ts1 += min(srcFrameIntervalS*segment_size, srcTotalDuration)
-
-        # save last frame of input as 1st frame of new batch
-        batchFrames = [inputVideoFrame]
+        events = np.array(events)  # remove first None element
+        eventRenderer.render_events_to_frames(
+            events, height=output_height, width=output_width)
+        ts0 = ts1
+        ts1 += min(srcFrameIntervalS*segment_size, srcTotalDuration)
 
     cap.release()
+    # remove the source directory
+    rmtree(source_frames_dir)
+
     if num_frames == 0:
         logger.error('no frames read from file')
         v2e_quit()

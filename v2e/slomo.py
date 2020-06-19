@@ -137,7 +137,7 @@ class SuperSloMo(object):
                                            transforms.ToPILImage()])
         return to_tensor, to_image
 
-    def __load_data(self, images):
+    def __load_data(self, source_frame_path):
         """Return a Dataloader instance, which is constructed with \
             APS frames.
 
@@ -152,7 +152,9 @@ class SuperSloMo(object):
         frames.dim: new size.
         frames.origDim: original size.
         """
-        frames = dataloader.Frames(images, transform=self.to_tensor)
+        #  frames = dataloader.Frames(images, transform=self.to_tensor)
+        frames = dataloader.FramesDirectory(
+            source_frame_path, transform=self.to_tensor)
         videoFramesloader = torch.utils.data.DataLoader(
                 frames,
                 batch_size=self.batch_size,
@@ -202,7 +204,7 @@ class SuperSloMo(object):
 
         return flow_estimator, warper, interpolator
 
-    def interpolate(self, images: np.ndarray, output_folder: str)->None:
+    def interpolate(self, source_frame_path, output_folder)->None:
         """Run interpolation. \
             Interpolated frames will be saved in folder self.output_path.
 
@@ -220,7 +222,7 @@ class SuperSloMo(object):
                 'output_folder is None; it must be supplied to store '
                 'the interpolated frames')
 
-        video_frame_loader, dim, ori_dim = self.__load_data(images)
+        video_frame_loader, dim, ori_dim = self.__load_data(source_frame_path)
         if not self.model_loaded:
             (self.flow_estimator, self.warper,
              self.interpolator) = self.__model(dim)
@@ -249,7 +251,8 @@ class SuperSloMo(object):
             #  logger.debug(
             #      "using " + str(output_folder) +
             #      " to store interpolated frames")
-            nImages = images.shape[0]
+            nImages = len(video_frame_loader)
+            #  nImages = images.shape[0]
             disableTqdm = nImages <= max(self.batch_size, 4)
             for _, (frame0, frame1) in enumerate(
                     tqdm(video_frame_loader, desc='slomo-interp',
@@ -324,20 +327,20 @@ class SuperSloMo(object):
             # write input frames into video
             # don't duplicate each frame if called using rotating buffer
             # of two frames in a row
-            numin = images.shape[0]
-            num2write = 1 if numin == 2 else numin
-            if self.ori_writer:
-                #  tqdm(range(0,num2write-1),
-                #       desc='slomo--write-orig-vid',unit='fr'):
-                for i in range(0, num2write):
-                    frame = images[i]
-                    # duplicate frames to match speed of slomo video
-                    for _ in range(self.sf):
-                        self.ori_writer.write(
-                            cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
-                        self.numOrigVideoFramesWritten += 1
-                    # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
-                    #     break
+            #  numin = images.shape[0]
+            #  num2write = 1 if numin == 2 else numin
+            #  if self.ori_writer:
+            #      #  tqdm(range(0,num2write-1),
+            #      #       desc='slomo--write-orig-vid',unit='fr'):
+            #      for i in range(0, num2write):
+            #          frame = images[i]
+            #          # duplicate frames to match speed of slomo video
+            #          for _ in range(self.sf):
+            #              self.ori_writer.write(
+            #                  cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
+            #              self.numOrigVideoFramesWritten += 1
+            #          # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
+            #          #     break
 
             frame_paths = self.__all_images(output_folder)
             # write slomo frames into video
