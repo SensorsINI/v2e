@@ -81,7 +81,10 @@ class SuperSloMo(object):
             logger.warning('CUDA not available, will be slow :-(')
         self.checkpoint = model
         self.batch_size = batch_size
-        if not isinstance(slowdown_factor,int) or slowdown_factor<2: raise ValueError('slowdown_factor={} but must be an int value>1'.format(slowdown_factor))
+        if not isinstance(slowdown_factor, int) or slowdown_factor < 2:
+            raise ValueError(
+                'slowdown_factor={} but must be an int value>1'
+                .format(slowdown_factor))
         self.sf = slowdown_factor
         self.video_path = video_path
         self.preview = preview
@@ -138,7 +141,7 @@ class SuperSloMo(object):
                                            transforms.ToPILImage()])
         return to_tensor, to_image
 
-    def __load_data(self, images):
+    def __load_data(self, source_frame_path, frame_size):
         """Return a Dataloader instance, which is constructed with \
             APS frames.
 
@@ -153,7 +156,9 @@ class SuperSloMo(object):
         frames.dim: new size.
         frames.origDim: original size.
         """
-        frames = dataloader.Frames(images, transform=self.to_tensor)
+        #  frames = dataloader.Frames(images, transform=self.to_tensor)
+        frames = dataloader.FramesDirectory(
+            source_frame_path, frame_size, transform=self.to_tensor)
         videoFramesloader = torch.utils.data.DataLoader(
                 frames,
                 batch_size=self.batch_size,
@@ -203,33 +208,44 @@ class SuperSloMo(object):
 
         return flow_estimator, warper, interpolator
 
-    def interpolate(self, images: np.ndarray, output_folder: str)->None:
+    def interpolate(self, source_frame_path, output_folder, frame_size):
         """Run interpolation. \
             Interpolated frames will be saved in folder self.output_path.
 
         Parameters
         ----------
-        images: np.ndarray, [N, W, H]
+        source_frame_path: path that contains source file
         output_folder:str, folder that stores the interpolated images,
             numbered 1:N*slowdown_factor.
+        frame_size: tuple (width, height)
 
-            Frames will include the input frames, i.e. if there are 2 input frames and slowdown_factor=10, there will be 10 frames written,
-            starting with the first input frame, and ending before the 2nd input frame.
 
-            If  slowdown factor=2, then the first output frame will be the first input frame, and the 2nd output frame will be
-            a new synthetic frame halfway to the 2nd frame.
+        Frames will include the input frames, i.e.
+        if there are 2 input frames and slowdown_factor=10,
+        there will be 10 frames written,
+        starting with the first input frame, and ending before
+        the 2nd input frame.
 
-            If the slowdown_factor is 3, then there will the first input frame followed by 2 more interframes.
+        If  slowdown factor=2, then the first output frame will be
+        the first input frame, and the 2nd output frame will be
+        a new synthetic frame halfway to the 2nd frame.
 
-            The output will never include the 2nd input frame.
+        If the slowdown_factor is 3, then there will
+        the first input frame followed by 2 more interframes.
 
+        The output will never include the 2nd input frame.
+
+        Frames will include the input frames,
+        i.e. if there are 2 input frames and slowdown_factor=10,
+        there will be ?? frames written
         """
         if not output_folder:
             raise Exception(
                 'output_folder is None; it must be supplied to store '
                 'the interpolated frames')
 
-        video_frame_loader, dim, ori_dim = self.__load_data(images)
+        video_frame_loader, dim, ori_dim = self.__load_data(
+            source_frame_path, frame_size)
         if not self.model_loaded:
             (self.flow_estimator, self.warper,
              self.interpolator) = self.__model(dim)
@@ -258,7 +274,8 @@ class SuperSloMo(object):
             #  logger.debug(
             #      "using " + str(output_folder) +
             #      " to store interpolated frames")
-            nImages = images.shape[0]
+            nImages = len(video_frame_loader)
+            #  nImages = images.shape[0]
             disableTqdm = nImages <= max(self.batch_size, 4)
             for _, (frame0, frame1) in enumerate(
                     tqdm(video_frame_loader, desc='slomo-interp',
@@ -333,20 +350,20 @@ class SuperSloMo(object):
             # write input frames into video
             # don't duplicate each frame if called using rotating buffer
             # of two frames in a row
-            numin = images.shape[0]
-            num2write = 1 if numin == 2 else numin
-            if self.ori_writer:
-                #  tqdm(range(0,num2write-1),
-                #       desc='slomo--write-orig-vid',unit='fr'):
-                for i in range(0, num2write):
-                    frame = images[i]
-                    # duplicate frames to match speed of slomo video
-                    for _ in range(self.sf):
-                        self.ori_writer.write(
-                            cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
-                        self.numOrigVideoFramesWritten += 1
-                    # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
-                    #     break
+            #  numin = images.shape[0]
+            #  num2write = 1 if numin == 2 else numin
+            #  if self.ori_writer:
+            #      #  tqdm(range(0,num2write-1),
+            #      #       desc='slomo--write-orig-vid',unit='fr'):
+            #      for i in range(0, num2write):
+            #          frame = images[i]
+            #          # duplicate frames to match speed of slomo video
+            #          for _ in range(self.sf):
+            #              self.ori_writer.write(
+            #                  cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
+            #              self.numOrigVideoFramesWritten += 1
+            #          # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
+            #          #     break
 
             frame_paths = self.__all_images(output_folder)
             # write slomo frames into video
