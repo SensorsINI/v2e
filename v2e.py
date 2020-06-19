@@ -363,33 +363,32 @@ if __name__ == "__main__":
         n = len(interpFramesFilenames) if slowdown_factor != NO_SLOWDOWN \
             else srcNumFrames
 
-        events = np.empty((0, 4), dtype=np.float32)
-        # Interpolating the 2 frames f0 to f1 results in
-        # n frames f0 fi0 fi1 ... fin-2 f1
-        # The endpoint frames are same as input.
-        # If we pass these to emulator repeatedly,
-        # then the f1 frame from past loop is the same as
-        # the f0 frame in the next iteration.
-        # For emulation, we should pass in to the emulator
-        # only up to the last interpolated frame,
-        # since the next iteration will pass in the f1
-        # from previous iteration.
-
         # compute times of output integrated frames
         interpTimes = np.linspace(
-            start=ts0, stop=ts1, num=n+1, endpoint=False)
+            start=ts0, stop=ts1, num=n, endpoint=False)
 
         # interpolate events
         # get some progress bar
-        for i in range(n):  # for each interpolated frame
-            fr = read_image(interpFramesFilenames[i])
-            newEvents = emulator.generate_events(fr, interpTimes[i])
-            if newEvents is not None and newEvents.shape[0] > 0:
-                events = np.append(events, newEvents, axis=0)
+        events = np.zeros((0, 4), dtype=np.float32)
+        num_batches = (n // (slowdown_factor*batch_size))+1
+
+        for batch_idx in range(num_batches):
+            events = np.zeros((0, 4), dtype=np.float32)
+            for sub_img_idx in range(slowdown_factor*batch_size):
+                image_idx = batch_idx*(slowdown_factor*batch_size)+sub_img_idx
+                # at the end of the file
+                if image_idx > n-1:
+                    break
+                fr = read_image(interpFramesFilenames[image_idx])
+                newEvents = emulator.generate_events(
+                    fr, interpTimes[image_idx])
+
+                if newEvents is not None and newEvents.shape[0] > 0:
+                    events = np.append(events, newEvents, axis=0)
 
             events = np.array(events)  # remove first None element
-        eventRenderer.render_events_to_frames(
-            events, height=output_height, width=output_width)
+            eventRenderer.render_events_to_frames(
+                events, height=output_height, width=output_width)
 
     cap.release()
     # remove the source directory
