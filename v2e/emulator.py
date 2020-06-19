@@ -566,7 +566,7 @@ class EventFrameRenderer(object):
         self.neg_thres = neg_thres
         self.preview = preview
         self.preview_resized = False
-        self.avi_frame_rate=avi_frame_rate
+        self.avi_frame_rate = avi_frame_rate
 
     def _get_events(self):
         """Get all events.

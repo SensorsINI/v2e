@@ -139,7 +139,9 @@ class EventRenderer(object):
                 os.path.join(self.output_path,
                              self.video_output_file_name), '.avi')
             logger.info('opening DVS video output file ' + fn)
-            self.video_output_file = video_writer(fn, self.height, self.width, frame_rate=self.avi_frame_rate)
+            self.video_output_file = video_writer(
+                fn, self.height, self.width,
+                frame_rate=self.avi_frame_rate)
             fn = checkAddSuffix(
                 os.path.join(
                     self.output_path, self.video_output_file_name),
@@ -269,7 +271,8 @@ class EventRenderer(object):
                 self.currentFrame + (img_on - img_off),
                 -self.full_scale_count, self.full_scale_count)
 
-            # If not finished with current event_arr, it means above we finished filling a frame, either with
+            # If not finished with current event_arr,
+            # it means above we finished filling a frame, either with
             # time or with sufficient count of events.
             # Write out the completed frame
             if not doneWithTheseEvents:
@@ -279,7 +282,7 @@ class EventRenderer(object):
                     # increase time to next frame
                     self.currentFrameStartTime += self.frameIntevalS
                     nextFrameStartTs = self.currentFrameStartTime + \
-                                       self.frameIntevalS
+                        self.frameIntevalS
                 elif self.exposure_mode == ExposureMode.COUNT or \
                         self.exposure_mode == ExposureMode.AREA_COUNT:
                     thisFrameIdx = end
@@ -347,7 +350,8 @@ class EventRenderer(object):
                 self.emulator = EventEmulator(
                     pos_thres=self.pos_thres, neg_thres=self.neg_thres,
                     sigma_thres=self.sigma_thres)
-            tmp_events = self.emulator.generate_events(new_frame, frameTimesS[i])
+            tmp_events = self.emulator.generate_events(
+                new_frame, frameTimesS[i])
             if tmp_events is not None:
                 # convert data to uint32 (microsecs) format
                 tmp_events[:, 0] = tmp_events[:, 0] * 1e6

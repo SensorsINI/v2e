@@ -87,7 +87,7 @@ class SuperSloMo(object):
         self.preview_resized = False
         self.vid_orig = vid_orig
         self.vid_slomo = vid_slomo
-        self.avi_frame_rate=avi_frame_rate
+        self.avi_frame_rate = avi_frame_rate
 
         # initialize the Transform instances.
         self.to_tensor, self.to_image = self.__transform()
@@ -211,8 +211,9 @@ class SuperSloMo(object):
         images: np.ndarray, [N, W, H]
         output_folder:str, folder that stores the interpolated images,
             numbered 1:N*slowdown_factor.
-            Frames will include the input frames, i.e. if there are 2 input frames and slowdown_factor=10, there will be ?? frames written
-
+            Frames will include the input frames, 
+            i.e. if there are 2 input frames and slowdown_factor=10, 
+            there will be ?? frames written
         """
         if not output_folder:
             raise Exception(

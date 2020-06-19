@@ -32,16 +32,20 @@ def v2e_args(parser):
         help="disable preview in cv2 windows for faster processing.")
     outGroupGeneral.add_argument(
         "--avi_frame_rate", type=int, default=30,
-        help="frame rate of output AVI video files; only affects playback rate. ")
+        help="frame rate of output AVI video files; "
+             "only affects playback rate. ")
 
     # DVS model parameters
     modelGroup = parser.add_argument_group('DVS model')
     modelGroup.add_argument(
         "--timestamp_resolution", type=float,
-        help="Desired DVS timestamp reolution in seconds; determines slow motion factor;  "
-             "the video will be upsampled from source fps to achieve the desired timestamp resolution."
+        help="Desired DVS timestamp reolution in seconds; "
+             "determines slow motion factor;  "
+             "the video will be upsampled from source fps to "
+             "achieve the desired timestamp resolution."
              "I.e. slowdown_factor = (1/fps)/timestamp_resolution; "
-             "using a high resolution e.g. of 1ms will result in slow rendering since it will force high upsampling ratio."
+             "using a high resolution e.g. of 1ms will result in slow "
+             "rendering since it will force high upsampling ratio."
              )
     modelGroup.add_argument(
         "--dvs_params", type=str, default='clean',
