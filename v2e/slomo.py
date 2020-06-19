@@ -103,10 +103,6 @@ class SuperSloMo(object):
         atexit.register(self.cleanup)
         self.model_loaded = False
 
-        if self.preview:
-            name = str(__file__)
-            cv2.namedWindow(name, cv2.WINDOW_NORMAL)
-
     def cleanup(self):
         logger.info("Closing video writers for original and slomo videos...")
         if self.ori_writer:
@@ -272,6 +268,11 @@ class SuperSloMo(object):
                 ori_dim[0], frame_rate=self.avi_frame_rate
             )
 
+        # prepare preview
+        if self.preview:
+            self.name = str(__file__)
+            cv2.namedWindow(self.name, cv2.WINDOW_NORMAL)
+
         frameCounter = 1
         # torch.cuda.empty_cache()
         with torch.no_grad():
@@ -294,6 +295,9 @@ class SuperSloMo(object):
                 F_0_1 = flowOut[:, :2, :, :]
                 F_1_0 = flowOut[:, 2:, :, :]
 
+                # for preview
+                if self.preview:
+                    start_frame_count = frameCounter
                 # Generate intermediate frames
                 for intermediateIndex in range(0, self.sf):
                     t = (intermediateIndex + 0.5) / self.sf
@@ -336,15 +340,25 @@ class SuperSloMo(object):
                             output_folder,
                             str(frameCounter + self.sf * batchIndex) + ".png")
                         img_resize.save(save_path)
-                        if self.preview:
-                            gray = np.uint8(img_resize)
-                            cv2.imshow(name, gray)
-                            if not self.preview_resized:
-                                cv2.resizeWindow(name, 800, 600)
-                                self.preview_resized = True
-                            # wait minimally since interp takes time anyhow
-                            cv2.waitKey(1)
+
                     frameCounter += 1
+
+                # for preview
+                if self.preview:
+                    stop_frame_count = frameCounter
+
+                    for frame_idx in range(
+                            start_frame_count,
+                            stop_frame_count+self.sf*(num_batch_frames-1)):
+                        frame_path = os.path.join(
+                            output_folder, str(frame_idx) + ".png")
+                        frame = cv2.imread(frame_path)
+                        cv2.imshow(self.name, frame)
+                        if not self.preview_resized:
+                            cv2.resizeWindow(self.name, 800, 600)
+                            self.preview_resized = True
+                        # wait minimally since interp takes time anyhow
+                        cv2.waitKey(1)
 
                 # Set counter accounting for batching of frames
                 frameCounter += self.sf * (self.batch_size - 1)

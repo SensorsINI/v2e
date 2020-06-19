@@ -276,7 +276,7 @@ if __name__ == "__main__":
     ts0 = 0
     ts1 = srcTotalDuration
     #  ts1 = srcFrameIntervalS  # timestamps of src frames
-    num_frames = 0
+    num_frames = srcNumFramesToBeProccessed
     inputHeight = None
     inputWidth = None
     inputChannels = None
