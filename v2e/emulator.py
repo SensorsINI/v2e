@@ -275,7 +275,7 @@ class EventEmulator(object):
         # Time constant of the filter is proportional to
         # the intensity value (with offset to deal with DN=0)
         deltaTime = t_frame - self.t_previous
-        logger.debug('deltaTime={}'.format(deltaTime))
+        # logger.debug('deltaTime={}'.format(deltaTime))
 
         inten01 = None  # define for later
         if self.cutoff_hz > 0 or self.shot_noise_rate_hz > 0:  # will use later

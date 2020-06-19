@@ -21,6 +21,7 @@ import os
 from tempfile import TemporaryDirectory
 from engineering_notation import EngNumber  # only from pip
 from tqdm import tqdm
+from gooey import Gooey
 
 
 import v2e.desktop as desktop
@@ -48,25 +49,28 @@ logging.addLevelName(
         logging.ERROR))
 logger = logging.getLogger(__name__)
 
-parser = argparse.ArgumentParser(
-    description='v2e: generate simulated DVS events from video.',
-    epilog='Run with no --input to open file dialog', allow_abbrev=True,
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-parser = v2e_args(parser)
-parser.add_argument(
-    "--rotate180", type=bool, default=False,
-    help="rotate all output 180 deg.")
-
-# https://kislyuk.github.io/argcomplete/#global-completion
-# Shellcode (only necessary if global completion is not activated -
-# see Global completion below), to be put in e.g. .bashrc:
-# eval "$(register-python-argcomplete v2e.py)"
-argcomplete.autocomplete(parser)
-args = parser.parse_args()
+# @Gooey(program_name="v2e", default_size=(575, 600))
+def get_args():
+    parser = argparse.ArgumentParser(
+        description='v2e: generate simulated DVS events from video.',
+        epilog='Run with no --input to open file dialog', allow_abbrev=True,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = v2e_args(parser)
+    parser.add_argument(
+        "--rotate180", type=bool, default=False,
+        help="rotate all output 180 deg.")
+    # https://kislyuk.github.io/argcomplete/#global-completion
+    # Shellcode (only necessary if global completion is not activated -
+    # see Global completion below), to be put in e.g. .bashrc:
+    # eval "$(register-python-argcomplete v2e.py)"
+    argcomplete.autocomplete(parser)
+    args = parser.parse_args()
+    return args
 
 
 if __name__ == "__main__":
+    args=get_args()
     overwrite = args.overwrite
     output_folder = args.output_folder
     f = not overwrite and os.path.exists(output_folder) \
@@ -162,7 +166,7 @@ if __name__ == "__main__":
         v2e_quit()
     srcFrameIntervalS = (1. / srcFps)/input_slowmotion_factor
 
-    slowdown_factor = int(srcFrameIntervalS/timestamp_resolution)
+    slowdown_factor = int(np.ceil(srcFrameIntervalS/timestamp_resolution))
     if slowdown_factor < 1:
         slowdown_factor = 1
         logger.warning(
@@ -176,6 +180,9 @@ if __name__ == "__main__":
         .format(
             srcFps, input_slowmotion_factor, timestamp_resolution*1000,
             slowdown_factor))
+
+    # # TODO debug
+    # slowdown_factor=int(3)
 
     slomoTimestampResolutionS = srcFrameIntervalS / slowdown_factor
     # https://stackoverflow.com/questions/25359288/how-to-know-total-number-of-frame-in-a-file-with-cv2-in-python
@@ -291,7 +298,7 @@ if __name__ == "__main__":
     for frameNumber in tqdm(
             range(start_frame, stop_frame, segment_size),
             unit='fr', desc='v2e'):
-        # each time add batch_size frames to previous frame
+        # each time add segment_size frames to previous frame
         # which we made first frame at end of interpolating and
         # generating events
         for i in range(segment_size):
@@ -349,8 +356,13 @@ if __name__ == "__main__":
             # because the memory should be able to handle
             # tens of frames
             if slowdown_factor != NO_SLOWDOWN:
-                # interpolated frames are stored to tmpfolder as
-                # 1.png, 2.png, etc
+                # Interpolated frames are stored to tmpfolder as
+                # 1.png, 2.png, etc.
+                # If slowdown_factor=3, then there will be total of 3 frames,
+                # i.e. 1.png same as first input frame,
+                # 2.png interpolated frame,
+                # 3.png 2nd interpolated frame.
+                # The 2nd input frame is NOT the last frame written output by slomo
                 slomo.interpolate(slomoInputFrames, interpFramesFolder)
                 # read back to memory
                 interpFramesFilenames = all_images(interpFramesFolder)
@@ -360,20 +372,13 @@ if __name__ == "__main__":
                 else slomoInputFrames.shape[0]
 
             events = np.empty((0, 4), dtype=np.float32)
-            # Interpolating the 2 frames f0 to f1 results in
-            # n frames f0 fi0 fi1 ... fin-2 f1
-            # The endpoint frames are same as input.
-            # If we pass these to emulator repeatedly,
-            # then the f1 frame from past loop is the same as
-            # the f0 frame in the next iteration.
-            # For emulation, we should pass in to the emulator
-            # only up to the last interpolated frame,
-            # since the next iteration will pass in the f1
-            # from previous iteration.
+            # Interpolating the 2 frames f0 to f1 results in interpolated frame fi,k
+            # n frames f0 fi,0 fi,1 ... fi,n-1, where n is the slowdown_factor
+            # The f0 i, and the last interpolated frame is NOT f1
 
-            # compute times of output integrated frames
-            interpTimes = np.linspace(
-                start=ts0, stop=ts1, num=n+1, endpoint=False)
+            # Compute times of output interpolated frames.
+            # Use endpoint=False so that we don't include 2nd input frame time
+            interpTimes = np.linspace(start=ts0, stop=ts1, num=n, endpoint=False)
 
             # interpolate events
             for i in range(n):  # for each interpolated frame
@@ -387,7 +392,7 @@ if __name__ == "__main__":
             events = np.array(events)  # remove first None element
             eventRenderer.render_events_to_frames(
                 events, height=output_height, width=output_width)
-            ts0 = ts1
+            ts0 = ts1 # next time will be time of next input frame, which was not yet used by the slomo interpolation
             ts1 += min(srcFrameIntervalS*segment_size, srcTotalDuration)
 
         # save last frame of input as 1st frame of new batch

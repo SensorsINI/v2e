@@ -81,6 +81,7 @@ class SuperSloMo(object):
             logger.warning('CUDA not available, will be slow :-(')
         self.checkpoint = model
         self.batch_size = batch_size
+        if not isinstance(slowdown_factor,int) or slowdown_factor<2: raise ValueError('slowdown_factor={} but must be an int value>1'.format(slowdown_factor))
         self.sf = slowdown_factor
         self.video_path = video_path
         self.preview = preview
@@ -211,9 +212,17 @@ class SuperSloMo(object):
         images: np.ndarray, [N, W, H]
         output_folder:str, folder that stores the interpolated images,
             numbered 1:N*slowdown_factor.
-            Frames will include the input frames, 
-            i.e. if there are 2 input frames and slowdown_factor=10, 
-            there will be ?? frames written
+
+            Frames will include the input frames, i.e. if there are 2 input frames and slowdown_factor=10, there will be 10 frames written,
+            starting with the first input frame, and ending before the 2nd input frame.
+
+            If  slowdown factor=2, then the first output frame will be the first input frame, and the 2nd output frame will be
+            a new synthetic frame halfway to the 2nd frame.
+
+            If the slowdown_factor is 3, then there will the first input frame followed by 2 more interframes.
+
+            The output will never include the 2nd input frame.
+
         """
         if not output_folder:
             raise Exception(
