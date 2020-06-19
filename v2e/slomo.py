@@ -103,6 +103,10 @@ class SuperSloMo(object):
         atexit.register(self.cleanup)
         self.model_loaded = False
 
+        if self.preview:
+            name = str(__file__)
+            cv2.namedWindow(name, cv2.WINDOW_NORMAL)
+
     def cleanup(self):
         logger.info("Closing video writers for original and slomo videos...")
         if self.ori_writer:
@@ -333,8 +337,6 @@ class SuperSloMo(object):
                             str(frameCounter + self.sf * batchIndex) + ".png")
                         img_resize.save(save_path)
                         if self.preview:
-                            name = str(__file__)
-                            cv2.namedWindow(name, cv2.WINDOW_NORMAL)
                             gray = np.uint8(img_resize)
                             cv2.imshow(name, gray)
                             if not self.preview_resized:
