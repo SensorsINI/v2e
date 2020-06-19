@@ -81,16 +81,15 @@ def v2e_args(parser):
     sloMoGroup.add_argument(
         "--slomo_model", type=str, default=prepend+"input/SuperSloMo39.ckpt",
         help="path of slomo_model checkpoint.")
-    sloMoGroup.add_argument(
-        "--segment_size", type=int, default=1,
-        help="Segment size for SuperSloMo. Video is split to chunks of "
-             "this many frames, and within each segment, "
-             "batch mode CNN inference of optic flow takes place. "
-             "Video will be processed segment by segment.")
+    #  sloMoGroup.add_argument(
+    #      "--segment_size", type=int, default=1,
+    #      help="Segment size for SuperSloMo. Video is split to chunks of "
+    #           "this many frames, and within each segment, "
+    #           "batch mode CNN inference of optic flow takes place. "
+    #           "Video will be processed segment by segment.")
     sloMoGroup.add_argument(
         "--batch_size", type=int, default=1,
-        help="Batch size in frames for SuperSloMo. "
-             "Must be less than or equal to seqment_size.")
+        help="Batch size in frames for SuperSloMo.")
     sloMoGroup.add_argument(
         "--vid_orig", type=str, default="video_orig.avi",
         help="Output src video at same rate as slomo video "

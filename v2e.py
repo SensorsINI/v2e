@@ -130,7 +130,7 @@ if __name__ == "__main__":
     vid_slomo = args.vid_slomo
     preview = not args.no_preview
     rotate180 = args.rotate180
-    segment_size = args.segment_size
+    #  segment_size = args.segment_size
     batch_size = args.batch_size
 
     #  if batch_size > segment_size:
@@ -282,8 +282,7 @@ if __name__ == "__main__":
         area_dimension=area_dimension)
 
     ts0 = 0
-    ts1 = min(srcFrameIntervalS*segment_size,
-              srcTotalDuration)  # timestamps of src frames
+    ts1 = srcFrameIntervalS  # timestamps of src frames
     num_frames = 0
     inputHeight = None
     inputWidth = None
@@ -399,7 +398,7 @@ if __name__ == "__main__":
         eventRenderer.render_events_to_frames(
             events, height=output_height, width=output_width)
         ts0 = ts1
-        ts1 += min(srcFrameIntervalS*segment_size, srcTotalDuration)
+        ts1 += srcFrameIntervalS
 
     cap.release()
     # remove the source directory
