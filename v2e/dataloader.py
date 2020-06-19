@@ -106,7 +106,7 @@ class FramesDirectory(data.Dataset):
         and transform them into tensor.
     """
 
-    def __init__(self, folder_path, parsing="/*.npy", transform=None):
+    def __init__(self, folder_path, ori_dim, parsing="/*.npy", transform=None):
 
         """
             @Parameters:
@@ -117,9 +117,10 @@ class FramesDirectory(data.Dataset):
         self.files = sorted(glob.glob("{}".format(folder_path)+parsing))
 
         self.transform = transform
+        self.origDim = ori_dim
         #  self.origDim = array.shape[2], array.shape[1]
-        #  self.dim = (int(self.origDim[0] / 32) * 32,
-        #              int(self.origDim[1] / 32) * 32)
+        self.dim = (int(self.origDim[0] / 32) * 32,
+                    int(self.origDim[1] / 32) * 32)
 
     def __getitem__(self, index):
 
@@ -138,7 +139,7 @@ class FramesDirectory(data.Dataset):
         for image in [image_1, image_2]:
             # Open image using pil.
             image = Image.fromarray(image)
-            #  image = image.resize(self.dim, Image.ANTIALIAS)
+            image = image.resize(self.dim, Image.ANTIALIAS)
             # Apply transformation if specified.
             if self.transform is not None:
                 image = self.transform(image)

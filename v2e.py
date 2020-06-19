@@ -133,10 +133,10 @@ if __name__ == "__main__":
     segment_size = args.segment_size
     batch_size = args.batch_size
 
-    if batch_size > segment_size:
-        raise ValueError(
-            'batch_size={} and segment_size={} is not allowed;'
-            'Use batch_size<=segment_size'.format(batch_size, segment_size))
+    #  if batch_size > segment_size:
+    #      raise ValueError(
+    #          'batch_size={} and segment_size={} is not allowed;'
+    #          'Use batch_size<=segment_size'.format(batch_size, segment_size))
 
     exposure_mode, exposure_val, area_dimension = \
         v2e_check_dvs_exposure_args(args)
@@ -161,49 +161,6 @@ if __name__ == "__main__":
         logger.error('source {} fps is 0'.format(input_file))
         v2e_quit()
 
-    # TODO: dump all the frames as individual files to a temp folder
-    # then the data loader can read individual file
-    source_frames_dir = mkdtemp()
-    inputWidth = cap.get(cv2.CV_CAP_PROP_FRAME_WIDTH)
-    inputHeight = cap.get(cv2.CV_CAP_PROP_FRAME_HEIGHT)
-    inputChannels = 3
-
-    if (output_width is None) and (output_height is None):
-        output_width = inputWidth
-        output_height = inputHeight
-        logger.warning(
-            'output size ({}x{}) was set automatically to '
-            'input video size\n    Are you sure you want this? '
-            'It might be slow.\n    Consider using '
-            '--output_width and --output_height'
-            .format(output_width, output_height))
-    inputFrameIndex = 0
-    while (cap.isOpened()):
-            # read frame
-            ret, inputVideoFrame = cap.read()
-
-            if output_height and output_width and \
-                    (inputHeight != output_height or
-                     inputWidth != output_width):
-                dim = (output_width, output_height)
-                (fx, fy) = (float(output_width)/inputWidth,
-                            float(output_height)/inputHeight)
-                inputVideoFrame = cv2.resize(
-                    src=inputVideoFrame, dsize=dim, fx=fx, fy=fy,
-                    interpolation=cv2.INTER_AREA)
-            if inputChannels == 3:  # color
-                if inputFrameIndex == 0:  # print info once
-                    logger.info(
-                        'converting input frames from RGB color to luma')
-                # TODO would break resize if input is gray frames
-                # convert RGB frame into luminance.
-                inputVideoFrame = cv2.cvtColor(
-                    inputVideoFrame, cv2.COLOR_BGR2GRAY)  # much faster
-            # save frame into numpy records
-            save_path = os.path.join(
-                source_frames_dir, str(inputVideoFrame).zfill(8)+".npy")
-            np.save(save_path, inputVideoFrame)
-            inputVideoFrame += 1
 
     # TODO: slowdown_factor should be determined solely by slowmotion factor
     # what's the relation between input_slowmotion_factor,
@@ -343,11 +300,54 @@ if __name__ == "__main__":
     logger.info(
         'processing frames {} to {} from video input'.format(
             start_frame, stop_frame))
-    batchFrames = []
-    # step over input by batch_size steps
-    #  for frameNumber in tqdm(
-    #          range(start_frame, stop_frame, segment_size),
-    #          unit='fr', desc='v2e'):
+
+    # TODO: dump all the frames as individual files to a temp folder
+    # then the data loader can read individual file
+    source_frames_dir = mkdtemp()
+    inputWidth = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+    inputHeight = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    inputChannels = 3
+
+    if (output_width is None) and (output_height is None):
+        output_width = inputWidth
+        output_height = inputHeight
+        logger.warning(
+            'output size ({}x{}) was set automatically to '
+            'input video size\n    Are you sure you want this? '
+            'It might be slow.\n    Consider using '
+            '--output_width and --output_height'
+            .format(output_width, output_height))
+    inputFrameIndex = 0
+    while (cap.isOpened()):
+            # read frame
+            ret, inputVideoFrame = cap.read()
+
+            if not ret or inputFrameIndex+start_frame > stop_frame:
+                break
+
+            if output_height and output_width and \
+                    (inputHeight != output_height or
+                     inputWidth != output_width):
+                dim = (output_width, output_height)
+                (fx, fy) = (float(output_width)/inputWidth,
+                            float(output_height)/inputHeight)
+                inputVideoFrame = cv2.resize(
+                    src=inputVideoFrame, dsize=dim, fx=fx, fy=fy,
+                    interpolation=cv2.INTER_AREA)
+            if inputChannels == 3:  # color
+                if inputFrameIndex == 0:  # print info once
+                    logger.info(
+                        'converting input frames from RGB color to luma')
+                # TODO would break resize if input is gray frames
+                # convert RGB frame into luminance.
+                inputVideoFrame = cv2.cvtColor(
+                    inputVideoFrame, cv2.COLOR_BGR2GRAY)  # much faster
+            # save frame into numpy records
+            save_path = os.path.join(
+                source_frames_dir, str(inputFrameIndex).zfill(8)+".npy")
+            np.save(save_path, inputVideoFrame)
+            inputFrameIndex += 1
+            print("Writing source frame {}".format(save_path), end="\r")
 
     with TemporaryDirectory() as interpFramesFolder:
         # make input to slomo
@@ -359,7 +359,9 @@ if __name__ == "__main__":
         if slowdown_factor != NO_SLOWDOWN:
             # interpolated frames are stored to tmpfolder as
             # 1.png, 2.png, etc
-            slomo.interpolate(source_frames_dir, interpFramesFolder)
+            slomo.interpolate(
+                source_frames_dir, interpFramesFolder,
+                (output_width, output_height))
             # read back to memory
             interpFramesFilenames = all_images(interpFramesFolder)
         else:

@@ -137,7 +137,7 @@ class SuperSloMo(object):
                                            transforms.ToPILImage()])
         return to_tensor, to_image
 
-    def __load_data(self, source_frame_path):
+    def __load_data(self, source_frame_path, frame_size):
         """Return a Dataloader instance, which is constructed with \
             APS frames.
 
@@ -154,7 +154,7 @@ class SuperSloMo(object):
         """
         #  frames = dataloader.Frames(images, transform=self.to_tensor)
         frames = dataloader.FramesDirectory(
-            source_frame_path, transform=self.to_tensor)
+            source_frame_path, frame_size, transform=self.to_tensor)
         videoFramesloader = torch.utils.data.DataLoader(
                 frames,
                 batch_size=self.batch_size,
@@ -204,17 +204,17 @@ class SuperSloMo(object):
 
         return flow_estimator, warper, interpolator
 
-    def interpolate(self, source_frame_path, output_folder)->None:
+    def interpolate(self, source_frame_path, output_folder, frame_size):
         """Run interpolation. \
             Interpolated frames will be saved in folder self.output_path.
 
         Parameters
         ----------
-        images: np.ndarray, [N, W, H]
+        source_frame_path: path that contains source file
         output_folder:str, folder that stores the interpolated images,
             numbered 1:N*slowdown_factor.
-            Frames will include the input frames, 
-            i.e. if there are 2 input frames and slowdown_factor=10, 
+            Frames will include the input frames,
+            i.e. if there are 2 input frames and slowdown_factor=10,
             there will be ?? frames written
         """
         if not output_folder:
@@ -222,7 +222,8 @@ class SuperSloMo(object):
                 'output_folder is None; it must be supplied to store '
                 'the interpolated frames')
 
-        video_frame_loader, dim, ori_dim = self.__load_data(source_frame_path)
+        video_frame_loader, dim, ori_dim = self.__load_data(
+            source_frame_path, frame_size)
         if not self.model_loaded:
             (self.flow_estimator, self.warper,
              self.interpolator) = self.__model(dim)
