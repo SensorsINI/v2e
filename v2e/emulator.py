@@ -104,6 +104,7 @@ class EventEmulator(object):
             "ON/OFF log_e temporal contrast thresholds: "
             "{} / {} +/- {}".format(pos_thres, neg_thres, sigma_thres))
         self.baseLogFrame = None
+        self.t_previous = None  # time of previous frame
         self.sigma_thres = sigma_thres
         # initialized to scalar, later overwritten by random value array
         self.pos_thres = pos_thres
@@ -223,7 +224,6 @@ class EventEmulator(object):
         self.num_events_on = 0
         self.num_events_off = 0
         self.baseLogFrame = None
-        self.lasttime = None
         self.lpLogFrame0 = None  # lowpass stage 0
         self.lpLogFrame1 = None  # stage 1
 
@@ -235,17 +235,15 @@ class EventEmulator(object):
 
     def generate_events(
             self, new_frame: np.ndarray,
-            t_start: float, t_end: float) -> np.ndarray:
+            t_frame: float) -> np.ndarray:
         """Compute events in new frame.
 
         Parameters
         ----------
         new_frame: np.ndarray
             [height, width]
-        t_start: float
-            starting timestamp of new frame in float seconds
-        t_end: float
-            ending timestamp of new frame in float seconds
+        t_frame: float
+            timestamp of new frame in float seconds
 
         Returns
         -------
@@ -255,19 +253,17 @@ class EventEmulator(object):
             # TODO validate that this order of x and y is correctly documented
         """
 
-        if t_start > t_end:
-            raise ValueError("t_start must be smaller than t_end")
-
-        # TODO handle K frames, not just 1
-
         #  base_frame: the change detector input,
         #              stores memorized brightness values
         # new_frame: the new intensity frame input
         # log_frame: the lowpass filtered brightness values
         if self.baseLogFrame is None:
             self._init(new_frame)
-            self.lasttime = t_start
+            self.t_previous = t_frame
             return None
+
+        if t_frame <= self.t_previous:
+            raise ValueError("t_frame must be later than previous frame ")
 
         # lin-log mapping
         logNewFrame = lin_log(new_frame)
@@ -278,7 +274,9 @@ class EventEmulator(object):
         # to store stages of cascaded first order RC filters.
         # Time constant of the filter is proportional to
         # the intensity value (with offset to deal with DN=0)
-        deltaTime = t_start - self.lasttime
+        deltaTime = t_frame - self.t_previous
+        logger.debug('deltaTime={}'.format(deltaTime))
+
         inten01 = None  # define for later
         if self.cutoff_hz > 0 or self.shot_noise_rate_hz > 0:  # will use later
             # make sure we get no zero time constants
@@ -294,7 +292,6 @@ class EventEmulator(object):
         self.lpLogFrame0 = (1-eps)*self.lpLogFrame0+eps*logNewFrame
         # then 2nd internal state (output) is updated from first
         self.lpLogFrame1 = (1-eps)*self.lpLogFrame1+eps*self.lpLogFrame0
-        self.lasttime = t_start
 
         # # Noise: add infinite bandwidth white noise to samples
         # # after lowpass filtering,
@@ -366,7 +363,7 @@ class EventEmulator(object):
             # they end at t_end
             # e.g. t_start=0, t_end=1, num_iters=2, i=0,1
             # ts=1*1/2, 2*1/2
-            ts = t_start + (t_end - t_start) * (i + 1) / (num_iters)
+            ts = self.t_previous + deltaTime * (i + 1) / (num_iters)
 
             # for each iteration, compute the ON and OFF event locations
             # for that threshold amount of change
@@ -523,6 +520,7 @@ class EventEmulator(object):
             if self.dvs_text is not None:
                 self.dvs_text.appendEvents(events)
 
+        self.t_previous = t_frame
         if len(events) > 0:
             return events
         else:
@@ -545,7 +543,8 @@ class EventFrameRenderer(object):
                  output_fps,
                  pos_thres,
                  neg_thres,
-                 preview=None):
+                 preview=None,
+                 avi_frame_rate=None):
         """
         Parameters
         ----------
@@ -555,7 +554,7 @@ class EventFrameRenderer(object):
             path of output video.
         input_fps: int
             frame rate of input video.
-        output_fps: int
+        avi_frame_rate: int
             frame rate of output video.
         """
 
@@ -567,6 +566,7 @@ class EventFrameRenderer(object):
         self.neg_thres = neg_thres
         self.preview = preview
         self.preview_resized = False
+        self.avi_frame_rate=avi_frame_rate
 
     def _get_events(self):
         """Get all events.
@@ -598,11 +598,7 @@ class EventFrameRenderer(object):
             new_frame = read_image(images[idx])
             t_start = input_ts[idx - 1]
             t_end = input_ts[idx]
-            tmp_events = emulator.generate_events(
-                new_frame,
-                t_start,
-                t_end
-            )
+            tmp_events = emulator.generate_events(new_frame, t_start)
 
             if tmp_events is not None:
                 event_list.append(tmp_events)
@@ -637,7 +633,7 @@ class EventFrameRenderer(object):
         histrange = [(0, v) for v in (height, width)]
         out = video_writer(
             os.path.join(self.output_path, 'output.avi'),
-            width=width, height=height)
+            width=width, height=height, frame_rate=self.avi_frame_rate)
         for ts_idx in range(output_ts.shape[0] - 1):
             # assume time_list is sorted.
             start = np.searchsorted(time_list,

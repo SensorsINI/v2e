@@ -136,7 +136,7 @@ if __name__ == "__main__":
             emulator.neg_thres = threshold
             emulator.reset()
             for i in range(nFrames):
-                events_v2e = emulator.generate_events(frames['frame'][i], frame_ts[i], frame_ts[i + 1])
+                events_v2e = emulator.generate_events(frames['frame'][i], frame_ts[i])
                 if not events_v2e is None:
                     events_v2e=select_events_in_roi(events_v2e,x,y)
                     onCount=np.count_nonzero(events_v2e[:,3]==1)

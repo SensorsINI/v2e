@@ -18,7 +18,31 @@ def v2e_args(parser):
     else:
         prepend = ''
 
+    # general arguments for output folder, overwriting, etc
+    outGroupGeneral = parser.add_argument_group('Output: General')
+    outGroupGeneral.add_argument(
+        "-o", "--output_folder", type=str, required=True,
+        help="folder to store outputs.")
+    outGroupGeneral.add_argument(
+        "--overwrite", action="store_true",
+        help="overwrites files in existing folder "
+             "(checks existence of non-empty output_folder).")
+    outGroupGeneral.add_argument(
+        "--no_preview", action="store_true",
+        help="disable preview in cv2 windows for faster processing.")
+    outGroupGeneral.add_argument(
+        "--avi_frame_rate", type=int, default=30,
+        help="frame rate of output AVI video files; only affects playback rate. ")
+
+    # DVS model parameters
     modelGroup = parser.add_argument_group('DVS model')
+    modelGroup.add_argument(
+        "--timestamp_resolution", type=float,
+        help="Desired DVS timestamp reolution in seconds; determines slow motion factor;  "
+             "the video will be upsampled from source fps to achieve the desired timestamp resolution."
+             "I.e. slowdown_factor = (1/fps)/timestamp_resolution; "
+             "using a high resolution e.g. of 1ms will result in slow rendering since it will force high upsampling ratio."
+             )
     modelGroup.add_argument(
         "--dvs_params", type=str, default='clean',
         help="Easy optional setting of parameters for DVS model:"
@@ -48,40 +72,39 @@ def v2e_args(parser):
         help="Temporal noise rate of ON+OFF events in "
              "darkest parts of scene; reduced in brightest parts. ")
 
+    # slow motion frame synthesis
     sloMoGroup = parser.add_argument_group('SloMo upsampling')
     sloMoGroup.add_argument(
         "--slomo_model", type=str, default=prepend+"input/SuperSloMo39.ckpt",
         help="path of slomo_model checkpoint.")
     sloMoGroup.add_argument(
         "--segment_size", type=int, default=1,
-        help="segment size for SuperSloMo. Video is split to chunks of "
+        help="Segment size for SuperSloMo. Video is split to chunks of "
              "this many frames, and within each segment, "
              "batch mode CNN inference of optic flow takes place. "
              "Video will be processed segment by segment.")
     sloMoGroup.add_argument(
         "--batch_size", type=int, default=1,
-        help="batch size in frames for SuperSloMo. "
+        help="Batch size in frames for SuperSloMo. "
              "Must be less than or equal to seqment_size.")
     sloMoGroup.add_argument(
-        "--no_preview", action="store_true",
-        help="disable preview in cv2 windows for faster processing.")
-    sloMoGroup.add_argument(
-        "--slowdown_factor", type=int, default=10,
-        help="slow motion factor; if the input video has frame rate fps, "
-             "then the DVS events will have time resolution of "
-             "1/(fps*slowdown_factor).")
-    sloMoGroup.add_argument(
         "--vid_orig", type=str, default="video_orig.avi",
-        help="output src video at same rate as slomo video "
+        help="Output src video at same rate as slomo video "
              "(with duplicated frames).")
     sloMoGroup.add_argument(
         "--vid_slomo", type=str, default="video_slomo.avi",
         help="output slomo of src video slowed down by slowdown_factor.")
 
+    # input file handling
     inGroup = parser.add_argument_group('Input')
     inGroup.add_argument(
         "-i", "--input", type=str,
         help="input video file; leave empty for file chooser dialog.")
+    inGroup.add_argument(
+        "--input_slowmotion_factor", type=float, default=1.0,
+        help="Sets the known slow-motion factor of the input video, "
+             "i.e. if the input video is 10fps with slowmotion_factor=2, "
+             "it means that each input frame represents (1/10)s/2=50ms.")
     inGroup.add_argument(
         "--start_time", type=float, default=None,
         help="start at this time in seconds in video.")
@@ -89,15 +112,7 @@ def v2e_args(parser):
         "--stop_time", type=float, default=None,
         help="stop at this time in seconds in video.")
 
-    outGroupGeneral = parser.add_argument_group('Output: General')
-    outGroupGeneral.add_argument(
-        "-o", "--output_folder", type=str, required=True,
-        help="folder to store outputs.")
-    outGroupGeneral.add_argument(
-        "--overwrite", action="store_true",
-        help="overwrites files in existing folder "
-             "(checks existence of non-empty output_folder).")
-
+    # DVS output video including address space size in pixels
     outGroupDvsVideo = parser.add_argument_group('Output: DVS video')
     outGroupDvsVideo.add_argument(
         "--dvs_vid", type=str, default="dvs-video.avi",
@@ -114,12 +129,12 @@ def v2e_args(parser):
         "--output_width", type=int, default=None,
         help="width of output DVS data in pixels. "
              "If None, same as input video.")
-    outGroupDvsVideo.add_argument(
-        "--frame_rate", type=float,
-        help="implies --dvs_exposure duration 1/framerate.  "
-             "Equivalent frame rate of --dvs_vid output video; "
-             "the events will be accummulated as this sample rate; "
-             "DVS frames will be accumulated for duration 1/frame_rate")
+    # outGroupDvsVideo.add_argument(
+    #     "--frame_rate", type=float,
+    #     help="implies --dvs_exposure duration 1/framerate.  "
+    #          "Equivalent frame rate of --dvs_vid output video; "
+    #          "the events will be accummulated as this sample rate; "
+    #          "DVS frames will be accumulated for duration 1/frame_rate")
     outGroupDvsVideo.add_argument(
         "--dvs_exposure", nargs='+', type=str,
         help="mode to finish DVS event integration: "
@@ -128,6 +143,7 @@ def v2e_args(parser):
              "area_event N M: frame ends when any area of M x M pixels "
              "fills with N events")
 
+    # DVS output as events
     dvsEventOutputGroup = parser.add_argument_group('Output: DVS events')
     dvsEventOutputGroup.add_argument(
         "--dvs_h5", type=str, default=None,
@@ -185,20 +201,12 @@ def write_args_info(args, path)-> str:
 
 
 def v2e_check_dvs_exposure_args(args):
-    if not args.frame_rate and not args.dvs_exposure:
+    if not args.dvs_exposure:
         raise ValueError(
-            "either define --frame_rate or --dvs_exposure. "
+            "define --dvs_exposure method. "
             "See extended usage.")
 
-    if args.frame_rate and args.dvs_exposure:
-        raise ValueError("either define --frame_rate or "
-                         "--dvs_exposure. See extended usage.")
-
-    if args.frame_rate:
-        dvs_exposure = ('duration', 1./float(args.frame_rate))
-        logger.info('--frame_rate option implies constant duration DVS frames')
-    else:
-        dvs_exposure = args.dvs_exposure
+    dvs_exposure = args.dvs_exposure
     exposure_mode = None
     exposure_val = None
     area_dimension = None

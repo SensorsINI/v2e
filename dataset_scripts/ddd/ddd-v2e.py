@@ -219,7 +219,7 @@ if __name__ == "__main__":
                     interpTimes = np.linspace(start=frame0['timestamp'], stop=frame1['timestamp'], num=n, endpoint=True)
                     for i in range(n - 1):  # for each interpolated frame up to last; use n-1 because we get last interpolated frame as first frame next time
                         fr = read_image(interpFramesFilenames[i])
-                        newEvents = emulator.generate_events(fr, interpTimes[i], interpTimes[i + 1])
+                        newEvents = emulator.generate_events(fr, interpTimes[i])
                         if not newEvents is None: events = np.append(events, newEvents, axis=0)
                     events = np.array(events)  # remove first None element
                     if numpy_output:

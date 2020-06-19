@@ -49,7 +49,8 @@ class SuperSloMo(object):
         video_path=None,
         vid_orig='original.avi',
         vid_slomo='slomo.avi',
-            preview=False
+        preview=False,
+        avi_frame_rate=30
     ):
         """
         init
@@ -86,6 +87,7 @@ class SuperSloMo(object):
         self.preview_resized = False
         self.vid_orig = vid_orig
         self.vid_slomo = vid_slomo
+        self.avi_frame_rate=avi_frame_rate
 
         # initialize the Transform instances.
         self.to_tensor, self.to_image = self.__transform()
@@ -208,7 +210,8 @@ class SuperSloMo(object):
         ----------
         images: np.ndarray, [N, W, H]
         output_folder:str, folder that stores the interpolated images,
-            numbered 1:N*slowdown_factor
+            numbered 1:N*slowdown_factor.
+            Frames will include the input frames, i.e. if there are 2 input frames and slowdown_factor=10, there will be ?? frames written
 
         """
         if not output_folder:
@@ -228,7 +231,7 @@ class SuperSloMo(object):
             self.ori_writer = video_writer(
                 os.path.join(self.video_path, self.vid_orig),
                 ori_dim[1],
-                ori_dim[0]
+                ori_dim[0], frame_rate=self.avi_frame_rate
             )
 
         if self.video_path is not None and self.vid_slomo is not None and \
@@ -236,7 +239,7 @@ class SuperSloMo(object):
             self.slomo_writer = video_writer(
                 os.path.join(self.video_path, self.vid_slomo),
                 ori_dim[1],
-                ori_dim[0]
+                ori_dim[0], frame_rate=self.avi_frame_rate
             )
 
         frameCounter = 1

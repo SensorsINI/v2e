@@ -24,7 +24,7 @@ from tqdm import tqdm
 
 
 import v2e.desktop as desktop
-from v2e.v2e_utils import all_images, read_image, OUTPUT_VIDEO_FPS, \
+from v2e.v2e_utils import all_images, read_image,  \
     check_lowpass, v2e_quit
 from v2e.v2e_args import v2e_args, write_args_info, v2e_check_dvs_exposure_args
 from v2e.v2e_args import NO_SLOWDOWN
@@ -38,7 +38,7 @@ import logging
 
 logging.basicConfig()
 root = logging.getLogger()
-root.setLevel(logging.INFO)
+root.setLevel(logging.DEBUG)
 # https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output/7995762#7995762
 logging.addLevelName(
     logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(
@@ -105,7 +105,10 @@ if __name__ == "__main__":
 
     start_time = args.start_time
     stop_time = args.stop_time
-    slowdown_factor = args.slowdown_factor
+
+    input_slowmotion_factor=args.input_slowmotion_factor
+    timestamp_resolution=args.timestamp_resolution
+
     pos_thres = args.pos_thres
     neg_thres = args.neg_thres
     sigma_thres = args.sigma_thres
@@ -116,6 +119,7 @@ if __name__ == "__main__":
             'leak_rate_hz>0 but sigma_thres==0, '
             'so all leak events will be synchronous')
     shot_noise_rate_hz = args.shot_noise_rate_hz
+    avi_frame_rate=args.avi_frame_rate
     dvs_vid = args.dvs_vid
     dvs_vid_full_scale = args.dvs_vid_full_scale
     dvs_h5 = args.dvs_h5
@@ -156,7 +160,17 @@ if __name__ == "__main__":
     if srcFps == 0:
         logger.error('source {} fps is 0'.format(input_file))
         v2e_quit()
-    srcFrameIntervalS = 1. / srcFps
+    srcFrameIntervalS = (1. / srcFps)/ input_slowmotion_factor
+
+    slowdown_factor = int(srcFrameIntervalS/timestamp_resolution)
+    if slowdown_factor<1:
+        slowdown_factor=1
+        logger.warning('timestamp resolution={}s is greater than source frame interval={}s, will not use upsampling'.format(timestamp_resolution,srcFrameIntervalS))
+
+    logger.info('src video frame rate={:.2f} Hz with slowmotion_factor={:.2f}, timestamp resolution={:.3f} ms, computed slomo upsampling factor={}'.format(
+        srcFps,input_slowmotion_factor,timestamp_resolution*1000,slowdown_factor
+    ))
+
     slomoTimestampResolutionS = srcFrameIntervalS / slowdown_factor
     # https://stackoverflow.com/questions/25359288/how-to-know-total-number-of-frame-in-a-file-with-cv2-in-python
     srcNumFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -165,18 +179,21 @@ if __name__ == "__main__":
             'num frames is less than 2, probably cannot be determined '
             'from cv2.CAP_PROP_FRAME_COUNT')
 
+    if slomoTimestampResolutionS > timestamp_resolution:
+        logger.warning('upsampled src frame intervals of {}s is larger than the desired DVS timestamp resolution of {}s'.format(slomoTimestampResolutionS,timestamp_resolution))
+
     check_lowpass(cutoff_hz, srcFps*slowdown_factor, logger)
 
     # the SloMo model, set no SloMo model if no slowdown
     if slowdown_factor != NO_SLOWDOWN:
         slomo = SuperSloMo(
-            model=args.slomo_model, slowdown_factor=args.slowdown_factor,
+            model=args.slomo_model, slowdown_factor=slowdown_factor,
             video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo,
             preview=preview, batch_size=batch_size)
     else:
         slomo = None
 
-    srcTotalDuration = (srcNumFrames - 1) * srcFrameIntervalS
+    srcTotalDuration = (srcNumFrames - 1) / srcFps
     start_frame = int(srcNumFrames * (start_time / srcTotalDuration)) \
         if start_time else 0
     stop_frame = int(srcNumFrames * (stop_time / srcTotalDuration)) \
@@ -188,7 +205,7 @@ if __name__ == "__main__":
         dvsFps = 1./exposure_val
         dvsNumFrames = np.math.floor(dvsFps * srcDurationToBeProcessed)
         dvsDuration = dvsNumFrames / dvsFps
-        dvsPlaybackDuration = dvsNumFrames / OUTPUT_VIDEO_FPS
+        dvsPlaybackDuration = dvsNumFrames / avi_frame_rate
         logger.info(
             '\n\n{} has {} frames with duration {}s, '
             '\nsource video is {}fps (frame interval {}s),'
@@ -204,6 +221,8 @@ if __name__ == "__main__":
                     EngNumber(dvsFps), EngNumber(1 / dvsFps),
                     dvsNumFrames, EngNumber(dvsDuration),
                     EngNumber(dvsPlaybackDuration)))
+        if dvsFps>(1/slomoTimestampResolutionS):
+            logger.warning('DVS video frame rate={}Hz is larger than the effective DVS frame rate of {}Hz; DVS video will have blank frames'.format(dvsFps,(1/slomoTimestampResolutionS)))
     else:
         logger.info(
             '\n\n{} has {} frames with duration {}s, '
@@ -244,7 +263,7 @@ if __name__ == "__main__":
     inputChannels = None
     if start_frame > 0:
         logger.info('skipping to frame {}'.format(start_frame))
-        for i in range(start_frame):
+        for i in tqdm(range(start_frame),unit='fr',desc='src'):
             ret, _ = cap.read()
             if not ret:
                 raise ValueError(
@@ -322,7 +341,6 @@ if __name__ == "__main__":
                 slomo.interpolate(slomoInputFrames, interpFramesFolder)
                 # read back to memory
                 interpFramesFilenames = all_images(interpFramesFolder)
-                n = len(interpFramesFilenames)
 
             # number of frames
             n = len(interpFramesFilenames) if slowdown_factor != NO_SLOWDOWN \
@@ -349,8 +367,7 @@ if __name__ == "__main__":
                 fr = read_image(interpFramesFilenames[i]) \
                     if slowdown_factor != NO_SLOWDOWN else \
                     slomoInputFrames[i]
-                newEvents = emulator.generate_events(
-                    fr, interpTimes[i], interpTimes[i + 1])
+                newEvents = emulator.generate_events(fr, interpTimes[i])
                 if newEvents is not None and newEvents.shape[0] > 0:
                     events = np.append(events, newEvents, axis=0)
 
@@ -394,5 +411,5 @@ if __name__ == "__main__":
         logger.warning(
             '{}: could not open {} in desktop'.format(e, output_folder))
     eventRenderer.cleanup()
-    slomo.cleanup()
+    if slomo is not None: slomo.cleanup()
     v2e_quit()

@@ -11,9 +11,6 @@ from tkinter import filedialog
 # adjust for different sensor than DAVIS346
 DVS_WIDTH, DVS_HEIGHT = 346, 260
 
-# playback frame rate specified for output video AVI file
-OUTPUT_VIDEO_FPS = 30.0
-
 # VIDEO_CODEC_FOURCC='RGBA' # uncompressed, >10MB for a few seconds of video
 
 # good codec, basically mp4 with simplest compression, packed in AVI,
@@ -82,7 +79,7 @@ def checkAddSuffix(path: str, suffix: str):
         return os.path.splitext(path)[0]+suffix
 
 
-def video_writer(output_path, height, width):
+def video_writer(output_path, height, width, frame_rate=30):
     """ Return a video writer.
 
     Parameters
@@ -93,6 +90,8 @@ def video_writer(output_path, height, width):
         height of a frame.
     width: int,
         width of a frame.
+    frame_rate: int
+        playback frame rate in Hz
 
     Returns
     -------
@@ -103,12 +102,12 @@ def video_writer(output_path, height, width):
     out = cv2.VideoWriter(
                 output_path,
                 fourcc,
-                OUTPUT_VIDEO_FPS,
+                frame_rate,
                 (width, height))
     logger.debug(
         'opened {} with {} https://www.fourcc.org/ codec, {}fps, '
         'and ({}x{}) size'.format(
-            output_path, OUTPUT_VIDEO_CODEC_FOURCC, OUTPUT_VIDEO_FPS,
+            output_path, OUTPUT_VIDEO_CODEC_FOURCC, frame_rate,
             width, height))
     return out
 

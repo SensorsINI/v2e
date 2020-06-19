@@ -38,24 +38,21 @@ class EventRenderer(object):
             dvs_vid=None,
             preview=False,
             exposure_mode=ExposureMode.DURATION,  # 'count', 'area-count'
-            exposure_value=1/300.0,
+            exposure_value=1 / 300.0,
             area_dimension=None,
             # suffix using dvs_vid file name for the frame times
             # when not using constant_time
-            frame_times_suffix='-frame_times.txt'
+            frame_times_suffix='-frame_times.txt',
+            avi_frame_rate=30
     ):
         """ Init.
 
         Parameters
         ----------
-        frame_rate_hz: float
-            frame rate of video; events will be integrated for 1/frame_rate_hz
         output_path: str,
             path of folder to hold output video
         dvs_vid: str or None, str name of video, e.g. dvs.avi
             else None.
-        rotate180: bool,
-            True to rotate the output frames 180 degrees.
         full_scale_count:int,
             full scale black/white DVS event count value
         exposure_mode: ExposureMode,
@@ -82,19 +79,20 @@ class EventRenderer(object):
         self.frame_rate_hz = None
         self.event_count = None
         self.frameIntevalS = None
+        self.avi_frame_rate = avi_frame_rate
 
         self.area_counts = None  # 2d array of counts
         self.area_count = None
         self.area_dimension = area_dimension
         if self.exposure_mode == ExposureMode.DURATION:
-            self.frame_rate_hz = 1/self.exposure_value
-            self.frameIntevalS = 1/self.frame_rate_hz
+            self.frame_rate_hz = 1 / self.exposure_value
+            self.frameIntevalS = 1 / self.frame_rate_hz
         elif self.exposure_mode == ExposureMode.COUNT:
-            self.event_count = self.exposure_value
+            self.event_count = int(self.exposure_value)
         elif self.exposure_mode == ExposureMode.AREA_COUNT:
-            self.area_count = self.exposure_value
+            self.area_count = int(self.exposure_value)
         else:
-            raise('exposure mode must be either duration or count')
+            raise ('exposure mode must be either duration or count')
 
         self.video_output_file_name = dvs_vid
         self.video_output_file = None
@@ -114,9 +112,7 @@ class EventRenderer(object):
         # It is saved between event packets passed to us
 
     def cleanup(self):
-        if self.video_output_file and \
-                (type(self.video_output_file) is not str):
-            # TODO not sure this is correct check for str type
+        if self.video_output_file is not None:
             logger.info(
                 "Closing DVS video output file "
                 "after writing {} frames".format(self.numFramesWritten))
@@ -127,7 +123,7 @@ class EventRenderer(object):
             cv2.destroyAllWindows()
 
     def _check_outputs_open(self):
-        '''checks that output video and event datasets files are open'''
+        """checks that output video and event datasets files are open"""
 
         if self.video_output_file is not None:
             return
@@ -143,7 +139,7 @@ class EventRenderer(object):
                 os.path.join(self.output_path,
                              self.video_output_file_name), '.avi')
             logger.info('opening DVS video output file ' + fn)
-            self.video_output_file = video_writer(fn, self.height, self.width)
+            self.video_output_file = video_writer(fn, self.height, self.width, frame_rate=self.avi_frame_rate)
             fn = checkAddSuffix(
                 os.path.join(
                     self.output_path, self.video_output_file_name),
@@ -155,7 +151,7 @@ class EventRenderer(object):
             self.frame_times_output_file.write(s)
 
     def render_events_to_frames(self, event_arr: np.ndarray,
-                                height: int, width: int)->np.ndarray:
+                                height: int, width: int) -> np.ndarray:
         """ Incrementally render event frames.
 
         Frames are appended to the video output file.
@@ -198,12 +194,12 @@ class EventRenderer(object):
             if self.currentFrameStartTime is None:
                 self.currentFrameStartTime = ts[0]  # initialize this frame
 
-            nextFrameStartTs = self.currentFrameStartTime+self.frameIntevalS
+            nextFrameStartTs = self.currentFrameStartTime + self.frameIntevalS
 
         if self.exposure_mode == ExposureMode.AREA_COUNT and \
                 self.area_counts is None:
-            nw = 1+self.width//self.area_dimension
-            nh = 1+self.height//self.area_dimension
+            nw = 1 + self.width // self.area_dimension
+            nh = 1 + self.height // self.area_dimension
             self.area_counts = np.zeros(shape=(nw, nh), dtype=int)
 
         returnedFrames = None  # accumulate frames here
@@ -217,12 +213,11 @@ class EventRenderer(object):
         numEvents = len(ts)
         histrange = [(0, v) for v in (self.height, self.width)]
 
-        done = False
-        read_to_done = False
+        doneWithTheseEvents = False
         # continue consuming events from input event_arr
         # until we are done with all these events,
         # output frames along the way
-        while not done:
+        while not doneWithTheseEvents:
             # try to get events for current frame
             if self.exposure_mode == ExposureMode.DURATION:
                 # find first event that is after the current frames start time
@@ -235,14 +230,14 @@ class EventRenderer(object):
                 # append it to output list
             elif self.exposure_mode == ExposureMode.COUNT:
                 start = thisFrameIdx
-                end = start+self.event_count
+                end = start + self.event_count
             elif self.exposure_mode == ExposureMode.AREA_COUNT:
                 start = thisFrameIdx
                 # brute force, iterate over events to determine end
                 for end, ev in enumerate(event_arr, start=start):
-                    x = int(ev[1]//self.area_dimension)
-                    y = int(ev[2]//self.area_dimension)
-                    count = 1+self.area_counts[x, y]
+                    x = int(ev[1] // self.area_dimension)
+                    y = int(ev[2] // self.area_dimension)
+                    count = 1 + self.area_counts[x, y]
                     self.area_counts[x, y] = count
                     if count >= self.area_count:
                         self.area_counts = np.zeros_like(self.area_counts)
@@ -250,12 +245,12 @@ class EventRenderer(object):
 
             if end >= numEvents:
                 # we will return now after integrating remaining events
-                read_to_done = True
+                doneWithTheseEvents = True
                 # reset to end of current events to integrate all of them
                 end = numEvents - 1
 
             events = event_arr[start:end]  # events in this frame
-
+            nevents = len(events)
             pol_on = (events[:, 3] == 1)
             pol_off = np.logical_not(pol_on)
             img_on, _, _ = np.histogram2d(
@@ -271,26 +266,27 @@ class EventRenderer(object):
             # accumulate event histograms to the current frame,
             # clip values of zero-centered current frame with new events added
             self.currentFrame = np.clip(
-                self.currentFrame+(img_on-img_off),
+                self.currentFrame + (img_on - img_off),
                 -self.full_scale_count, self.full_scale_count)
 
-            # if not finished with current event_arr,
-            # write out the completed frame
-            if not done:
+            # If not finished with current event_arr, it means above we finished filling a frame, either with
+            # time or with sufficient count of events.
+            # Write out the completed frame
+            if not doneWithTheseEvents:
                 # we finished a frame above, but we will continue to
                 # accumulate remaining events after writing out current frame
                 if self.exposure_mode == ExposureMode.DURATION:
                     # increase time to next frame
                     self.currentFrameStartTime += self.frameIntevalS
                     nextFrameStartTs = self.currentFrameStartTime + \
-                        self.frameIntevalS
+                                       self.frameIntevalS
                 elif self.exposure_mode == ExposureMode.COUNT or \
                         self.exposure_mode == ExposureMode.AREA_COUNT:
                     thisFrameIdx = end
 
                 # img output is 0-1 range
-                img = (self.currentFrame+self.full_scale_count)/float(
-                    self.full_scale_count*2)
+                img = (self.currentFrame + self.full_scale_count) / float(
+                    self.full_scale_count * 2)
                 # done with this frame, allocate new one in next loop
                 self.currentFrame = None
                 if (returnedFrames is not None):
@@ -303,14 +299,14 @@ class EventRenderer(object):
 
                 if self.video_output_file:
                     self.video_output_file.write(
-                        cv2.cvtColor((img*255).astype(np.uint8),
+                        cv2.cvtColor((img * 255).astype(np.uint8),
                                      cv2.COLOR_GRAY2BGR))
                     t = None
                     if self.exposure_mode == ExposureMode.COUNT or \
                             self.exposure_mode == ExposureMode.AREA_COUNT:
-                        t = (ts[start]+ts[end])/2
+                        t = (ts[start] + ts[end]) / 2
                     else:
-                        t = self.currentFrameStartTime+self.frameIntevalS/2
+                        t = self.currentFrameStartTime + self.frameIntevalS / 2
                     self.frame_times_output_file.write(
                         '{}\t{:10.6f}\n'.format(self.numFramesWritten, t))
                     self.numFramesWritten += 1
@@ -322,8 +318,6 @@ class EventRenderer(object):
                         cv2.resizeWindow(name, 800, 600)
                         self.preview_resized = True
                     cv2.waitKey(30)  # 30 hz playback
-
-            done = read_to_done
 
         return returnedFrames
 
@@ -353,11 +347,7 @@ class EventRenderer(object):
                 self.emulator = EventEmulator(
                     pos_thres=self.pos_thres, neg_thres=self.neg_thres,
                     sigma_thres=self.sigma_thres)
-            tmp_events = self.emulator.generate_events(
-                new_frame,
-                frameTimesS[i],
-                frameTimesS[i + 1]
-            )
+            tmp_events = self.emulator.generate_events(new_frame, frameTimesS[i])
             if tmp_events is not None:
                 # convert data to uint32 (microsecs) format
                 tmp_events[:, 0] = tmp_events[:, 0] * 1e6
