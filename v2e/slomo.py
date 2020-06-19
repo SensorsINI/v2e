@@ -350,20 +350,17 @@ class SuperSloMo(object):
             # write input frames into video
             # don't duplicate each frame if called using rotating buffer
             # of two frames in a row
-            #  numin = images.shape[0]
-            #  num2write = 1 if numin == 2 else numin
-            #  if self.ori_writer:
-            #      #  tqdm(range(0,num2write-1),
-            #      #       desc='slomo--write-orig-vid',unit='fr'):
-            #      for i in range(0, num2write):
-            #          frame = images[i]
-            #          # duplicate frames to match speed of slomo video
-            #          for _ in range(self.sf):
-            #              self.ori_writer.write(
-            #                  cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
-            #              self.numOrigVideoFramesWritten += 1
-            #          # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
-            #          #     break
+            if self.ori_writer:
+                src_files = sorted(
+                    glob.glob("{}".format(source_frame_path)+"/*.npy"))
+
+                for frame_idx, src_file_path in enumerate(
+                        tqdm(src_files, desc='slomo-interp',
+                             unit='fr', disable=disableTqdm), 0):
+                    src_frame = np.load(src_file_path)
+                    self.ori_writer.write(
+                        cv2.cvtColor(src_frame, cv2.COLOR_GRAY2BGR))
+                    self.numOrigVideoFramesWritten += 1
 
             frame_paths = self.__all_images(output_folder)
             # write slomo frames into video

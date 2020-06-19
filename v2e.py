@@ -8,9 +8,9 @@ frames from the original video frames.
 @contact: tobi@ini.uzh.ch, yuhuang.hu@ini.uzh.ch, zhehe@student.ethz.ch
 @latest update: Apr 2020
 """
-# todo  add batch mode for slomo to speed up
 # todo refractory period for pixel
 
+import glob
 import argparse
 from pathlib import Path
 from shutil import rmtree
@@ -342,11 +342,6 @@ if __name__ == "__main__":
 
     with TemporaryDirectory() as interpFramesFolder:
         # make input to slomo
-        #  slomoInputFrames = np.asarray(batchFrames)
-
-        # does not even bother save them if there is no slowdown
-        # because the memory should be able to handle
-        # tens of frames
         if slowdown_factor != NO_SLOWDOWN:
             # interpolated frames are stored to tmpfolder as
             # 1.png, 2.png, etc
@@ -356,8 +351,13 @@ if __name__ == "__main__":
             # read back to memory
             interpFramesFilenames = all_images(interpFramesFolder)
         else:
-            pass
-            # TODO: resave numpy records into interpolation folder
+            src_files = sorted(
+                glob.glob("{}".format(source_frames_dir)+"/*.npy"))
+            for frame_idx, src_file_path in enumerate(src_files):
+                src_frame = np.load(src_file_path)
+                tgt_file_path = os.join.path(
+                    interpFramesFolder, str(frame_idx)+".png")
+                cv2.imwrite(tgt_file_path, src_frame)
 
         # number of frames
         n = len(interpFramesFilenames) if slowdown_factor != NO_SLOWDOWN \
