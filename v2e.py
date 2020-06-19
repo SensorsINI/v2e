@@ -161,20 +161,7 @@ if __name__ == "__main__":
         logger.error('source {} fps is 0'.format(input_file))
         v2e_quit()
 
-
-    # TODO: slowdown_factor should be determined solely by slowmotion factor
-    # what's the relation between input_slowmotion_factor,
-    # timestamp_resolution and slowdown_factor?
-    # e.g.,
-    # fps = 10
-    # input_slowmotion_factor = 2
-    # timestamp_resolution = 2ms
-    # srcFrameIntervalS = 1/10/2 = 50ms
-    # slowdown_factor = 50ms/2 = 25
-    # frame_rate after sampling = 25*10 = 250 fps
-    # time resolution = 1/250 = 4ms
     srcFrameIntervalS = (1. / srcFps)/input_slowmotion_factor
-
     slowdown_factor = int(srcFrameIntervalS//timestamp_resolution)
 
     if slowdown_factor < 1:
@@ -371,7 +358,7 @@ if __name__ == "__main__":
         n = len(interpFramesFilenames) if slowdown_factor != NO_SLOWDOWN \
             else srcNumFrames
 
-        events = np.empty((0, 4), dtype=np.float32)
+        #  events = np.empty((0, 4), dtype=np.float32)
         # Interpolating the 2 frames f0 to f1 results in
         # n frames f0 fi0 fi1 ... fin-2 f1
         # The endpoint frames are same as input.
@@ -388,15 +375,16 @@ if __name__ == "__main__":
             start=ts0, stop=ts1, num=n+1, endpoint=False)
 
         # interpolate events
+        # get some progress bar
         for i in range(n):  # for each interpolated frame
             fr = read_image(interpFramesFilenames[i])
             newEvents = emulator.generate_events(fr, interpTimes[i])
-            if newEvents is not None and newEvents.shape[0] > 0:
-                events = np.append(events, newEvents, axis=0)
+            #  if newEvents is not None and newEvents.shape[0] > 0:
+            #      events = np.append(events, newEvents, axis=0)
 
-        events = np.array(events)  # remove first None element
-        eventRenderer.render_events_to_frames(
-            events, height=output_height, width=output_width)
+            #  events = np.array(events)  # remove first None element
+            eventRenderer.render_events_to_frames(
+                newEvents, height=output_height, width=output_width)
         ts0 = ts1
         ts1 += srcFrameIntervalS
 
