@@ -273,9 +273,9 @@ if __name__ == "__main__":
         exposure_value=exposure_val,
         area_dimension=area_dimension)
 
+    # timestamps of DVS start at zero and end with span of video we processed
     ts0 = 0
-    ts1 = srcTotalDuration
-    #  ts1 = srcFrameIntervalS  # timestamps of src frames
+    ts1 = stop_time-start_time
     num_frames = srcNumFramesToBeProccessed
     inputHeight = None
     inputWidth = None
@@ -294,8 +294,8 @@ if __name__ == "__main__":
             start_frame, stop_frame))
 
     source_frames_dir = mkdtemp()
-    inputWidth = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-    inputHeight = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    inputWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    inputHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     inputChannels = 3
 
     if (output_width is None) and (output_height is None):
@@ -373,7 +373,7 @@ if __name__ == "__main__":
         events = np.zeros((0, 4), dtype=np.float32)
         num_batches = (n // (slowdown_factor*batch_size))+1
 
-        for batch_idx in range(num_batches):
+        for batch_idx in tqdm(range(num_batches), desc='dvs', unit='batch'):
             events = np.zeros((0, 4), dtype=np.float32)
             for sub_img_idx in range(slowdown_factor*batch_size):
                 image_idx = batch_idx*(slowdown_factor*batch_size)+sub_img_idx

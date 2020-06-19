@@ -282,9 +282,10 @@ class SuperSloMo(object):
             nImages = len(video_frame_loader)
             #  nImages = images.shape[0]
             disableTqdm = nImages <= max(self.batch_size, 4)
+            unit='fr' if self.batch_size==1 else 'batch'
             for _, (frame0, frame1) in enumerate(
                     tqdm(video_frame_loader, desc='slomo-interp',
-                         unit='fr', disable=disableTqdm), 0):
+                         unit=unit, disable=disableTqdm), 0):
 
                 I0 = frame0.to(self.device)
                 I1 = frame1.to(self.device)
