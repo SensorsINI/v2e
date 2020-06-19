@@ -393,8 +393,11 @@ if __name__ == "__main__":
 
     cap.release()
     # remove the source directory
-    # TODO: somehow failed to delete itself
+    logger.info("Removing source video temporary directory {}...".format(
+        source_frames_dir))
     rmtree(source_frames_dir, ignore_errors=True)
+    logger.info("Removed source video temporary directory {}.".format(
+        source_frames_dir))
 
     if num_frames == 0:
         logger.error('no frames read from file')
