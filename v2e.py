@@ -166,7 +166,6 @@ if __name__ == "__main__":
     srcFrameIntervalS = (1. / srcFps)/input_slowmotion_factor
 
     slowdown_factor = int(np.ceil(srcFrameIntervalS/timestamp_resolution))
-    slowdown_factor = 1
     if slowdown_factor < 1:
         slowdown_factor = 1
         logger.warning(
@@ -352,17 +351,18 @@ if __name__ == "__main__":
             # read back to memory
             interpFramesFilenames = all_images(interpFramesFolder)
         else:
+            interpFramesFilenames = []
             src_files = sorted(
                 glob.glob("{}".format(source_frames_dir)+"/*.npy"))
             for frame_idx, src_file_path in enumerate(src_files):
                 src_frame = np.load(src_file_path)
-                tgt_file_path = os.join.path(
+                tgt_file_path = os.path.join(
                     interpFramesFolder, str(frame_idx)+".png")
+                interpFramesFilenames.append(tgt_file_path)
                 cv2.imwrite(tgt_file_path, src_frame)
 
         # number of frames
-        n = len(interpFramesFilenames) if slowdown_factor != NO_SLOWDOWN \
-            else srcNumFrames
+        n = len(interpFramesFilenames)
 
         # compute times of output integrated frames
         interpTimes = np.linspace(
@@ -393,7 +393,8 @@ if __name__ == "__main__":
 
     cap.release()
     # remove the source directory
-    rmtree(source_frames_dir)
+    # TODO: somehow failed to delete itself
+    rmtree(source_frames_dir, ignore_errors=True)
 
     if num_frames == 0:
         logger.error('no frames read from file')
