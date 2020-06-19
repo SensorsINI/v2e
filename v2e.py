@@ -166,6 +166,7 @@ if __name__ == "__main__":
     srcFrameIntervalS = (1. / srcFps)/input_slowmotion_factor
 
     slowdown_factor = int(np.ceil(srcFrameIntervalS/timestamp_resolution))
+    slowdown_factor = 1
     if slowdown_factor < 1:
         slowdown_factor = 1
         logger.warning(
