@@ -24,7 +24,7 @@ from engineering_notation import EngNumber  # only from pip
 from tqdm import tqdm
 # may only apply to windows
 try:
-    from gooey import Gooey
+    from gooey import Gooey # pip install Gooey
 except Exception:
     pass
 
@@ -37,24 +37,11 @@ from v2e.renderer import EventRenderer, ExposureMode
 from v2e.slomo import SuperSloMo
 from v2e.emulator import EventEmulator
 from v2e.v2e_utils import inputVideoFileDialog
-
-
 import logging
 
-logging.basicConfig()
-root = logging.getLogger()
-root.setLevel(logging.DEBUG)
-# https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output/7995762#7995762
-logging.addLevelName(
-    logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(
-        logging.WARNING))
-logging.addLevelName(
-    logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(
-        logging.ERROR))
-logger = logging.getLogger(__name__)
 
 
-# @Gooey(program_name="v2e", default_size=(575, 600))
+# @Gooey(program_name="v2e", default_size=(575, 600))  # uncomment if you are lucky enough to be able to install Gooey, which requires wxPython
 def get_args():
     parser = argparse.ArgumentParser(
         description='v2e: generate simulated DVS events from video.',
@@ -73,7 +60,19 @@ def get_args():
     return args
 
 
-if __name__ == "__main__":
+def main():
+    logging.basicConfig()
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    # https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output/7995762#7995762
+    logging.addLevelName(
+        logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(
+            logging.WARNING))
+    logging.addLevelName(
+        logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(
+            logging.ERROR))
+    logger = logging.getLogger(__name__)
+
     args = get_args()
     overwrite = args.overwrite
     output_folder = args.output_folder
@@ -338,7 +337,7 @@ if __name__ == "__main__":
                 source_frames_dir, str(inputFrameIndex).zfill(8)+".npy")
             np.save(save_path, inputVideoFrame)
             inputFrameIndex += 1
-            print("Writing source frame {}".format(save_path), end="\r")
+            # print("Writing source frame {}".format(save_path), end="\r")
 
     with TemporaryDirectory() as interpFramesFolder:
         # make input to slomo
@@ -431,4 +430,7 @@ if __name__ == "__main__":
     eventRenderer.cleanup()
     if slomo is not None:
         slomo.cleanup()
-    v2e_quit()
+
+main()
+v2e_quit()
+
