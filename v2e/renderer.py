@@ -1,4 +1,6 @@
+import time
 import numpy as np
+from fast_histogram import histogram2d
 import cv2
 import os
 import atexit
@@ -7,6 +9,7 @@ from tqdm import tqdm
 from typing import List
 from engineering_notation import EngNumber  # only from pip
 from enum import Enum
+from numba import jit
 
 from v2e.emulator import EventEmulator
 from v2e.v2e_utils import video_writer, read_image, checkAddSuffix
@@ -153,7 +156,8 @@ class EventRenderer(object):
             self.frame_times_output_file.write(s)
 
     def render_events_to_frames(self, event_arr: np.ndarray,
-                                height: int, width: int) -> np.ndarray:
+                                height: int, width: int,
+                                return_frames=False) -> np.ndarray:
         """ Incrementally render event frames.
 
         Frames are appended to the video output file.
@@ -174,6 +178,7 @@ class EventRenderer(object):
             I.e. if input has 100 pixels and height is 30 pixels,
             roughly 3 pixels will be collected to one output pixel
         width: width of output video in pixels
+        return_frames: return Frames if True, return None otherwise
 
         Returns
         -------
@@ -219,14 +224,21 @@ class EventRenderer(object):
         # continue consuming events from input event_arr
         # until we are done with all these events,
         # output frames along the way
+
+        @jit("UniTuple(int32, 2)(float64[:], float64, float64)",
+             nopython=True)
+        def search_duration_idx(ts, curr_start, next_start):
+            start = np.searchsorted(ts, curr_start, side="left")
+            end = np.searchsorted(ts, next_start, side="right")
+            return start, end
+
         while not doneWithTheseEvents:
             # try to get events for current frame
             if self.exposure_mode == ExposureMode.DURATION:
                 # find first event that is after the current frames start time
-                start = np.searchsorted(
-                    ts[thisFrameIdx:], self.currentFrameStartTime, side='left')
-                # find last event that fits within current frame
-                end = np.searchsorted(ts, nextFrameStartTs, side='right')
+                start, end = search_duration_idx(
+                    ts[thisFrameIdx:], self.currentFrameStartTime,
+                    nextFrameStartTs)
                 # if the event is after next frame start time,
                 # then we finished current frame and can
                 # append it to output list
@@ -252,24 +264,9 @@ class EventRenderer(object):
                 end = numEvents - 1
 
             events = event_arr[start:end]  # events in this frame
-            nevents = len(events)
-            pol_on = (events[:, 3] == 1)
-            pol_off = np.logical_not(pol_on)
-            img_on, _, _ = np.histogram2d(
-                events[pol_on, 2], events[pol_on, 1],
-                bins=(self.height, self.width), range=histrange)
-            img_off, _, _ = np.histogram2d(
-                events[pol_off, 2], events[pol_off, 1],
-                bins=(self.height, self.width), range=histrange)
-            if self.currentFrame is None:
-                # make a new empty frame
-                self.currentFrame = np.zeros_like(img_on)
-
             # accumulate event histograms to the current frame,
             # clip values of zero-centered current frame with new events added
-            self.currentFrame = np.clip(
-                self.currentFrame + (img_on - img_off),
-                -self.full_scale_count, self.full_scale_count)
+            self.accumulate_event_frame(events, histrange)
 
             # If not finished with current event_arr,
             # it means above we finished filling a frame, either with
@@ -292,24 +289,25 @@ class EventRenderer(object):
                     self.full_scale_count * 2)
                 # done with this frame, allocate new one in next loop
                 self.currentFrame = None
-                if (returnedFrames is not None):
-                    # put new frame under previous ones
+
+                if return_frames:
                     returnedFrames = np.concatenate(
-                        (returnedFrames, img[np.newaxis, ...]))
-                else:
-                    # add axis at position zero for the frames
-                    returnedFrames = img[np.newaxis, ...]
+                        (returnedFrames, img[np.newaxis, ...])) \
+                            if returnedFrames is not None else \
+                            img[np.newaxis, ...]
 
                 if self.video_output_file:
                     self.video_output_file.write(
                         cv2.cvtColor((img * 255).astype(np.uint8),
                                      cv2.COLOR_GRAY2BGR))
                     t = None
-                    if self.exposure_mode == ExposureMode.COUNT or \
-                            self.exposure_mode == ExposureMode.AREA_COUNT:
-                        t = (ts[start] + ts[end]) / 2
-                    else:
-                        t = self.currentFrameStartTime + self.frameIntevalS / 2
+
+                    exposure_mode_cond = (
+                        self.exposure_mode == ExposureMode.COUNT or
+                        self.exposure_mode == ExposureMode.AREA_COUNT)
+                    t = (ts[start]+ts[end])/2 if exposure_mode_cond else \
+                        self.currentFrameStartTime+self.frameIntevalS/2
+                        
                     self.frame_times_output_file.write(
                         '{}\t{:10.6f}\n'.format(self.numFramesWritten, t))
                     self.numFramesWritten += 1
@@ -369,3 +367,32 @@ class EventRenderer(object):
                 num_events += tmp_events.shape[0]
 
         logger.info("Generated {} events".format(EngNumber(num_events)))
+
+    def accumulate_event_frame(self, events, histrange):
+        """Accumulate event frame from an array of events.
+
+        # Arguments
+        events: np.ndarray
+            an [N events x 4] array
+
+        # Returns
+        event_frame: np.ndarray
+            an event frame
+        """
+        pol_on = (events[:, 3] == 1)
+        pol_off = np.logical_not(pol_on)
+        img_on = histogram2d(
+            events[pol_on, 2], events[pol_on, 1],
+            bins=(self.height, self.width), range=histrange)
+        img_off = histogram2d(
+            events[pol_off, 2], events[pol_off, 1],
+            bins=(self.height, self.width), range=histrange)
+
+        if self.currentFrame is None:
+            self.currentFrame = np.zeros_like(img_on)
+
+        # accumulate event histograms to the current frame,
+        # clip values of zero-centered current frame with new events added
+        self.currentFrame = np.clip(
+            self.currentFrame+(img_on-img_off),
+            -self.full_scale_count, self.full_scale_count)

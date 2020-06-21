@@ -7,6 +7,7 @@ import cv2
 import glob
 import tkinter as tk
 from tkinter import filedialog
+from numba import njit
 
 # adjust for different sensor than DAVIS346
 DVS_WIDTH, DVS_HEIGHT = 346, 260
