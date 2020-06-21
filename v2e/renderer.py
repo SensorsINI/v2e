@@ -111,6 +111,9 @@ class EventRenderer(object):
         # this frame is what we are currently accumulating to.
         # It is saved between event packets passed to us
 
+        self.printed_empty_packet_warning=False
+
+
     def cleanup(self):
         if self.video_output_file is not None:
             logger.info(
@@ -187,8 +190,10 @@ class EventRenderer(object):
         self._check_outputs_open()
 
         if event_arr is None or event_arr.shape[0] == 0:
-            logger.info(
-                'event_arr is None or there are no events, doing nothing')
+            if not self.printed_empty_packet_warning:
+                logger.info(
+                'event_arr is None or there are no events, doing nothing, supressing further warnings')
+                self.printed_empty_packet_warning=True
             return None
 
         ts = event_arr[:, 0]

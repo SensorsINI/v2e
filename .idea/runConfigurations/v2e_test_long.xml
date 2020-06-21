@@ -10,7 +10,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/v2e.py" />
-    <option name="PARAMETERS" value="--slomo_model=input/SuperSloMo39.ckpt --slowdown_factor=20 --output_folder=output/v2e-test-long --pos_thres=.15 --neg_thres=.15 --sigma_thres=0.05 --frame_rate=400 --dvs_aedat2 v2e-test-long.aedat --output_width=346 --output_height=260 --start_time 5 --stop_time 10 --no_preview" />
+    <option name="PARAMETERS" value="--slomo_model=input/SuperSloMo39.ckpt --output_folder=output/v2e-test-box --pos_thres=.15 --neg_thres=.15 --sigma_thres=0.05 --dvs_exposure duration 0.005 --timestamp=0.001 --dvs_aedat2 v2eg.aedat --output_width=346 --output_height=260 --overwrite" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

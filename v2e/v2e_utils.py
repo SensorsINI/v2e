@@ -27,6 +27,9 @@ def v2e_quit():
 
 
 def check_lowpass(cutoffhz, fs, logger):
+    """ checks if cutoffhz is ok given sample rate fs
+
+    """
     import numpy as np
     from engineering_notation import EngNumber as eng
     if cutoffhz == 0 or fs == 0:
