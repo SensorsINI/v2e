@@ -1,4 +1,3 @@
-import time
 import numpy as np
 from fast_histogram import histogram2d
 import cv2
@@ -232,6 +231,12 @@ class EventRenderer(object):
             end = np.searchsorted(ts, next_start, side="right")
             return start, end
 
+        @jit("float64[:, :](float64[:, :], int32)",
+             fastmath=True, nopython=True)
+        def normalize_frame(curr_frame, full_scale_count):
+            return (curr_frame+full_scale_count)/float(
+                full_scale_count*2)
+
         while not doneWithTheseEvents:
             # try to get events for current frame
             if self.exposure_mode == ExposureMode.DURATION:
@@ -285,8 +290,8 @@ class EventRenderer(object):
                     thisFrameIdx = end
 
                 # img output is 0-1 range
-                img = (self.currentFrame + self.full_scale_count) / float(
-                    self.full_scale_count * 2)
+                img = normalize_frame(self.currentFrame, self.full_scale_count)
+
                 # done with this frame, allocate new one in next loop
                 self.currentFrame = None
 
@@ -307,7 +312,7 @@ class EventRenderer(object):
                         self.exposure_mode == ExposureMode.AREA_COUNT)
                     t = (ts[start]+ts[end])/2 if exposure_mode_cond else \
                         self.currentFrameStartTime+self.frameIntevalS/2
-                        
+
                     self.frame_times_output_file.write(
                         '{}\t{:10.6f}\n'.format(self.numFramesWritten, t))
                     self.numFramesWritten += 1
