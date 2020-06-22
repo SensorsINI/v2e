@@ -44,7 +44,7 @@ def check_lowpass(cutoffhz, fs, logger):
             ' Lowpass cutoff is {}Hz with sample rate {}Hz '
             '(sample interval {}ms),\nbut this results in tau={}ms,'
             'and large IIR mixing factor eps={:5.3f}>0.3,\n which means your lowpass '
-            'will filter few or even 1 samples'.format(
+            'will filter few or even 1 samples. \nDecrease --timestamp_resolution of DVS events or decrease --cutoff_frequency_hz'.format(
                 eng(cutoffhz), eng(fs), eng(dt*1000), eng(tau*1000), eps))
     else:
         logger.info(
