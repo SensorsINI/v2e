@@ -34,6 +34,7 @@ def check_lowpass(cutoffhz, fs, logger):
     import numpy as np
     from engineering_notation import EngNumber as eng
     if cutoffhz == 0 or fs == 0:
+        logger.info('lowpass filter is disabled, no need for check')
         return
     tau = 1 / (2 * np.pi * cutoffhz)
     dt = 1 / fs
@@ -41,8 +42,8 @@ def check_lowpass(cutoffhz, fs, logger):
     if eps > 0.3:
         logger.warning(
             ' Lowpass cutoff is {}Hz with sample rate {}Hz '
-            '(sample interval {}ms),\nbut this results in tau={}ms '
-            'and mixing factor eps={:5.3f},\n which means your lowpass '
+            '(sample interval {}ms),\nbut this results in tau={}ms,'
+            'and large IIR mixing factor eps={:5.3f}>0.3,\n which means your lowpass '
             'will filter few or even 1 samples'.format(
                 eng(cutoffhz), eng(fs), eng(dt*1000), eng(tau*1000), eps))
     else:

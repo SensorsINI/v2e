@@ -73,13 +73,15 @@ def get_args():
     return args
 
 
-def makeOutputFolder(output_folder, suffix_counter,
+def makeOutputFolder(output_folder_base, suffix_counter,
                      overwrite, unique_output_folder):
     if overwrite and unique_output_folder:
         logger.error("specify either --overwrite or --unique_output_folder")
         v2e_quit()
     if suffix_counter > 0:
-        output_folder = output_folder+'-'+str(suffix_counter)
+        output_folder = output_folder_base+'-'+str(suffix_counter)
+    else:
+        output_folder=output_folder_base
     nonEmptyFolderExists = not overwrite and os.path.exists(output_folder) \
         and os.listdir(output_folder)
     if nonEmptyFolderExists and not overwrite and not unique_output_folder:
@@ -91,9 +93,9 @@ def makeOutputFolder(output_folder, suffix_counter,
 
     if nonEmptyFolderExists and unique_output_folder:
         return makeOutputFolder(
-            output_folder, suffix_counter+1, overwrite, unique_output_folder)
+            output_folder_base, suffix_counter+1, overwrite, unique_output_folder)
     else:
-        logger.info('making output folder {}'.format(output_folder))
+        logger.info('using output folder {}'.format(output_folder))
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
         return output_folder
