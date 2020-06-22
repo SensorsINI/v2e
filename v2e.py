@@ -129,6 +129,10 @@ def main():
     input_slowmotion_factor = args.input_slowmotion_factor
     timestamp_resolution = args.timestamp_resolution
 
+    if args.timestamp_resolution is None:
+        logger.error('--timestamp_resolution must be set to some DVS event timestamp resolution in seconds, e.g. 0.01')
+        v2e_quit()
+
     pos_thres = args.pos_thres
     neg_thres = args.neg_thres
     sigma_thres = args.sigma_thres

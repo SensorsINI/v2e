@@ -235,18 +235,26 @@ Process finished with exit code 0
 You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.
 
 ```
-python v2e.py -i input/tennis.mov --slowdown_factor=10 --output_folder=output --pos_thres=.15 --neg_thres=.15 --sigma_thres=0.01 --frame_rate=300 --dvs_aedat2 tennis.aedat --output_width=346 --output_height=260
+python v2e.py -i input/tennis.mov --timestamp_resolution=.005 --dvs_exposure duration 0.005 --output_folder=output/tennis --overwrite --pos_thres=.15 --neg_thres=.15 --sigma_thres=0.03 --dvs_aedat2 tennis.aedat --output_width=346 --output_height=260 --stop_time=3
 ```
-Run the command above, and the following files will be created in a folder called _output_.
+Run the command above, and the following files will be created in a folder called _output/tennis_.
 
 ```
-original.avi  slomo.avi  dvs-video.avi  tennis.aedat 
+dvs-video.avi
+dvs-video-frame_times.txt
+tennis.aedat
+v2e-args.txt
+video_orig.avi
+video_slomo.avi
+
 ```
 
-* _original.avi_: input video, but converted to luma and resized to output (width,height) and with repeated frames to allow comparison to _slomo.avi_.
-* _slomo.avi_: slow motion video (with playback rate 30Hz) but slowed down by slowdown_factor.
 * _dvs-video.avi_: DVS video (with playback rate 30Hz) but with frame rate (DVS timestamp resolution) set by source video frame rate times slowdown_factor.
+* _dvs-video-frame_times.txt_: The times of the DVS frames. Useful when _--dvs_exposure count_ or _--dvs_exposure area-count_ methods are used.
 * _tennis.aedat_: AEDAT-2.0 file for playback and algorithm experiments in [jAER](https://jaerproject.net) (use the AEChip _Davis346Blue_ to play this file.)
+* _v2e-args.txt_: All the parameters and logging output from the run.
+* _video_orig.avi_: input video, but converted to luma and resized to output (width,height) and with repeated frames to allow comparison to _slomo.avi_.
+* _video_slomo.avi_: slow motion video (with playback rate 30Hz) but slowed down by slowdown_factor.
 
 The [v2e site](https://sites.google.com/view/video2events/home) shows these videos.
 
@@ -259,9 +267,12 @@ The _-dvs_params_ argument sets reasonable DVS model parameters for high and low
 See our technical paper for futher information about these parameters.
  
  ### Frame rate and DVS timestamp resolution in v2e
- The _frame_rate_ parameter sets the output frame rate of DVS movies. It does not affect the generated DVS events, only how they are rendered to make the AVI movies.
+There are several different 'frame rates' in v2e. On opening the input video, v2e reads the frame rate of the video and assumes the video is shot in real time, except that you can specify a _--input_slowmotion_factor_ slowdown_factor if the video is already a slow-motion video. The desired DVS timestamp resolution is combined with the source frame rate to compute the slow-motion upsampling factor. The output DVS AVI video is then generated using a _--dvs-exposure_ method.
+
+ * _--avi_frame_rate_: Just sets the frame rate for playback of output AVI files
+ * _--dvs-exposure_: See next section
+ * --input_slowmotion_factor_: Specifies by what factor the input video is slowed down.
  
- The timestep resolution of the generated DVS events is set by combining the source frame rate and _slowdown_factor_ parameters. For example, if the source video is at 30Hz frame rate and _slowdown_factor_ is 20, then the DVS events will have timestamp resolution of 1/(30*20)s=1/600s=1.66ms.
 
 ## DVS frame exposure modes
 
