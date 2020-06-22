@@ -433,6 +433,9 @@ def main():
                     eventRenderer.render_events_to_frames(
                         events, height=output_height, width=output_width)
 
+            # properly close emulator file handling
+            emulator.close()
+
     if num_frames == 0:
         logger.error('no frames read from file')
         v2e_quit()

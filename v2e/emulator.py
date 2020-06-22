@@ -175,6 +175,16 @@ class EventEmulator(object):
                 logger.info('opening text DVS output file ' + path)
                 self.dvs_text = DVSTextOutput(path)
 
+    def close(self):
+        if self.dvs_h5 is not None:
+            self.dvs_h5.close()
+
+        if self.dvs_aedat2 is not None:
+            self.dvs_aedat2.close()
+
+        if self.dvs_text is not None:
+            self.dvs_text.close()
+
     def _init(self, firstFrameLinear):
         logger.debug(
             'initializing random temporal contrast thresholds '
@@ -531,18 +541,18 @@ class EventEmulator(object):
             events = np.vstack(events)
             if self.dvs_h5 is not None:  # todo add h5 output
                 pass
-                # # convert data to uint32 (microsecs) format
-                # tmp_events[:, 0] = tmp_events[:, 0] * 1e6
-                # tmp_events[tmp_events[:, 3] == -1, 3] = 0
-                # tmp_events = tmp_events.astype(np.uint32)
-                #
-                # # save events
-                # self.dvs_h5_dataset.resize(
-                #     event_dataset.shape[0] + tmp_events.shape[0],
-                #     axis=0)
-                #
-                # event_dataset[-tmp_events.shape[0]:] = tmp_events
-                # self.dvs_h5.flush()
+                # convert data to uint32 (microsecs) format
+                events[:, 0] = events[:, 0] * 1e6
+                events[events[:, 3] == -1, 3] = 0
+                events = events.astype(np.uint32)
+
+                # save events
+                self.dvs_h5_dataset.resize(
+                   self.dvs_h5_dataset.shape[0] + events.shape[0],
+                   axis=0)
+
+                self.dvs_h5_dataset[-events.shape[0]:] = events
+                self.dvs_h5.flush()
             if self.dvs_aedat2 is not None:
                 self.dvs_aedat2.appendEvents(events)
             if self.dvs_text is not None:
