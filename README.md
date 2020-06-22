@@ -98,18 +98,19 @@ _v2e.py_ reads a standard video (e.g. in .avi, .mp4, .mov, or .wmv) and generate
 ```
 (base)$ conda activate pt-v2e # activate your workspace
 (pt-v2e)$ python v2e.py -h
-usage: v2e.py [-h] [--dvs_params DVS_PARAMS] [--pos_thres POS_THRES]
+usage: v2e.py [-h] -o OUTPUT_FOLDER [--overwrite] [--unique_output_folder]
+              [--no_preview] [--avi_frame_rate AVI_FRAME_RATE]
+              [--timestamp_resolution TIMESTAMP_RESOLUTION]
+              [--dvs_params DVS_PARAMS] [--pos_thres POS_THRES]
               [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
               [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
               [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ]
-              [--slomo_model SLOMO_MODEL] [--segment_size SEGMENT_SIZE]
-              [--batch_size BATCH_SIZE] [--no_preview]
-              [--slowdown_factor SLOWDOWN_FACTOR] [--vid_orig VID_ORIG]
-              [--vid_slomo VID_SLOMO] [-i INPUT] [--start_time START_TIME]
-              [--stop_time STOP_TIME] -o OUTPUT_FOLDER [--overwrite]
+              [--slomo_model SLOMO_MODEL] [--batch_size BATCH_SIZE]
+              [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO] [-i INPUT]
+              [--input_slowmotion_factor INPUT_SLOWMOTION_FACTOR]
+              [--start_time START_TIME] [--stop_time STOP_TIME]
               [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
               [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
-              [--frame_rate FRAME_RATE]
               [--dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]]
               [--dvs_h5 DVS_H5] [--dvs_aedat2 DVS_AEDAT2]
               [--dvs_text DVS_TEXT] [--dvs_numpy DVS_NUMPY]
@@ -119,10 +120,32 @@ optional arguments:
   -h, --help            show this help message and exit
   --rotate180 ROTATE180
                         rotate all output 180 deg. (default: False)
+Output: General:
+  -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
+                        folder to store outputs. (default: None)
+  --overwrite           overwrites files in existing folder (checks existence
+                        of non-empty output_folder). (default: False)
+  --unique_output_folder
+                        makes unique output folder based on output_folder if
+                        non-empty output_folder already exists (default:
+                        False)
+  --no_preview          disable preview in cv2 windows for faster processing.
+                        (default: False)
+  --avi_frame_rate AVI_FRAME_RATE
+                        frame rate of output AVI video files; only affects
+                        playback rate. (default: 30)
 DVS model:
+  --timestamp_resolution TIMESTAMP_RESOLUTION
+                        Desired DVS timestamp reolution in seconds; determines
+                        slow motion factor; the video will be upsampled from
+                        source fps to achieve the desired timestamp
+                        resolution.I.e. slowdown_factor =
+                        (1/fps)/timestamp_resolution; using a high resolution
+                        e.g. of 1ms will result in slow rendering since it
+                        will force high upsampling ratio. (default: None)
   --dvs_params DVS_PARAMS
-                        Easy optional setting of parameters for DVS model:
-                        'clean', 'noisy' (default: clean)
+                        Easy optional setting of parameters for DVS
+                        model:'clean', 'noisy' (default: None)
   --pos_thres POS_THRES
                         threshold in log_e intensity change to trigger a
                         positive event. (default: 0.2)
@@ -148,80 +171,62 @@ SloMo upsampling:
   --slomo_model SLOMO_MODEL
                         path of slomo_model checkpoint. (default:
                         input/SuperSloMo39.ckpt)
-  --segment_size SEGMENT_SIZE
-                        segment size for SuperSloMo. Video is split to chunks
-                        of this many frames, and within each segment, batch
-                        mode CNN inference of optic flow takes place. Video
-                        will be processed segment by segment. (default: 1)
   --batch_size BATCH_SIZE
-                        batch size in frames for SuperSloMo. Must be less than
-                        or equal to seqment_size. (default: 1)
-  --no_preview          disable preview in cv2 windows for faster processing.
-                        (default: False)
-  --slowdown_factor SLOWDOWN_FACTOR
-                        slow motion factor; if the input video has frame rate
-                        fps, then the DVS events will have time resolution of
-                        1/(fps*slowdown_factor). (default: 10)
-  --vid_orig VID_ORIG   output src video at same rate as slomo video (with
+                        Batch size in frames for SuperSloMo. (default: 1)
+  --vid_orig VID_ORIG   Output src video at same rate as slomo video (with
                         duplicated frames). (default: video_orig.avi)
   --vid_slomo VID_SLOMO
-                        output slomo of src video slowed down by
+                        Output slomo of src video slowed down by
                         slowdown_factor. (default: video_slomo.avi)
 Input:
   -i INPUT, --input INPUT
-                        input video file; leave empty for file chooser dialog.
+                        Input video file; leave empty for file chooser dialog.
                         (default: None)
+  --input_slowmotion_factor INPUT_SLOWMOTION_FACTOR
+                        Sets the known slow-motion factor of the input video,
+                        i.e. if the input video is 10fps with
+                        slowmotion_factor=2, it means that each input frame
+                        represents (1/10)s/2=50ms. (default: 1.0)
   --start_time START_TIME
-                        start at this time in seconds in video. (default:
+                        Start at this time in seconds in video. (default:
                         None)
   --stop_time STOP_TIME
-                        stop at this time in seconds in video. (default: None)
-Output: General:
-  -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
-                        folder to store outputs. (default: None)
-  --overwrite           overwrites files in existing folder (checks existence
-                        of non-empty output_folder). (default: False)
+                        Stop at this time in seconds in video. (default: None)
 Output: DVS video:
-  --dvs_vid DVS_VID     output DVS events as AVI video at frame_rate.
+  --dvs_vid DVS_VID     Output DVS events as AVI video at frame_rate.
                         (default: dvs-video.avi)
   --dvs_vid_full_scale DVS_VID_FULL_SCALE
-                        set full scale event count histogram count for DVS
+                        Set full scale event count histogram count for DVS
                         videos to be this many ON or OFF events for full white
                         or black. (default: 2)
   --output_height OUTPUT_HEIGHT
-                        height of output DVS data in pixels. If None, same as
-                        input video. (default: 260)
+                        Height of output DVS data in pixels. If None, same as
+                        input video. (default: None)
   --output_width OUTPUT_WIDTH
-                        width of output DVS data in pixels. If None, same as
-                        input video. (default: 346)
-  --frame_rate FRAME_RATE
-                        implies --dvs_exposure duration 1/framerate.
-                        Equivalent frame rate of --dvs_vid output video; the
-                        events will be accummulated as this sample rate; DVS
-                        frames will be accumulated for duration 1/frame_rate
-                        (default: None)
+                        Width of output DVS data in pixels. If None, same as
+                        input video. (default: None)
   --dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]
-                        mode to finish DVS event integration: duration time:
+                        Mode to finish DVS event integration: duration time:
                         accumulation time in seconds; count n: count n events
                         per frame; area_event N M: frame ends when any area of
                         M x M pixels fills with N events (default: None)
 Output: DVS events:
-  --dvs_h5 DVS_H5       output DVS events as hdf5 event database. (default:
+  --dvs_h5 DVS_H5       Output DVS events as hdf5 event database. (default:
                         None)
   --dvs_aedat2 DVS_AEDAT2
-                        output DVS events as DAVIS346 camera AEDAT-2.0 event
+                        Output DVS events as DAVIS346 camera AEDAT-2.0 event
                         file for jAER; one file for real and one file for v2e
                         events. (default: None)
-  --dvs_text DVS_TEXT   output DVS events as text file with one event per line
+  --dvs_text DVS_TEXT   Output DVS events as text file with one event per line
                         [timestamp (float s), x, y, polarity (0,1)]. (default:
                         None)
   --dvs_numpy DVS_NUMPY
-                        accumulates DVS events to memory and writes final
+                        Accumulates DVS events to memory and writes final
                         numpy data file with this name holding vector of
                         events. WARNING: memory use is unbounded. (default:
                         None)
 Run with no --input to open file dialog
-
+Process finished with exit code 0
 ```
 You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.
 
