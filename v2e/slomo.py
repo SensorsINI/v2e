@@ -42,15 +42,15 @@ class SuperSloMo(object):
     """
 
     def __init__(
-        self,
-        model,
-        slowdown_factor,
-        batch_size=1,
-        video_path=None,
-        vid_orig='original.avi',
-        vid_slomo='slomo.avi',
-        preview=False,
-        avi_frame_rate=30
+            self,
+            model,
+            slowdown_factor,
+            batch_size=1,
+            video_path=None,
+            vid_orig='original.avi',
+            vid_slomo='slomo.avi',
+            preview=False,
+            avi_frame_rate=30,
     ):
         """
         init
@@ -84,7 +84,7 @@ class SuperSloMo(object):
         if not isinstance(slowdown_factor, int) or slowdown_factor < 2:
             raise ValueError(
                 'slowdown_factor={} but must be an int value>1'
-                .format(slowdown_factor))
+                    .format(slowdown_factor))
         self.sf = slowdown_factor
         self.video_path = video_path
         self.preview = preview
@@ -160,9 +160,9 @@ class SuperSloMo(object):
         frames = dataloader.FramesDirectory(
             source_frame_path, frame_size, transform=self.to_tensor)
         videoFramesloader = torch.utils.data.DataLoader(
-                frames,
-                batch_size=self.batch_size,
-                shuffle=False)
+            frames,
+            batch_size=self.batch_size,
+            shuffle=False)
         return videoFramesloader, frames.dim, frames.origDim
 
     def __model(self, dim):
@@ -181,7 +181,7 @@ class SuperSloMo(object):
         """
         if not os.path.isfile(self.checkpoint):
             raise FileNotFoundError(
-                'SuperSloMo model checkpoint '+str(self.checkpoint) +
+                'SuperSloMo model checkpoint ' + str(self.checkpoint) +
                 ' does not exist or is not readable')
         logger.info('loading SuperSloMo model from ' + str(self.checkpoint))
 
@@ -282,7 +282,7 @@ class SuperSloMo(object):
             nImages = len(video_frame_loader)
             #  nImages = images.shape[0]
             disableTqdm = nImages <= max(self.batch_size, 4)
-            unit='fr' if self.batch_size==1 else 'batch'
+            unit = 'fr' if self.batch_size == 1 else 'batch of '+str(self.batch_size)+' fr'
             for _, (frame0, frame1) in enumerate(
                     tqdm(video_frame_loader, desc='slomo-interp',
                          unit=unit, disable=disableTqdm), 0):
@@ -333,7 +333,6 @@ class SuperSloMo(object):
 
                     # Save intermediate frame
                     for batchIndex in range(num_batch_frames):
-
                         img = self.to_image(Ft_p[batchIndex].cpu().detach())
                         img_resize = img.resize(ori_dim, Image.BILINEAR)
 
@@ -350,7 +349,7 @@ class SuperSloMo(object):
 
                     for frame_idx in range(
                             start_frame_count,
-                            stop_frame_count+self.sf*(num_batch_frames-1)):
+                            stop_frame_count + self.sf * (num_batch_frames - 1)):
                         frame_path = os.path.join(
                             output_folder, str(frame_idx) + ".png")
                         frame = cv2.imread(frame_path)
@@ -369,10 +368,10 @@ class SuperSloMo(object):
             # of two frames in a row
             if self.ori_writer:
                 src_files = sorted(
-                    glob.glob("{}".format(source_frame_path)+"/*.npy"))
+                    glob.glob("{}".format(source_frame_path) + "/*.npy"))
 
                 for frame_idx, src_file_path in enumerate(
-                        tqdm(src_files, desc='slomo-interp',
+                        tqdm(src_files, desc='slomo-write-avi',
                              unit='fr', disable=disableTqdm), 0):
                     src_frame = np.load(src_file_path)
                     self.ori_writer.write(
@@ -411,8 +410,8 @@ class SuperSloMo(object):
             raise ValueError(("Input folder is empty or images are not in"
                               " 'png' format."))
         images_sorted = sorted(
-                images,
-                key=lambda line: int(line.split(os.sep)[-1].split('.')[0]))
+            images,
+            key=lambda line: int(line.split(os.sep)[-1].split('.')[0]))
         # only works for linux separators with /,
         # use os.sep according to
         # https://stackoverflow.com/questions/16010992

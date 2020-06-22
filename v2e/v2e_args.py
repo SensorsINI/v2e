@@ -28,6 +28,9 @@ def v2e_args(parser):
         help="overwrites files in existing folder "
              "(checks existence of non-empty output_folder).")
     outGroupGeneral.add_argument(
+        "--unique_output_folder", action="store_true",
+        help="makes unique output folder based on output_folder if non-empty output_folder already exists")
+    outGroupGeneral.add_argument(
         "--no_preview", action="store_true",
         help="disable preview in cv2 windows for faster processing.")
     outGroupGeneral.add_argument(
@@ -48,7 +51,7 @@ def v2e_args(parser):
              "rendering since it will force high upsampling ratio."
              )
     modelGroup.add_argument(
-        "--dvs_params", type=str, default='clean',
+        "--dvs_params", type=str,
         help="Easy optional setting of parameters for DVS model:"
              "'clean', 'noisy'")
     modelGroup.add_argument(
@@ -96,13 +99,17 @@ def v2e_args(parser):
              "(with duplicated frames).")
     sloMoGroup.add_argument(
         "--vid_slomo", type=str, default="video_slomo.avi",
-        help="output slomo of src video slowed down by slowdown_factor.")
+        help="Output slomo of src video slowed down by slowdown_factor.")
+    # TODO in general, allow reuse of slomo output
+    # sloMoGroup.add_argument(
+    #     "--slomo_use_saved", action="store_true",
+    #     help="Use previously-generated vid_slomo as input video instead of generating new one. Caution: saved video must have correct slowdown_factor.")
 
     # input file handling
     inGroup = parser.add_argument_group('Input')
     inGroup.add_argument(
         "-i", "--input", type=str,
-        help="input video file; leave empty for file chooser dialog.")
+        help="Input video file; leave empty for file chooser dialog.")
     inGroup.add_argument(
         "--input_slowmotion_factor", type=float, default=1.0,
         help="Sets the known slow-motion factor of the input video, "
@@ -110,27 +117,27 @@ def v2e_args(parser):
              "it means that each input frame represents (1/10)s/2=50ms.")
     inGroup.add_argument(
         "--start_time", type=float, default=None,
-        help="start at this time in seconds in video.")
+        help="Start at this time in seconds in video.")
     inGroup.add_argument(
         "--stop_time", type=float, default=None,
-        help="stop at this time in seconds in video.")
+        help="Stop at this time in seconds in video.")
 
     # DVS output video including address space size in pixels
     outGroupDvsVideo = parser.add_argument_group('Output: DVS video')
     outGroupDvsVideo.add_argument(
         "--dvs_vid", type=str, default="dvs-video.avi",
-        help="output DVS events as AVI video at frame_rate.")
+        help="Output DVS events as AVI video at frame_rate.")
     outGroupDvsVideo.add_argument(
         "--dvs_vid_full_scale", type=int, default=2,
-        help="set full scale event count histogram count for DVS videos "
+        help="Set full scale event count histogram count for DVS videos "
              "to be this many ON or OFF events for full white or black.")
     outGroupDvsVideo.add_argument(
         "--output_height", type=int, default=None,
-        help="height of output DVS data in pixels. "
+        help="Height of output DVS data in pixels. "
              "If None, same as input video.")
     outGroupDvsVideo.add_argument(
         "--output_width", type=int, default=None,
-        help="width of output DVS data in pixels. "
+        help="Width of output DVS data in pixels. "
              "If None, same as input video.")
     # outGroupDvsVideo.add_argument(
     #     "--frame_rate", type=float,
@@ -140,7 +147,7 @@ def v2e_args(parser):
     #          "DVS frames will be accumulated for duration 1/frame_rate")
     outGroupDvsVideo.add_argument(
         "--dvs_exposure", nargs='+', type=str,
-        help="mode to finish DVS event integration: "
+        help="Mode to finish DVS event integration: "
              "duration time: accumulation time in seconds; "
              "count n: count n events per frame; "
              "area_event N M: frame ends when any area of M x M pixels "
@@ -150,18 +157,18 @@ def v2e_args(parser):
     dvsEventOutputGroup = parser.add_argument_group('Output: DVS events')
     dvsEventOutputGroup.add_argument(
         "--dvs_h5", type=str, default=None,
-        help="output DVS events as hdf5 event database.")
+        help="Output DVS events as hdf5 event database.")
     dvsEventOutputGroup.add_argument(
         "--dvs_aedat2", type=str, default=None,
-        help="output DVS events as DAVIS346 camera AEDAT-2.0 event file "
+        help="Output DVS events as DAVIS346 camera AEDAT-2.0 event file "
              "for jAER; one file for real and one file for v2e events.")
     dvsEventOutputGroup.add_argument(
         "--dvs_text", type=str, default=None,
-        help="output DVS events as text file with one event per "
+        help="Output DVS events as text file with one event per "
              "line [timestamp (float s), x, y, polarity (0,1)].")
     dvsEventOutputGroup.add_argument(
         "--dvs_numpy", type=str, default=None,
-        help="accumulates DVS events to memory and writes final numpy data "
+        help="Accumulates DVS events to memory and writes final numpy data "
              "file with this name holding vector of events. "
              "WARNING: memory use is unbounded.")
 

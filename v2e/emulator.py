@@ -227,7 +227,14 @@ class EventEmulator(object):
                 "dvs_params {} not known: "
                 "use 'clean' or 'noisy'".format(model))
             sys.exit(1)
-        logger.info("set DVS model params with option '{}'".format(model))
+        logger.info("set DVS model params with option '{}' to following values:\n"
+                    "pos_thres={}\n"
+                    "neg_thres={}\n"
+                    "sigma_thres={}\n"
+                    "cutoff_hz={}\n"
+                    "leak_rate_hz={}\n"
+                    "shot_noise_rate_hz={}\n"
+                    "refractory_period_s={}".format(model,self.pos_thres,self.neg_thres,self.sigma_thres,self.cutoff_hz,self.leak_rate_hz,self.shot_noise_rate_hz,self.refractory_period_s))
 
     def reset(self):
         '''resets so that next use will reinitialize the base frame
