@@ -100,9 +100,10 @@ def v2e_args(parser):
     sloMoGroup.add_argument(
         "--vid_slomo", type=str, default="video_slomo.avi",
         help="Output slomo of src video slowed down by slowdown_factor.")
-    sloMoGroup.add_argument(
-        "--slomo_use_saved", action="store_true",
-        help="Use previously-generated vid_slomo as input video instead of generating new one. Caution: saved video must have correct slowdown_factor.")
+    # TODO in general, allow reuse of slomo output
+    # sloMoGroup.add_argument(
+    #     "--slomo_use_saved", action="store_true",
+    #     help="Use previously-generated vid_slomo as input video instead of generating new one. Caution: saved video must have correct slowdown_factor.")
 
     # input file handling
     inGroup = parser.add_argument_group('Input')
