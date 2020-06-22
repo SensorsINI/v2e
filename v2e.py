@@ -90,11 +90,13 @@ def makeOutputFolder(output_folder, suffix_counter,
         v2e_quit()
 
     if nonEmptyFolderExists and unique_output_folder:
-        makeOutputFolder(
+        return makeOutputFolder(
             output_folder, suffix_counter+1, overwrite, unique_output_folder)
-    logger.info('making output folder {}'.format(output_folder))
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
+    else:
+        logger.info('making output folder {}'.format(output_folder))
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+        return output_folder
 
 
 def main():
@@ -104,7 +106,7 @@ def main():
     output_folder = args.output_folder
     unique_output_folder = args.unique_output_folder
 
-    makeOutputFolder(output_folder, 0, overwrite, unique_output_folder)
+    output_folder=makeOutputFolder(output_folder, 0, overwrite, unique_output_folder)
 
     if (args.output_width is not None) ^ (args.output_width is not None):
         logger.error(
