@@ -540,18 +540,18 @@ class EventEmulator(object):
         if len(events) > 0:
             events = np.vstack(events)
             if self.dvs_h5 is not None:  # todo add h5 output
-                pass
                 # convert data to uint32 (microsecs) format
-                events[:, 0] = events[:, 0] * 1e6
-                events[events[:, 3] == -1, 3] = 0
-                events = events.astype(np.uint32)
+                temp_events = np.copy(events)
+                temp_events[:, 0] = temp_events[:, 0] * 1e6
+                temp_events[temp_events[:, 3] == -1, 3] = 0
+                temp_events = temp_events.astype(np.uint32)
 
                 # save events
                 self.dvs_h5_dataset.resize(
-                   self.dvs_h5_dataset.shape[0] + events.shape[0],
+                   self.dvs_h5_dataset.shape[0] + temp_events.shape[0],
                    axis=0)
 
-                self.dvs_h5_dataset[-events.shape[0]:] = events
+                self.dvs_h5_dataset[-temp_events.shape[0]:] = temp_events
                 self.dvs_h5.flush()
             if self.dvs_aedat2 is not None:
                 self.dvs_aedat2.appendEvents(events)
