@@ -276,3 +276,18 @@ def histogram_events_in_time_bins(
         ts_cnt[i][1] = cnt
 
     return ts_cnt
+
+
+@njit("float64[:, :](float64[:, :], int64[:], int64[:, :])",
+      nogil=True, parallel=False)
+def hist2d_numba_seq(tracks, bins, ranges):
+    H = np.zeros((bins[0], bins[1]), dtype=np.float64)
+    delta = 1/((ranges[:, 1] - ranges[:, 0]) / bins)
+
+    for t in range(tracks.shape[1]):
+        i = (tracks[0, t] - ranges[0, 0]) * delta[0]
+        j = (tracks[1, t] - ranges[1, 0]) * delta[1]
+        if 0 <= i < bins[0] and 0 <= j < bins[1]:
+            H[int(i), int(j)] += 1
+
+    return H

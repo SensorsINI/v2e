@@ -1,5 +1,5 @@
+import time
 import numpy as np
-from fast_histogram import histogram2d
 import cv2
 import os
 import atexit
@@ -12,6 +12,7 @@ from numba import jit
 
 from v2e.emulator import EventEmulator
 from v2e.v2e_utils import video_writer, read_image, checkAddSuffix
+from v2e.v2e_utils import hist2d_numba_seq
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +46,7 @@ class EventRenderer(object):
             # suffix using dvs_vid file name for the frame times
             # when not using constant_time
             frame_times_suffix='-frame_times.txt',
-            avi_frame_rate=30
-    ):
+            avi_frame_rate=30):
         """ Init.
 
         Parameters
@@ -113,8 +113,7 @@ class EventRenderer(object):
         # this frame is what we are currently accumulating to.
         # It is saved between event packets passed to us
 
-        self.printed_empty_packet_warning=False
-
+        self.printed_empty_packet_warning = False
 
     def cleanup(self):
         if self.video_output_file is not None:
@@ -196,8 +195,9 @@ class EventRenderer(object):
         if event_arr is None or event_arr.shape[0] == 0:
             if not self.printed_empty_packet_warning:
                 logger.info(
-                'event_arr is None or there are no events, doing nothing, supressing further warnings')
-                self.printed_empty_packet_warning=True
+                    'event_arr is None or there are no events, '
+                    'doing nothing, supressing further warnings')
+                self.printed_empty_packet_warning = True
             return None
 
         ts = event_arr[:, 0]
@@ -222,7 +222,7 @@ class EventRenderer(object):
 
         thisFrameIdx = 0  # start at first event
         numEvents = len(ts)
-        histrange = [(0, v) for v in (self.height, self.width)]
+        histrange = np.asarray([(0, v) for v in (self.height, self.width)])
 
         doneWithTheseEvents = False
         # continue consuming events from input event_arr
@@ -276,7 +276,10 @@ class EventRenderer(object):
             events = event_arr[start:end]  # events in this frame
             # accumulate event histograms to the current frame,
             # clip values of zero-centered current frame with new events added
+            start_time = time.time()
             self.accumulate_event_frame(events, histrange)
+            end_time = time.time()
+            print((end_time-start_time)*1000)
 
             # If not finished with current event_arr,
             # it means above we finished filling a frame, either with
@@ -391,12 +394,15 @@ class EventRenderer(object):
         """
         pol_on = (events[:, 3] == 1)
         pol_off = np.logical_not(pol_on)
-        img_on = histogram2d(
-            events[pol_on, 2], events[pol_on, 1],
-            bins=(self.height, self.width), range=histrange)
-        img_off = histogram2d(
-            events[pol_off, 2], events[pol_off, 1],
-            bins=(self.height, self.width), range=histrange)
+
+        img_on = hist2d_numba_seq(
+            np.array([events[pol_on, 2], events[pol_on, 1]]),
+            bins=np.asarray([self.height, self.width]),
+            ranges=histrange)
+        img_off = hist2d_numba_seq(
+            np.array([events[pol_off, 2], events[pol_off, 1]]),
+            bins=np.asarray([self.height, self.width]),
+            ranges=histrange)
 
         if self.currentFrame is None:
             self.currentFrame = np.zeros_like(img_on)

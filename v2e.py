@@ -13,20 +13,18 @@ frames from the original video frames.
 import glob
 import argparse
 from pathlib import Path
-from shutil import rmtree
 
 import argcomplete
 import cv2
 import numpy as np
 import os
-from tempfile import TemporaryDirectory, mkdtemp
+from tempfile import TemporaryDirectory
 from engineering_notation import EngNumber  # only from pip
-from scripts.regsetup import description
 from tqdm import tqdm
-from tqdm import trange
 # may only apply to windows
 try:
-    from gooey import Gooey # pip install Gooey
+    from scripts.regsetup import description
+    from gooey import Gooey  # pip install Gooey
 except Exception:
     pass
 
@@ -53,7 +51,10 @@ logging.addLevelName(
         logging.ERROR))
 logger = logging.getLogger(__name__)
 
-# @Gooey(program_name="v2e", default_size=(575, 600))  # uncomment if you are lucky enough to be able to install Gooey, which requires wxPython
+
+# uncomment if you are lucky enough to be able to install Gooey,
+# which requires wxPython
+# @Gooey(program_name="v2e", default_size=(575, 600))
 def get_args():
     parser = argparse.ArgumentParser(
         description='v2e: generate simulated DVS events from video.',
@@ -71,24 +72,29 @@ def get_args():
     args = parser.parse_args()
     return args
 
-def makeOutputFolder(output_folder,suffix_counter, overwrite, unique_output_folder):
+
+def makeOutputFolder(output_folder, suffix_counter,
+                     overwrite, unique_output_folder):
     if overwrite and unique_output_folder:
         logger.error("specify either --overwrite or --unique_output_folder")
         v2e_quit()
-    if suffix_counter>0:
-        output_folder=output_folder+'-'+str(suffix_counter)
+    if suffix_counter > 0:
+        output_folder = output_folder+'-'+str(suffix_counter)
     nonEmptyFolderExists = not overwrite and os.path.exists(output_folder) \
         and os.listdir(output_folder)
     if nonEmptyFolderExists and not overwrite and not unique_output_folder:
         logger.error(
             'non-empty output folder {} already exists \n '
-            '- use --overwrite or --unique_output_folder'.format(os.path.abspath(output_folder), nonEmptyFolderExists))
+            '- use --overwrite or --unique_output_folder'.format(
+                os.path.abspath(output_folder), nonEmptyFolderExists))
         v2e_quit()
 
     if nonEmptyFolderExists and unique_output_folder:
-        makeOutputFolder(output_folder, suffix_counter+1, overwrite, unique_output_folder)
+        makeOutputFolder(
+            output_folder, suffix_counter+1, overwrite, unique_output_folder)
     logger.info('making output folder {}'.format(output_folder))
-    if not os.path.exists(output_folder): os.mkdir(output_folder)
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
 
 
 def main():
@@ -129,7 +135,9 @@ def main():
     timestamp_resolution = args.timestamp_resolution
 
     if args.timestamp_resolution is None:
-        logger.error('--timestamp_resolution must be set to some DVS event timestamp resolution in seconds, e.g. 0.01')
+        logger.error('--timestamp_resolution must be set to '
+                     'some DVS event timestamp resolution in seconds, '
+                     'e.g. 0.01')
         v2e_quit()
 
     pos_thres = args.pos_thres
@@ -228,24 +236,27 @@ def main():
         if stop_time else srcNumFrames
     srcNumFramesToBeProccessed = stop_frame-start_frame+1
     srcDurationToBeProcessed = srcNumFramesToBeProccessed/srcFps
-    start_time=start_frame/srcFps
-    stop_time=stop_frame/srcFps
+    start_time = start_frame/srcFps
+    stop_time = stop_frame/srcFps
 
     if exposure_mode == ExposureMode.DURATION:
         dvsFps = 1./exposure_val
-        dvsNumFrames = np.math.floor(dvsFps * srcDurationToBeProcessed/input_slowmotion_factor)
+        dvsNumFrames = np.math.floor(
+            dvsFps * srcDurationToBeProcessed/input_slowmotion_factor)
         dvsDuration = dvsNumFrames / dvsFps
         dvsPlaybackDuration = dvsNumFrames / avi_frame_rate
         logger.info(
             '\n\n{} has {} frames with duration {}s, '
-            '\nsource video is {}fps with slowmotion_factor {} (frame interval {}s),'
+            '\nsource video is {}fps with slowmotion_factor {} '
+            '(frame interval {}s),'
             '\n slomo will have {}fps,'
             '\n events will have timestamp resolution {}s,'
             '\n v2e DVS video will have {}fps (accumulation time {}s), '
             '\n DVS video will have {} frames with duration {}s '
             'and playback duration {}s\n'
             .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
-                    EngNumber(srcFps), EngNumber(input_slowmotion_factor), EngNumber(srcFrameIntervalS),
+                    EngNumber(srcFps), EngNumber(input_slowmotion_factor), 
+                    EngNumber(srcFrameIntervalS),
                     EngNumber(srcFps * slowdown_factor),
                     EngNumber(slomoTimestampResolutionS),
                     EngNumber(dvsFps), EngNumber(1 / dvsFps),
@@ -323,37 +334,40 @@ def main():
                 '--output_width and --output_height'
                 .format(output_width, output_height))
 
-        logger.info('Resizing input frames to output size (with possible RGG to luma conversion)')
-        for inputFrameIndex in tqdm(range(srcNumFramesToBeProccessed),desc='rgb2luma',unit='fr'):
+        logger.info('Resizing input frames to output size '
+                    '(with possible RGG to luma conversion)')
+        for inputFrameIndex in tqdm(
+                range(srcNumFramesToBeProccessed),
+                desc='rgb2luma', unit='fr'):
                 # read frame
-                ret, inputVideoFrame = cap.read()
+            ret, inputVideoFrame = cap.read()
 
-                if not ret or inputFrameIndex+start_frame > stop_frame:
-                    break
+            if not ret or inputFrameIndex+start_frame > stop_frame:
+                break
 
-                if output_height and output_width and \
-                        (inputHeight != output_height or
-                         inputWidth != output_width):
-                    dim = (output_width, output_height)
-                    (fx, fy) = (float(output_width)/inputWidth,
-                                float(output_height)/inputHeight)
-                    inputVideoFrame = cv2.resize(
-                        src=inputVideoFrame, dsize=dim, fx=fx, fy=fy,
-                        interpolation=cv2.INTER_AREA)
-                if inputChannels == 3:  # color
-                    if inputFrameIndex == 0:  # print info once
-                        logger.info(
-                            '\nConverting input frames from RGB color to luma')
-                    # TODO would break resize if input is gray frames
-                    # convert RGB frame into luminance.
-                    inputVideoFrame = cv2.cvtColor(
-                        inputVideoFrame, cv2.COLOR_BGR2GRAY)  # much faster
+            if output_height and output_width and \
+                    (inputHeight != output_height or
+                     inputWidth != output_width):
+                dim = (output_width, output_height)
+                (fx, fy) = (float(output_width)/inputWidth,
+                            float(output_height)/inputHeight)
+                inputVideoFrame = cv2.resize(
+                    src=inputVideoFrame, dsize=dim, fx=fx, fy=fy,
+                    interpolation=cv2.INTER_AREA)
+            if inputChannels == 3:  # color
+                if inputFrameIndex == 0:  # print info once
+                    logger.info(
+                        '\nConverting input frames from RGB color to luma')
+                # TODO would break resize if input is gray frames
+                # convert RGB frame into luminance.
+                inputVideoFrame = cv2.cvtColor(
+                    inputVideoFrame, cv2.COLOR_BGR2GRAY)  # much faster
 
-                # save frame into numpy records
-                save_path = os.path.join(
-                    source_frames_dir, str(inputFrameIndex).zfill(8)+".npy")
-                np.save(save_path, inputVideoFrame)
-                # print("Writing source frame {}".format(save_path), end="\r")
+            # save frame into numpy records
+            save_path = os.path.join(
+                source_frames_dir, str(inputFrameIndex).zfill(8)+".npy")
+            np.save(save_path, inputVideoFrame)
+            # print("Writing source frame {}".format(save_path), end="\r")
         cap.release()
 
         with TemporaryDirectory() as interpFramesFolder:
@@ -367,11 +381,13 @@ def main():
                 # read back to memory
                 interpFramesFilenames = all_images(interpFramesFolder)
             else:
-                logger.info('turning npy frame files to png from {}'.format(source_frames_dir))
+                logger.info('turning npy frame files to png from {}'
+                            .format(source_frames_dir))
                 interpFramesFilenames = []
                 src_files = sorted(
                     glob.glob("{}".format(source_frames_dir)+"/*.npy"))
-                for frame_idx, src_file_path in tqdm(enumerate(src_files),desc='npy2png',unit='fr'):
+                for frame_idx, src_file_path in tqdm(
+                        enumerate(src_files), desc='npy2png', unit='fr'):
                     src_frame = np.load(src_file_path)
                     tgt_file_path = os.path.join(
                         interpFramesFolder, str(frame_idx)+".png")
@@ -387,26 +403,35 @@ def main():
 
             # interpolate events
             # get some progress bar
-            events = np.zeros((0, 4), dtype=np.float32)
+            #  events = np.zeros((0, 4), dtype=np.float32)
             num_batches = (n // (slowdown_factor*batch_size))+1
 
-            with tqdm(total=num_batches * slowdown_factor*batch_size, desc='dvs',unit='fr') as pbar:
+            with tqdm(
+                    total=num_batches*slowdown_factor*batch_size,
+                    desc='dvs', unit='fr') as pbar:
                 for batch_idx in (range(num_batches)):
-                    # events = np.zeros((0, 4), dtype=np.float32)
+                    events = np.zeros((0, 4), dtype=np.float32)
                     for sub_img_idx in range(slowdown_factor*batch_size):
-                        image_idx = batch_idx*(slowdown_factor*batch_size)+sub_img_idx
+                        image_idx = batch_idx*(slowdown_factor*batch_size) +\
+                            sub_img_idx
                         # at the end of the file
                         if image_idx > n-1:
                             break
                         fr = read_image(interpFramesFilenames[image_idx])
                         newEvents = emulator.generate_events(
                             fr, interpTimes[image_idx])
-                        # events = np.array(events)  # remove first None element
-                        eventRenderer.render_events_to_frames(
-                            newEvents, height=output_height, width=output_width)
-                        # if newEvents is not None and newEvents.shape[0] > 0:
-                        #     events = np.append(events, newEvents, axis=0)
+
+                        if newEvents is not None and newEvents.shape[0] > 0:
+                            events = np.append(events, newEvents, axis=0)
+                        events = np.array(events)
+
                         pbar.update(1)
+
+                    # to make sure there are enough events for rendering,
+                    # use batch of generated events instead of render
+                    # at every step
+                    eventRenderer.render_events_to_frames(
+                        events, height=output_height, width=output_width)
 
     if num_frames == 0:
         logger.error('no frames read from file')
