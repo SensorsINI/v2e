@@ -93,7 +93,7 @@ def v2e_args(parser):
     #           "Video will be processed segment by segment.")
     sloMoGroup.add_argument(
         "--batch_size", type=int, default=1,
-        help="Batch size in frames for SuperSloMo.")
+        help="Batch size in frames for SuperSloMo. Batch size 8-16 is recommended if your GPU has sufficient memory.")
     sloMoGroup.add_argument(
         "--vid_orig", type=str, default="video_orig.avi",
         help="Output src video at same rate as slomo video "
