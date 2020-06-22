@@ -191,7 +191,7 @@ class EventEmulator(object):
         # initialize first stage of 2nd order IIR to first input
         self.lpLogFrame0 = np.copy(self.baseLogFrame)
         # 2nd stage is initialized to same,
-        # so diff will be zero for first frame 
+        # so diff will be zero for first frame
         self.lpLogFrame1 = np.copy(self.baseLogFrame)
         # take the variance of threshold into account.
         self.pos_thres = np.random.normal(
@@ -227,14 +227,19 @@ class EventEmulator(object):
                 "dvs_params {} not known: "
                 "use 'clean' or 'noisy'".format(model))
             sys.exit(1)
-        logger.info("set DVS model params with option '{}' to following values:\n"
+        logger.info("set DVS model params with option '{}' "
+                    "to following values:\n"
                     "pos_thres={}\n"
                     "neg_thres={}\n"
                     "sigma_thres={}\n"
                     "cutoff_hz={}\n"
                     "leak_rate_hz={}\n"
                     "shot_noise_rate_hz={}\n"
-                    "refractory_period_s={}".format(model,self.pos_thres,self.neg_thres,self.sigma_thres,self.cutoff_hz,self.leak_rate_hz,self.shot_noise_rate_hz,self.refractory_period_s))
+                    "refractory_period_s={}".format(
+                        model, self.pos_thres, self.neg_thres,
+                        self.sigma_thres, self.cutoff_hz,
+                        self.leak_rate_hz, self.shot_noise_rate_hz,
+                        self.refractory_period_s))
 
     def reset(self):
         '''resets so that next use will reinitialize the base frame
@@ -369,13 +374,15 @@ class EventEmulator(object):
         neg_evts_frame = neg_frame // self.neg_thres  # same for OFF events
         neg_iters = int(neg_evts_frame.max())
 
-        pos_evts_frame.argmax()
+        # ERROR: why are you here?
+        #  pos_evts_frame.argmax()
         # need to iterative this many times
         num_iters = max(pos_iters, neg_iters)
 
         events = []
 
         for i in range(num_iters):
+            events_curr_iters = np.zeros((0, 4), dtype=np.float32)
             # intermediate timestamps are linearly spaced
             # they start after the t_start to make sure
             # that there is space from previous frame
@@ -407,9 +414,8 @@ class EventEmulator(object):
                      pos_event_xy[1][..., np.newaxis],
                      pos_event_xy[0][..., np.newaxis],
                      np.ones((num_pos_events, 1), dtype=np.float32) * 1))
-
             else:
-                pos_events = None
+                pos_events = np.zeros((0, 4), dtype=np.float32)
 
             if num_neg_events > 0:
                 neg_events = np.hstack(
@@ -417,23 +423,18 @@ class EventEmulator(object):
                      neg_event_xy[1][..., np.newaxis],
                      neg_event_xy[0][..., np.newaxis],
                      np.ones((num_neg_events, 1), dtype=np.float32) * -1))
-
             else:
-                neg_events = None
+                neg_events = np.zeros((0, 4), dtype=np.float32)
 
-            if pos_events is not None and neg_events is not None:
-                events_tmp = np.vstack((pos_events, neg_events))
-            else:
-                if pos_events is not None:
-                    events_tmp = pos_events
-                else:
-                    events_tmp = neg_events
+            events_tmp = np.vstack((pos_events, neg_events))
+
             # randomly order events to prevent bias to one corner
-            if events_tmp is not None:
-                events_tmp = events_tmp.take(
-                    np.random.permutation(events_tmp.shape[0]), axis=0)
+            #  if events_tmp.shape[0] != 0:
+            #      np.random.shuffle(events_tmp)
+
             if num_events > 0:
-                events.append(events_tmp)
+                events_curr_iters = events_tmp
+                #  events.append(events_tmp)
 
                 if self.shot_noise_rate_hz > 0:
                     # NOISE: add temporal noise here by
@@ -485,7 +486,9 @@ class EventEmulator(object):
                              shotOnXy[1][..., np.newaxis],
                              shotOnXy[0][..., np.newaxis],
                              np.ones((shotOnCount, 1), dtype=np.float32) * 1))
-                        events.append(shotEvents)
+                        events_curr_iters = np.append(
+                            events_curr_iters, shotEvents, axis=0)
+                        #  events.append(shotEvents)
                         self.baseLogFrame[shotOnCord] += \
                             shotOnCord[shotOnCord] * self.pos_thres[shotOnCord]
                     if shotOffCount > 0:
@@ -494,11 +497,17 @@ class EventEmulator(object):
                              shotOffXy[1][..., np.newaxis],
                              shotOffXy[0][..., np.newaxis],
                              np.ones((shotOffCount, 1), dtype=np.float32) * 1))
-                        events.append(shotEvents)
+                        events_curr_iters = np.append(
+                            events_curr_iters, shotEvents, axis=0)
+                        #  events.append(shotEvents)
                         self.baseLogFrame[shotOffCord] += \
                             shotOffCord[shotOffCord] * \
                             self.neg_thres[shotOffCord]
                     # end temporal noise
+
+            # shuffle and append to the events collectors
+            np.random.shuffle(events_curr_iters)
+            events.append(events_curr_iters)
 
             if i == 0:
                 # update the base frame only once,

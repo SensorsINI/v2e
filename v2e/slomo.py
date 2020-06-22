@@ -50,8 +50,7 @@ class SuperSloMo(object):
             vid_orig='original.avi',
             vid_slomo='slomo.avi',
             preview=False,
-            avi_frame_rate=30,
-    ):
+            avi_frame_rate=30):
         """
         init
 
@@ -84,7 +83,7 @@ class SuperSloMo(object):
         if not isinstance(slowdown_factor, int) or slowdown_factor < 2:
             raise ValueError(
                 'slowdown_factor={} but must be an int value>1'
-                    .format(slowdown_factor))
+                .format(slowdown_factor))
         self.sf = slowdown_factor
         self.video_path = video_path
         self.preview = preview
@@ -282,7 +281,8 @@ class SuperSloMo(object):
             nImages = len(video_frame_loader)
             #  nImages = images.shape[0]
             disableTqdm = nImages <= max(self.batch_size, 4)
-            unit = 'fr' if self.batch_size == 1 else 'batch of '+str(self.batch_size)+' fr'
+            unit = ' fr' if self.batch_size == 1 \
+                else ' batch of '+str(self.batch_size)+' fr'
             for _, (frame0, frame1) in enumerate(
                     tqdm(video_frame_loader, desc='slomo-interp',
                          unit=unit, disable=disableTqdm), 0):
@@ -349,7 +349,7 @@ class SuperSloMo(object):
 
                     for frame_idx in range(
                             start_frame_count,
-                            stop_frame_count + self.sf * (num_batch_frames - 1)):
+                            stop_frame_count+self.sf*(num_batch_frames-1)):
                         frame_path = os.path.join(
                             output_folder, str(frame_idx) + ".png")
                         frame = cv2.imread(frame_path)

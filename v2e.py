@@ -467,5 +467,6 @@ def main():
         slomo.cleanup()
 
 
-main()
-v2e_quit()
+if __name__ == "__main__":
+    main()
+    v2e_quit()
