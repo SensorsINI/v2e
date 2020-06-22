@@ -221,7 +221,8 @@ class EventRenderer(object):
 
         thisFrameIdx = 0  # start at first event
         numEvents = len(ts)
-        histrange = np.asarray([(0, v) for v in (self.height, self.width)])
+        histrange = np.asarray([(0, v) for v in (self.height, self.width)],
+                               dtype=np.int64)
 
         doneWithTheseEvents = False
         # continue consuming events from input event_arr
@@ -405,12 +406,14 @@ class EventRenderer(object):
         pol_off = np.logical_not(pol_on)
 
         img_on = hist2d_numba_seq(
-            np.array([events[pol_on, 2], events[pol_on, 1]]),
-            bins=np.asarray([self.height, self.width]),
+            np.array([events[pol_on, 2], events[pol_on, 1]],
+                     dtype=np.float64),
+            bins=np.asarray([self.height, self.width], dtype=np.int64),
             ranges=histrange)
         img_off = hist2d_numba_seq(
-            np.array([events[pol_off, 2], events[pol_off, 1]]),
-            bins=np.asarray([self.height, self.width]),
+            np.array([events[pol_off, 2], events[pol_off, 1]],
+                     dtype=np.float64),
+            bins=np.asarray([self.height, self.width], dtype=np.int64),
             ranges=histrange)
 
         if self.currentFrame is None:
