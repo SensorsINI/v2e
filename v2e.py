@@ -40,7 +40,6 @@ from v2e.v2e_utils import inputVideoFileDialog
 import logging
 
 
-
 # @Gooey(program_name="v2e", default_size=(575, 600))  # uncomment if you are lucky enough to be able to install Gooey, which requires wxPython
 def get_args():
     parser = argparse.ArgumentParser(
@@ -431,6 +430,6 @@ def main():
     if slomo is not None:
         slomo.cleanup()
 
+
 main()
 v2e_quit()
-

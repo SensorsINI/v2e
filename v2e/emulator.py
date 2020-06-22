@@ -10,9 +10,12 @@ Compute events from input frames.
 
 import os
 import sys
+import time
 
 import cv2
 import numpy as np
+import numba as nb
+from numba import jit
 import logging
 import h5py
 from engineering_notation import EngNumber  # only from pip
@@ -25,6 +28,14 @@ from v2e.output.ae_text_output import DVSTextOutput
 logger = logging.getLogger(__name__)
 
 
+#  @jit("float32[:, :](float32[:, :], int32)",
+#       nopython=True)
+
+#  y = np.zeros_like(x)
+#  for i in range(x.shape[0]):
+#      for j in range(x.shape[1]):
+#          y[i, j] = x[i, j]*f if x[i, j] < threshold else \
+#              np.log(x[i, j])
 def lin_log(x, threshold=20):
     """
     linear mapping + logrithmic mapping.
@@ -36,6 +47,7 @@ def lin_log(x, threshold=20):
     if x.dtype is not np.float32:
         x = x.astype(np.float32)
     f = (1 / (threshold)) * np.log(threshold)
+
     y = np.piecewise(
         x,
         [x < threshold, x >= threshold],
