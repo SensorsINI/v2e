@@ -54,7 +54,7 @@ logging.addLevelName(
 logger = logging.getLogger(__name__)
 
 
-# @Gooey(program_name="v2e", default_size=(575, 600))  # uncomment if you are lucky enough to be able to install Gooey, which requires wxPython
+@Gooey(program_name="v2e", default_size=(575, 600))  # uncomment if you are lucky enough to be able to install Gooey, which requires wxPython
 def get_args():
     parser = argparse.ArgumentParser(
         description='v2e: generate simulated DVS events from video.',
