@@ -29,7 +29,8 @@ def v2e_args(parser):
              "(checks existence of non-empty output_folder).")
     outGroupGeneral.add_argument(
         "--unique_output_folder", action="store_true",
-        help="makes unique output folder based on output_folder if non-empty output_folder already exists")
+        help="makes unique output folder based on output_folder "
+             "if non-empty output_folder already exists")
     outGroupGeneral.add_argument(
         "--no_preview", action="store_true",
         help="disable preview in cv2 windows for faster processing.")
@@ -101,9 +102,11 @@ def v2e_args(parser):
         "--vid_slomo", type=str, default="video_slomo.avi",
         help="Output slomo of src video slowed down by slowdown_factor.")
     # TODO in general, allow reuse of slomo output
-    # sloMoGroup.add_argument(
+    #  sloMoGroup.add_argument(
     #     "--slomo_use_saved", action="store_true",
-    #     help="Use previously-generated vid_slomo as input video instead of generating new one. Caution: saved video must have correct slowdown_factor.")
+    #     help="Use previously-generated vid_slomo as input video "
+    #          "instead of generating new one. "
+    #          "Caution: saved video must have correct slowdown_factor.")
 
     # input file handling
     inGroup = parser.add_argument_group('Input')

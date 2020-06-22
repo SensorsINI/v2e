@@ -255,7 +255,7 @@ def main():
             '\n DVS video will have {} frames with duration {}s '
             'and playback duration {}s\n'
             .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
-                    EngNumber(srcFps), EngNumber(input_slowmotion_factor), 
+                    EngNumber(srcFps), EngNumber(input_slowmotion_factor),
                     EngNumber(srcFrameIntervalS),
                     EngNumber(srcFps * slowdown_factor),
                     EngNumber(slomoTimestampResolutionS),

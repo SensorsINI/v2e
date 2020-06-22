@@ -1,4 +1,3 @@
-import time
 import numpy as np
 import cv2
 import os
@@ -242,6 +241,22 @@ class EventRenderer(object):
             return (curr_frame+full_scale_count)/float(
                 full_scale_count*2)
 
+        @jit("Tuple((int64[:, :], int64))(float64[:, :], int64[:, :], "
+             "int64, int64, int64)", nopython=True)
+        def compute_area_counts(events, area_counts,
+                                area_count, area_dimension, start):
+            #  new_area_counts = np.copy(area_counts)
+            for ev_idx in range(start, events.shape[0]):
+                x = int(events[ev_idx, 1] // area_dimension)
+                y = int(events[ev_idx, 2] // area_dimension)
+                count = 1 + area_counts[x, y]
+                area_counts[x, y] = count
+                if count >= area_count:
+                    area_counts = np.zeros_like(area_counts)
+                    break
+
+            return area_counts, ev_idx
+
         while not doneWithTheseEvents:
             # try to get events for current frame
             if self.exposure_mode == ExposureMode.DURATION:
@@ -258,16 +273,11 @@ class EventRenderer(object):
             elif self.exposure_mode == ExposureMode.AREA_COUNT:
                 start = thisFrameIdx
                 # brute force, iterate over events to determine end
-                for end, ev in enumerate(event_arr, start=start):
-                    x = int(ev[1] // self.area_dimension)
-                    y = int(ev[2] // self.area_dimension)
-                    count = 1 + self.area_counts[x, y]
-                    self.area_counts[x, y] = count
-                    if count >= self.area_count:
-                        self.area_counts = np.zeros_like(self.area_counts)
-                        break
+                self.area_counts, end = compute_area_counts(
+                    event_arr, self.area_counts, self.area_count,
+                    self.area_dimension, start)
 
-            if end >= numEvents:
+            if end >= numEvents-1:
                 # we will return now after integrating remaining events
                 doneWithTheseEvents = True
                 # reset to end of current events to integrate all of them
@@ -276,10 +286,7 @@ class EventRenderer(object):
             events = event_arr[start:end]  # events in this frame
             # accumulate event histograms to the current frame,
             # clip values of zero-centered current frame with new events added
-            start_time = time.time()
             self.accumulate_event_frame(events, histrange)
-            end_time = time.time()
-            print((end_time-start_time)*1000)
 
             # If not finished with current event_arr,
             # it means above we finished filling a frame, either with
@@ -339,6 +346,8 @@ class EventRenderer(object):
             self, outputFileName: str, imageFileNames: List[str],
             frameTimesS: np.array) -> None:
         """Export events to a HDF5 file.
+
+        TODO: not sure if we should still keep this function
 
         Parameters
         ----------
