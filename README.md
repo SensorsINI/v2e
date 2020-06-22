@@ -53,6 +53,12 @@ To save your conda environment, use
 conda env export --from-history >myenvironment.yml
 ```
 
+Part of the v2e is `numba` accelerated, please install it via:
+
+```bash
+pip install numba
+```
+
 ## Install the Package
 
 Install v2e will make it available on your python path.
