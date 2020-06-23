@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     with TemporaryDirectory() as interp_frames_dir:
         logger.info("intepolated frames folder: {}".format(interp_frames_dir))
-        slomo = SuperSloMo(model=args.slomo_model, slowdown_factor=args.slowdown_factor, preview=preview)
+        slomo = SuperSloMo(model=args.slomo_model, upsampling_factor=args.slowdown_factor, preview=preview)
         slomo.interpolate(images=frames['frame'], output_folder=interp_frames_dir)  # writes all frames to interp_frames_folder
         frame_ts = slomo.get_interpolated_timestamps(frames["ts"])
         height, width = frames['frame'].shape[1:]

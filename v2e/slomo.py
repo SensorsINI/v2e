@@ -43,8 +43,8 @@ class SuperSloMo(object):
 
     def __init__(
             self,
-            model,
-            slowdown_factor,
+            model: str,
+            upsampling_factor: object,
             batch_size=1,
             video_path=None,
             vid_orig='original.avi',
@@ -58,8 +58,8 @@ class SuperSloMo(object):
         ----------
         model: str,
             path of the stored Pytorch checkpoint.
-        slowdown_factor: int,
-            slow motion factor.
+        upsampling_factor: object,
+            slow motion factor, or 'auto' to generate upsampling automatically based on flow.
         batch_size: int,
             batch size.
         video_path: str or None,
@@ -70,6 +70,11 @@ class SuperSloMo(object):
             needs video_path to be set too
         vid_slomo: str or None,
             name of slomo video file, needs video_path to be set too
+            
+            Returns
+            ---------------
+            None in case of slowdown_factor=int value.
+            np.array of deltaTimes as fractions of source frame interval, based on limiting flow to at most 1 pixel per interframe.
         """
 
         if torch.cuda.is_available():
@@ -80,11 +85,19 @@ class SuperSloMo(object):
             logger.warning('CUDA not available, will be slow :-(')
         self.checkpoint = model
         self.batch_size = batch_size
-        if not isinstance(slowdown_factor, int) or slowdown_factor < 2:
+        if (not isinstance(upsampling_factor, int) or upsampling_factor < 2) or (isinstance(upsampling_factor,str) and not upsampling_factor=='auto'):
             raise ValueError(
-                'slowdown_factor={} but must be an int value>1'
-                .format(slowdown_factor))
-        self.sf = slowdown_factor
+                'slowdown_factor={} but must be an int value>1 or "auto"'
+                .format(upsampling_factor))
+        if upsampling_factor=='auto':
+            logger.info('using automatic upsampling mode')
+            self.upsampling_factor=None
+            self.auto_upsample=True
+        else:
+            logger.info('upsampling by fixed factor of {}'.format(self.upsampling_factor))
+            self.auto_upsample=False
+            self.upsampling_factor = upsampling_factor
+            
         self.video_path = video_path
         self.preview = preview
         self.preview_resized = False
@@ -234,9 +247,13 @@ class SuperSloMo(object):
 
         The output will never include the 2nd input frame.
 
-        Frames will include the input frames,
         i.e. if there are 2 input frames and slowdown_factor=10,
-        there will be ?? frames written
+        there will be 10 frames written, frame0 is the first input frame, and frame9 is the 9th interpolated frame.
+        Frame1 is *not* included, so that it can be fed as input for the next interpolation.
+
+        Returns
+        deltaTimes: np.array
+            Array of delta times, if 'auto' is the upsampling_factor. TODO add batch frame return
         """
         if not output_folder:
             raise Exception(
@@ -299,9 +316,18 @@ class SuperSloMo(object):
                 # for preview
                 if self.preview:
                     start_frame_count = frameCounter
+
                 # Generate intermediate frames
-                for intermediateIndex in range(0, self.sf):
-                    t = (intermediateIndex + 0.5) / self.sf
+                
+                if self.auto_upsample:
+                    # compute utomatic sample time from maximum flow magnitude such that
+                    #                 #  dt(s)*speed(pix/s)=1pix,
+                    #                 #  i.e., dt(s)=1pix/speed(pix/s)
+                    maxFlow= # TODO compute from tensor taking into account batch
+                else:
+                    upsampling_factor=self.upsampling_factor
+                for intermediateIndex in range(0, upsampling_factor):
+                    t = (intermediateIndex + 0.5) / upsampling_factor
                     temp = -t * (1 - t)
                     fCoeff = [temp, t * t, (1 - t) * (1 - t), temp]
 
@@ -338,7 +364,7 @@ class SuperSloMo(object):
 
                         save_path = os.path.join(
                             output_folder,
-                            str(frameCounter + self.sf * batchIndex) + ".png")
+                            str(frameCounter + upsampling_factor * batchIndex) + ".png")
                         img_resize.save(save_path)
 
                     frameCounter += 1
@@ -349,7 +375,7 @@ class SuperSloMo(object):
 
                     for frame_idx in range(
                             start_frame_count,
-                            stop_frame_count+self.sf*(num_batch_frames-1)):
+                            stop_frame_count + upsampling_factor * (num_batch_frames - 1)):
                         frame_path = os.path.join(
                             output_folder, str(frame_idx) + ".png")
                         frame = cv2.imread(frame_path)
@@ -361,7 +387,7 @@ class SuperSloMo(object):
                         cv2.waitKey(1)
 
                 # Set counter accounting for batching of frames
-                frameCounter += self.sf * (self.batch_size - 1)
+                frameCounter += upsampling_factor * (self.batch_size - 1)
 
             # write input frames into video
             # don't duplicate each frame if called using rotating buffer
@@ -453,8 +479,8 @@ class SuperSloMo(object):
             interpolated_ts = np.linspace(
                 start,
                 end,
-                self.sf,
-                endpoint=False) + 0.5 * (end - start) / self.sf
+                self.upsampling_factor, # TODO deal with auto mode
+                endpoint=False) + 0.5 * (end - start) / self.upsampling_factor
             new_ts.append(interpolated_ts)
         new_ts = np.hstack(new_ts)
 

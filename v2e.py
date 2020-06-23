@@ -226,7 +226,7 @@ def main():
     # the SloMo model, set no SloMo model if no slowdown
     if slowdown_factor != NO_SLOWDOWN:
         slomo = SuperSloMo(
-            model=args.slomo_model, slowdown_factor=slowdown_factor,
+            model=args.slomo_model, upsampling_factor=slowdown_factor,
             video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo,
             preview=preview, batch_size=batch_size)
     else:
