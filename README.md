@@ -87,6 +87,9 @@ Uncommenting the line in _v2e.py_ with decorator _@Gooey_ and installing Gooey w
 
 ![v2e_gooey](media/v2e_Gooey.png)
 
+## Sample input data
+The _SuperSoMo_ model and sample input videos to try _v2e_ with are in [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6UylAdxg5O1ko_GaIXz7wo?usp=sharing) on google drive.
+
 ## Download SuperSloMo model
 
 We use the excellent [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects/superslomo/) framework to interpolate the APS frames. 
