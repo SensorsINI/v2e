@@ -21,6 +21,7 @@ import os
 from tempfile import TemporaryDirectory
 from engineering_notation import EngNumber  # only from pip
 from tqdm import tqdm
+
 # may only apply to windows
 try:
     from scripts.regsetup import description
@@ -29,7 +30,7 @@ except Exception:
     pass
 
 import v2e.desktop as desktop
-from v2e.v2e_utils import all_images, read_image,  \
+from v2e.v2e_utils import all_images, read_image, \
     check_lowpass, v2e_quit
 from v2e.v2e_args import v2e_args, write_args_info, v2e_check_dvs_exposure_args
 from v2e.v2e_args import NO_SLOWDOWN
@@ -79,11 +80,10 @@ def makeOutputFolder(output_folder_base, suffix_counter,
         logger.error("specify either --overwrite or --unique_output_folder")
         v2e_quit()
     if suffix_counter > 0:
-        output_folder = output_folder_base+'-'+str(suffix_counter)
+        output_folder = output_folder_base + '-' + str(suffix_counter)
     else:
-        output_folder=output_folder_base
-    nonEmptyFolderExists = not overwrite and os.path.exists(output_folder) \
-        and os.listdir(output_folder)
+        output_folder = output_folder_base
+    nonEmptyFolderExists = not overwrite and os.path.exists(output_folder) and os.listdir(output_folder)
     if nonEmptyFolderExists and not overwrite and not unique_output_folder:
         logger.error(
             'non-empty output folder {} already exists \n '
@@ -93,7 +93,7 @@ def makeOutputFolder(output_folder_base, suffix_counter,
 
     if nonEmptyFolderExists and unique_output_folder:
         return makeOutputFolder(
-            output_folder_base, suffix_counter+1, overwrite, unique_output_folder)
+            output_folder_base, suffix_counter + 1, overwrite, unique_output_folder)
     else:
         logger.info('using output folder {}'.format(output_folder))
         if not os.path.exists(output_folder):
@@ -102,13 +102,12 @@ def makeOutputFolder(output_folder_base, suffix_counter,
 
 
 def main():
-
     args = get_args()
-    overwrite = args.overwrite
-    output_folder = args.output_folder
-    unique_output_folder = args.unique_output_folder
+    overwrite: bool = args.overwrite
+    output_folder: str = args.output_folder
+    unique_output_folder: bool = args.unique_output_folder
 
-    output_folder=makeOutputFolder(output_folder, 0, overwrite, unique_output_folder)
+    output_folder = makeOutputFolder(output_folder, 0, overwrite, unique_output_folder)
 
     if (args.output_width is not None) ^ (args.output_width is not None):
         logger.error(
@@ -191,21 +190,21 @@ def main():
         logger.error('source {} fps is 0'.format(input_file))
         v2e_quit()
 
-    srcFrameIntervalS = (1. / srcFps)/input_slowmotion_factor
+    srcFrameIntervalS = (1. / srcFps) / input_slowmotion_factor
 
-    slowdown_factor = int(np.ceil(srcFrameIntervalS/timestamp_resolution))
+    slowdown_factor = int(np.ceil(srcFrameIntervalS / timestamp_resolution))
     if slowdown_factor < 1:
         slowdown_factor = 1
         logger.warning(
             'timestamp resolution={}s is greater than source '
             'frame interval={}s, will not use upsampling'
-            .format(timestamp_resolution, srcFrameIntervalS))
+                .format(timestamp_resolution, srcFrameIntervalS))
 
     logger.info(
         'src video frame rate={:.2f} Hz with slowmotion_factor={:.2f}, '
         'timestamp resolution={:.3f} ms, computed slomo upsampling factor={}'
-        .format(
-            srcFps, input_slowmotion_factor, timestamp_resolution*1000,
+            .format(
+            srcFps, input_slowmotion_factor, timestamp_resolution * 1000,
             slowdown_factor))
 
     slomoTimestampResolutionS = srcFrameIntervalS / slowdown_factor
@@ -220,9 +219,9 @@ def main():
         logger.warning(
             'upsampled src frame intervals of {}s is larger than '
             'the desired DVS timestamp resolution of {}s'
-            .format(slomoTimestampResolutionS, timestamp_resolution))
+                .format(slomoTimestampResolutionS, timestamp_resolution))
 
-    check_lowpass(cutoff_hz, 1/slomoTimestampResolutionS, logger)
+    check_lowpass(cutoff_hz, 1 / slomoTimestampResolutionS, logger)
 
     # the SloMo model, set no SloMo model if no slowdown
     if slowdown_factor != NO_SLOWDOWN:
@@ -238,15 +237,15 @@ def main():
         if start_time else 0
     stop_frame = int(srcNumFrames * (stop_time / srcTotalDuration)) \
         if stop_time else srcNumFrames
-    srcNumFramesToBeProccessed = stop_frame-start_frame+1
-    srcDurationToBeProcessed = srcNumFramesToBeProccessed/srcFps
-    start_time = start_frame/srcFps
-    stop_time = stop_frame/srcFps
+    srcNumFramesToBeProccessed = stop_frame - start_frame + 1
+    srcDurationToBeProcessed = srcNumFramesToBeProccessed / srcFps
+    start_time = start_frame / srcFps
+    stop_time = stop_frame / srcFps
 
     if exposure_mode == ExposureMode.DURATION:
-        dvsFps = 1./exposure_val
+        dvsFps = 1. / exposure_val
         dvsNumFrames = np.math.floor(
-            dvsFps * srcDurationToBeProcessed/input_slowmotion_factor)
+            dvsFps * srcDurationToBeProcessed / input_slowmotion_factor)
         dvsDuration = dvsNumFrames / dvsFps
         dvsPlaybackDuration = dvsNumFrames / avi_frame_rate
         logger.info(
@@ -258,20 +257,20 @@ def main():
             '\n v2e DVS video will have {}fps (accumulation time {}s), '
             '\n DVS video will have {} frames with duration {}s '
             'and playback duration {}s\n'
-            .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
-                    EngNumber(srcFps), EngNumber(input_slowmotion_factor),
-                    EngNumber(srcFrameIntervalS),
-                    EngNumber(srcFps * slowdown_factor),
-                    EngNumber(slomoTimestampResolutionS),
-                    EngNumber(dvsFps), EngNumber(1 / dvsFps),
-                    dvsNumFrames, EngNumber(dvsDuration),
-                    EngNumber(dvsPlaybackDuration)))
-        if dvsFps > (1/slomoTimestampResolutionS):
+                .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
+                        EngNumber(srcFps), EngNumber(input_slowmotion_factor),
+                        EngNumber(srcFrameIntervalS),
+                        EngNumber(srcFps * slowdown_factor),
+                        EngNumber(slomoTimestampResolutionS),
+                        EngNumber(dvsFps), EngNumber(1 / dvsFps),
+                        dvsNumFrames, EngNumber(dvsDuration),
+                        EngNumber(dvsPlaybackDuration)))
+        if dvsFps > (1 / slomoTimestampResolutionS):
             logger.warning(
                 'DVS video frame rate={}Hz is larger than '
                 'the effective DVS frame rate of {}Hz; '
                 'DVS video will have blank frames'.format(
-                    dvsFps, (1/slomoTimestampResolutionS)))
+                    dvsFps, (1 / slomoTimestampResolutionS)))
     else:
         logger.info(
             '\n\n{} has {} frames with duration {}s, '
@@ -280,11 +279,11 @@ def main():
             '\n events will have timestamp resolution {}s,'
             '\n v2e DVS video will have constant count '
             'frames with {} events), '
-            .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
-                    EngNumber(srcFps), EngNumber(srcFrameIntervalS),
-                    EngNumber(srcFps * slowdown_factor),
-                    EngNumber(slomoTimestampResolutionS),
-                    exposure_val))
+                .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
+                        EngNumber(srcFps), EngNumber(srcFrameIntervalS),
+                        EngNumber(srcFps * slowdown_factor),
+                        EngNumber(slomoTimestampResolutionS),
+                        exposure_val))
 
     emulator = EventEmulator(
         pos_thres=pos_thres, neg_thres=neg_thres,
@@ -305,7 +304,7 @@ def main():
 
     # timestamps of DVS start at zero and end with span of video we processed
     ts0 = 0
-    ts1 = (stop_time-start_time)/input_slowmotion_factor
+    ts1 = (stop_time - start_time) / input_slowmotion_factor
     num_frames = srcNumFramesToBeProccessed
     inputHeight = None
     inputWidth = None
@@ -336,25 +335,25 @@ def main():
                 'input video size\n    Are you sure you want this? '
                 'It might be slow.\n    Consider using '
                 '--output_width and --output_height'
-                .format(output_width, output_height))
+                    .format(output_width, output_height))
 
         logger.info('Resizing input frames to output size '
                     '(with possible RGG to luma conversion)')
         for inputFrameIndex in tqdm(
                 range(srcNumFramesToBeProccessed),
                 desc='rgb2luma', unit='fr'):
-                # read frame
+            # read frame
             ret, inputVideoFrame = cap.read()
 
-            if not ret or inputFrameIndex+start_frame > stop_frame:
+            if not ret or inputFrameIndex + start_frame > stop_frame:
                 break
 
             if output_height and output_width and \
                     (inputHeight != output_height or
                      inputWidth != output_width):
                 dim = (output_width, output_height)
-                (fx, fy) = (float(output_width)/inputWidth,
-                            float(output_height)/inputHeight)
+                (fx, fy) = (float(output_width) / inputWidth,
+                            float(output_height) / inputHeight)
                 inputVideoFrame = cv2.resize(
                     src=inputVideoFrame, dsize=dim, fx=fx, fy=fy,
                     interpolation=cv2.INTER_AREA)
@@ -369,7 +368,7 @@ def main():
 
             # save frame into numpy records
             save_path = os.path.join(
-                source_frames_dir, str(inputFrameIndex).zfill(8)+".npy")
+                source_frames_dir, str(inputFrameIndex).zfill(8) + ".npy")
             np.save(save_path, inputVideoFrame)
             # print("Writing source frame {}".format(save_path), end="\r")
         cap.release()
@@ -389,12 +388,12 @@ def main():
                             .format(source_frames_dir))
                 interpFramesFilenames = []
                 src_files = sorted(
-                    glob.glob("{}".format(source_frames_dir)+"/*.npy"))
+                    glob.glob("{}".format(source_frames_dir) + "/*.npy"))
                 for frame_idx, src_file_path in tqdm(
                         enumerate(src_files), desc='npy2png', unit='fr'):
                     src_frame = np.load(src_file_path)
                     tgt_file_path = os.path.join(
-                        interpFramesFolder, str(frame_idx)+".png")
+                        interpFramesFolder, str(frame_idx) + ".png")
                     interpFramesFilenames.append(tgt_file_path)
                     cv2.imwrite(tgt_file_path, src_frame)
 
@@ -408,18 +407,18 @@ def main():
             # interpolate events
             # get some progress bar
             #  events = np.zeros((0, 4), dtype=np.float32)
-            num_batches = (n // (slowdown_factor*batch_size))+1
+            num_batches = (n // (slowdown_factor * batch_size)) + 1
 
             with tqdm(
-                    total=num_batches*slowdown_factor*batch_size,
+                    total=num_batches * slowdown_factor * batch_size,
                     desc='dvs', unit='fr') as pbar:
                 for batch_idx in (range(num_batches)):
                     events = np.zeros((0, 4), dtype=np.float32)
-                    for sub_img_idx in range(slowdown_factor*batch_size):
-                        image_idx = batch_idx*(slowdown_factor*batch_size) +\
-                            sub_img_idx
+                    for sub_img_idx in range(slowdown_factor * batch_size):
+                        image_idx = batch_idx * (slowdown_factor * batch_size) + \
+                                    sub_img_idx
                         # at the end of the file
-                        if image_idx > n-1:
+                        if image_idx > n - 1:
                             break
                         fr = read_image(interpFramesFilenames[image_idx])
                         newEvents = emulator.generate_events(
@@ -444,26 +443,26 @@ def main():
         logger.error('no frames read from file')
         v2e_quit()
     totalTime = (time.time() - time_run_started)
-    framePerS = num_frames/totalTime
-    sPerFrame = 1/framePerS
-    throughputStr = (str(EngNumber(framePerS))+'fr/s') \
-        if framePerS > 1 else (str(EngNumber(sPerFrame))+'s/fr')
+    framePerS = num_frames / totalTime
+    sPerFrame = 1 / framePerS
+    throughputStr = (str(EngNumber(framePerS)) + 'fr/s') \
+        if framePerS > 1 else (str(EngNumber(sPerFrame)) + 's/fr')
     logger.info(
         'done processing {} frames in {}s ({})\n see output folder {}'
-        .format(num_frames,
-                EngNumber(totalTime),
-                throughputStr,
-                output_folder))
+            .format(num_frames,
+                    EngNumber(totalTime),
+                    throughputStr,
+                    output_folder))
     logger.info('generated total {} events ({} on, {} off)'
                 .format(EngNumber(emulator.num_events_total),
                         EngNumber(emulator.num_events_on),
                         EngNumber(emulator.num_events_off)))
     logger.info(
         'avg event rate {}Hz ({}Hz on, {}Hz off)'
-        .format(
-            EngNumber(emulator.num_events_total/srcDurationToBeProcessed),
-            EngNumber(emulator.num_events_on/srcDurationToBeProcessed),
-            EngNumber(emulator.num_events_off/srcDurationToBeProcessed)))
+            .format(
+            EngNumber(emulator.num_events_total / srcDurationToBeProcessed),
+            EngNumber(emulator.num_events_on / srcDurationToBeProcessed),
+            EngNumber(emulator.num_events_off / srcDurationToBeProcessed)))
     try:
         desktop.open(os.path.abspath(output_folder))
     except Exception as e:
