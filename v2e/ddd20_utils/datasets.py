@@ -53,7 +53,7 @@ class HDF5(mp.Process):
             except KeyboardInterrupt:
                 #print('datasets.run got interrupt')
                 self.exit.set()
-        f.close()
+        f.cleanup()
         self.close()
 
     def create_datasets(self, tables, compression=None):

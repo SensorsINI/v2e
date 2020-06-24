@@ -21,6 +21,7 @@ import os
 from tempfile import TemporaryDirectory, TemporaryFile
 from engineering_notation import EngNumber  # only from pip
 from tqdm import tqdm
+from matplotlib import pyplot as plt # TODO debug
 
 # may only apply to windows
 try:
@@ -311,8 +312,7 @@ def main():
         area_dimension=area_dimension)
 
     # timestamps of DVS start at zero and end with span of video we processed
-    ts0 = 0
-    ts1 = (stop_time - start_time) / input_slowmotion_factor
+    srcVideoRealProcessedDuration = (stop_time - start_time) / input_slowmotion_factor
     num_frames = srcNumFramesToBeProccessed
     inputHeight = None
     inputWidth = None
@@ -414,41 +414,35 @@ def main():
 
 
             # compute times of output integrated frames
-            nFrames=len(interpTimes)
-            interpTimes = interpTimes*(ts1-ts0)
+            nFrames=len(interpFramesFilenames)
+            interpTimes = interpTimes*srcVideoRealProcessedDuration # compute actual times from video times
+            # debug
+            # dt = np.diff(interpTimes)
+            plt.plot(interpTimes)
+            plt.xlabel('frame')
+            plt.ylabel('frame time (s)')
+            plt.show()
 
-            # interpolate events
-            num_batches = (nFrames // batch_size) + 1
+            events = np.zeros((0, 4), dtype=np.float32)  # array to batch events for rendering to DVS frames
+            with tqdm(total=nFrames, desc='dvs', unit='fr') as pbar: # instantiate progress bar
+                for i in range(nFrames):
+                    fr = read_image(interpFramesFilenames[i])
+                    newEvents = emulator.generate_events(fr, interpTimes[i])
 
-            with tqdm(
-                    total=nFrames,
-                    desc='dvs', unit='fr') as pbar: # instantiate progress bar
-                for batch_idx in (range(num_batches)):
-                    events = np.zeros((0, 4), dtype=np.float32)
-                    for sub_img_idx in range(slowdown_factor * batch_size):
-                        image_idx = batch_idx * (slowdown_factor * batch_size) + \
-                                    sub_img_idx
-                        # at the end of the file
-                        if image_idx > n - 1:
-                            break
-                        fr = read_image(interpFramesFilenames[image_idx])
-                        newEvents = emulator.generate_events(
-                            fr, interpTimes[image_idx])
-
-                        if newEvents is not None and newEvents.shape[0] > 0:
-                            events = np.append(events, newEvents, axis=0)
+                    pbar.update(1)
+                    if newEvents is not None and newEvents.shape[0] > 0:
+                        events = np.append(events, newEvents, axis=0)
                         events = np.array(events)
+                        if i%batch_size==0:
+                            eventRenderer.render_events_to_frames(events, height=output_height, width=output_width)
+                            events = np.zeros((0, 4), dtype=np.float32)  # clear array
+                if len(events)>0: # process leftover
+                    eventRenderer.render_events_to_frames(events, height=output_height, width=output_width)
 
-                        pbar.update(1)
-
-                    # to make sure there are enough events for rendering,
-                    # use batch of generated events instead of render
-                    # at every step
-                    eventRenderer.render_events_to_frames(
-                        events, height=output_height, width=output_width)
-
-            # properly close emulator file handling
-            emulator.close()
+    eventRenderer.cleanup()
+    emulator.cleanup()
+    if slomo is not None:
+        slomo.cleanup()
 
     if num_frames == 0:
         logger.error('no frames read from file')
@@ -479,9 +473,6 @@ def main():
     except Exception as e:
         logger.warning(
             '{}: could not open {} in desktop'.format(e, output_folder))
-    eventRenderer.cleanup()
-    if slomo is not None:
-        slomo.cleanup()
 
 
 if __name__ == "__main__":

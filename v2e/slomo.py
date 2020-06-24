@@ -120,7 +120,6 @@ class SuperSloMo(object):
         self.model_loaded = False
 
     def cleanup(self):
-        logger.info("Closing video writers for original and slomo videos...")
         if self.ori_writer:
             logger.info(
                 'closing original video AVI after '
@@ -293,8 +292,9 @@ class SuperSloMo(object):
             self.name = str(__file__)
             cv2.namedWindow(self.name, cv2.WINDOW_NORMAL)
 
-
-        frameCounter = 1
+        frameCounter=0
+        outputFrameCounter=0
+        batchCounter=0
         # torch.cuda.empty_cache()
         with torch.no_grad():
             #  logger.debug(
@@ -306,30 +306,26 @@ class SuperSloMo(object):
 
             interpTimes=None # array to hold times normalized to 1 unit per input frame interval
 
-            #  nImages = images.shape[0]
-            disableTqdm = nImages <= max(self.batch_size, 4)
             unit = ' fr' if self.batch_size == 1 \
                 else ' batch of '+str(self.batch_size)+' fr'
             for _, (frame0, frame1) in enumerate(
                     tqdm(video_frame_loader, desc='slomo-interp',
-                         unit=unit, disable=disableTqdm), 0):
+                         unit=unit), 0):
 
                 I0 = frame0.to(self.device)
                 I1 = frame1.to(self.device)
-                # actual number of frames, account for <batch_size
+                # actual number of frames, account for < batch_size
                 num_batch_frames = I0.shape[0]
 
                 flowOut = self.flow_estimator(torch.cat((I0, I1), dim=1))
                 F_0_1 = flowOut[:, :2, :, :] # flow from 0 to 1
                 F_1_0 = flowOut[:, 2:, :, :] # flow from 1 to 0
-                # dimensions [batch, flow[x,y?], x,y]
+                # dimensions [batch, flow[vx,vy], loc_x,loc_y]
 
-                # for preview
                 if self.preview:
                     start_frame_count = frameCounter
 
                 # Generate intermediate frames
-                
                 if self.auto_upsample:
                     # compute automatic sample time from maximum flow magnitude such that
                     #                 #  dt(s)*speed(pix/s)=1pix,
@@ -341,12 +337,9 @@ class SuperSloMo(object):
                     vx1=vFlat[:,2,:]
                     vy0=vFlat[:,1,:]
                     vy1=vFlat[:,3,:]
-
                     sp0=torch.sqrt(vx0*vx0+vy0*vy0)
                     sp1=torch.sqrt(vx1*vx1+vy1*vy1)
                     sp=torch.cat((sp0,sp1),1)
-
-
                     maxSpeed= torch.max(torch.max(sp,dim=1)[0]).cpu().item() # this is maximimum movement between frames in pixels dim [batch]
                     # dim=1 gets max over all pixels
                     # [0] gets value of max, rather than idx which would be 1
@@ -356,14 +349,18 @@ class SuperSloMo(object):
                     upsampling_factor=int(np.ceil(maxSpeed)) # use ceil to ensure oversampling. compute overall maximum needed upsampling ratio
                     # it is shared over all frames in batch so just use max value for all of them
                     logger.debug('upsampling factor={}'.format(upsampling_factor))
-
                 else:
                     upsampling_factor=self.upsampling_factor
 
+                if upsampling_factor<2:
+                    logger.warning('upsampling_factor was less than 2 (maybe very slow motion caused this); set it to 2')
+                    upsampling_factor=2
                 # compute normalized frame times where 1 is full interval between frames
-                interframeTime=1/upsampling_factor
-                interframeTimes=np.array(range(upsampling_factor))*interframeTime
-                interframeTimes=interframeTimes.squeeze()
+                # each src frame increments time by 1 unit, interframes fill between.
+                numFramesThisBatch= upsampling_factor*self.batch_size
+                interframeTime = 1/upsampling_factor
+                interframeTimes = batchCounter*self.batch_size + np.array(range(numFramesThisBatch))*interframeTime
+                interframeTimes = interframeTimes.squeeze()
                 if interpTimes is None:
                     interpTimes=interframeTimes
                 else:
@@ -404,12 +401,11 @@ class SuperSloMo(object):
                     for batchIndex in range(num_batch_frames):
                         img = self.to_image(Ft_p[batchIndex].cpu().detach())
                         img_resize = img.resize(ori_dim, Image.BILINEAR)
-
+                        outputFrameCounter=frameCounter + upsampling_factor * batchIndex
                         save_path = os.path.join(
                             output_folder,
-                            str(frameCounter + upsampling_factor * batchIndex) + ".png")
+                            str(outputFrameCounter) + ".png")
                         img_resize.save(save_path)
-
                     frameCounter += 1
 
                 # for preview
@@ -428,9 +424,9 @@ class SuperSloMo(object):
                             self.preview_resized = True
                         # wait minimally since interp takes time anyhow
                         cv2.waitKey(1)
-
+                batchCounter+=1
                 # Set counter accounting for batching of frames
-                frameCounter += upsampling_factor * (self.batch_size - 1)
+                frameCounter += upsampling_factor * (self.batch_size - 1) # batch_size-1 because we repeat frame1 as frame0
 
             # write input frames into video
             # don't duplicate each frame if called using rotating buffer
@@ -441,7 +437,7 @@ class SuperSloMo(object):
 
                 for frame_idx, src_file_path in enumerate(
                         tqdm(src_files, desc='slomo-write-avi',
-                             unit='fr', disable=disableTqdm), 0):
+                             unit='fr'), 0):
                     src_frame = np.load(src_file_path)
                     self.ori_writer.write(
                         cv2.cvtColor(src_frame, cv2.COLOR_GRAY2BGR))
@@ -457,10 +453,8 @@ class SuperSloMo(object):
                     self.slomo_writer.write(
                         cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
                     self.numSlomoVideoFramesWritten += 1
-                    # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
-                    #     break
 
-        return interpTimes
+        return interpTimes[:outputFrameCounter] # truncate to actual frames
 
     def __all_images(self, data_path):
         """Return path of all input images. Assume that the ascending order of

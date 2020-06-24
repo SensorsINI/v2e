@@ -43,7 +43,7 @@ class DVSTextOutput:
 
     def close(self):
         if self.file:
-            self.file.close()
+            self.file.cleanup()
             self.file = None
 
     def _writeHeader(self):

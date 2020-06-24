@@ -109,8 +109,8 @@ except ImportError:
 
     def _readfrom(cmd, shell):
         opener = popen2.Popen3(cmd)
-        opener.tochild.close()
-        opener.childerr.close()
+        opener.tochild.cleanup()
+        opener.childerr.cleanup()
         return opener.fromchild.read()
 
     def _status(cmd, shell):

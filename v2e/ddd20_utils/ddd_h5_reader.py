@@ -368,7 +368,7 @@ class HDF5Stream(mp.Process):
         for k in self.q:
             # print('[DEBUG] flushing', k)
             _flush_q(self.q[k])
-            self.q[k].close()
+            self.q[k].cleanup()
             self.q[k].join_thread()
         # print('[DEBUG] flushed all stream queues')
         self.done.set()

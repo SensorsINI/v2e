@@ -7,7 +7,7 @@ Compute events from input frames.
 @credits: Yuhuang Hu
 @latest updaste: 2019-Jun-13
 """
-
+import atexit
 import os
 import sys
 import time
@@ -174,8 +174,9 @@ class EventEmulator(object):
                 path = os.path.join(self.output_folder, dvs_text)
                 logger.info('opening text DVS output file ' + path)
                 self.dvs_text = DVSTextOutput(path)
+        atexit.register(self.cleanup)
 
-    def close(self):
+    def cleanup(self):
         if self.dvs_h5 is not None:
             self.dvs_h5.close()
 
@@ -297,7 +298,7 @@ class EventEmulator(object):
             return None
 
         if t_frame <= self.t_previous:
-            raise ValueError("t_frame must be later than previous frame ")
+            raise ValueError("this frame time={} must be later than previous frame time={}".format(t_frame,self.t_previous))
 
         # lin-log mapping
         logNewFrame = lin_log(new_frame)

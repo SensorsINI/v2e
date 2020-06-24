@@ -47,6 +47,9 @@ class AEDat2Output:
             quit()
 
     def cleanup(self):
+        self.close()
+
+    def close(self):
         if self.file:
             logger.info("Closing {} after writing {} events ({} on, {} off)".
                         format(self.filepath,
@@ -54,10 +57,6 @@ class AEDat2Output:
                                EngNumber(self.numOnEvents),
                                EngNumber(self.numOffEvents),
                                ))
-            self.file.close()
-
-    def close(self):
-        if self.file:
             self.file.close()
             self.file = None
 
