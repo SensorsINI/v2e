@@ -293,9 +293,10 @@ class SuperSloMo(object):
             cv2.namedWindow(self.name, cv2.WINDOW_NORMAL)
 
         frameCounter=0
-        outputFrameCounter=0
         batchCounter=0
         # torch.cuda.empty_cache()
+        upsamplingSum=0 #stats
+        nUpsamplingSamples=0
         with torch.no_grad():
             #  logger.debug(
             #      "using " + str(output_folder) +
@@ -311,7 +312,7 @@ class SuperSloMo(object):
             for _, (frame0, frame1) in enumerate(
                     tqdm(video_frame_loader, desc='slomo-interp',
                          unit=unit), 0):
-                # video_frame_loader delivers batch of frame0 and frame1
+                # video_frame_loader delivers self.batch_size batch of frame0 and frame1
                 # frame0 is actually frame0, frame1,.... frameN
                 # frame1 is actually frame1, frame2, .... frameN+1, where N is batch_size-1
                 # that way the slomo computes in parallel the flow from 0->1, 1->2, 2->3... N-1->N
@@ -352,13 +353,16 @@ class SuperSloMo(object):
                     # outer .item() gets first element of 0-dim tensor which is the speed
                     upsampling_factor=int(np.ceil(maxSpeed)) # use ceil to ensure oversampling. compute overall maximum needed upsampling ratio
                     # it is shared over all frames in batch so just use max value for all of them
-                    logger.debug('upsampling factor={}'.format(upsampling_factor))
+                    # logger.info('upsampling factor={}'.format(upsampling_factor))
                 else:
                     upsampling_factor=self.upsampling_factor
 
                 if upsampling_factor<2:
                     logger.warning('upsampling_factor was less than 2 (maybe very slow motion caused this); set it to 2')
                     upsampling_factor=2
+
+                nUpsamplingSamples+=1
+                upsamplingSum+=upsampling_factor
                 # compute normalized frame times where 1 is full interval between frames
                 # each src frame increments time by 1 unit, interframes fill between.
                 numFramesThisBatch= upsampling_factor*self.batch_size
@@ -408,12 +412,11 @@ class SuperSloMo(object):
                         img = self.to_image(Ft_p[batchIndex].cpu().detach())
                         img_resize = img.resize(ori_dim, Image.BILINEAR)
                         # the output frame index is computed
-                        outputFrameCounter=frameCounter + upsampling_factor * batchIndex
+                        outputFrameIdx=frameCounter + upsampling_factor * batchIndex + intermediateIndex
                         save_path = os.path.join(
                             output_folder,
-                            str(outputFrameCounter) + ".png")
+                            str(outputFrameIdx) + ".png")
                         img_resize.save(save_path)
-                    frameCounter += 1 # go to next upsampling time
 
                 # for preview
                 if self.preview:
@@ -432,9 +435,8 @@ class SuperSloMo(object):
                         # wait minimally since interp takes time anyhow
                         cv2.waitKey(1)
                 batchCounter+=1 # finished a batch of frames
-
                 # Set counter accounting for batching of frames
-                frameCounter += upsampling_factor * (self.batch_size - 1) # batch_size-1 because we repeat frame1 as frame0
+                frameCounter += upsampling_factor * (self.batch_size) # batch_size-1 because we repeat frame1 as frame0
 
             # write input frames into video
             # don't duplicate each frame if called using rotating buffer
@@ -443,8 +445,9 @@ class SuperSloMo(object):
                 src_files = sorted(
                     glob.glob("{}".format(source_frame_path) + "/*.npy"))
 
+                # write original frames into stop-motion video
                 for frame_idx, src_file_path in enumerate(
-                        tqdm(src_files, desc='slomo-write-avi',
+                        tqdm(src_files, desc='write-orig-avi',
                              unit='fr'), 0):
                     src_frame = np.load(src_file_path)
                     self.ori_writer.write(
@@ -452,17 +455,17 @@ class SuperSloMo(object):
                     self.numOrigVideoFramesWritten += 1
 
             frame_paths = self.__all_images(output_folder)
-            # write slomo frames into video
-            # will not duplicate frames if called in 2-frame loop (tobi thinks)
             if self.slomo_writer:
-                # tqdm(frame_paths,desc='slomo-write-slomo-vid',unit='fr'):
-                for path in frame_paths:
+                for path in tqdm(frame_paths,desc='write-slomo-vid',unit='fr'):
                     frame = self.__read_image(path)
                     self.slomo_writer.write(
                         cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
                     self.numSlomoVideoFramesWritten += 1
-
-        return interpTimes[:outputFrameCounter] # truncate to actual frames
+        nFramesWritten=len(frame_paths)
+        nTimePoints=len(interpTimes)
+        avgUpsampling=upsamplingSum/nUpsamplingSamples
+        logger.info('Wrote {} frames and returning {} frame times.\nAverage upsampling factor={:5.1f}'.format(nFramesWritten,nTimePoints,avgUpsampling))
+        return interpTimes
 
     def __all_images(self, data_path):
         """Return path of all input images. Assume that the ascending order of

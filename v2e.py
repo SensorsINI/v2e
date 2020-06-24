@@ -184,7 +184,7 @@ def main():
     import time
     time_run_started = time.time()
 
-    logger.info("opening video input " + input_file)
+    logger.info("opening video input file " + input_file)
 
     cap = cv2.VideoCapture(input_file)
     srcFps = cap.get(cv2.CAP_PROP_FPS)
@@ -216,15 +216,15 @@ def main():
     slowdown_factor=None
     if not auto_timestamp_resolution:
         slowdown_factor = int(np.ceil(srcFrameIntervalS / timestamp_resolution))
-        if slowdown_factor < 1:
+        if slowdown_factor <= 1:
             slowdown_factor = 1
             logger.warning(
-                'timestamp resolution={}s is greater than source '
-                'frame interval={}s, will not use upsampling'
+                'timestamp resolution={}s is >= source '
+                'frame interval={}s, will not upsample'
                     .format(timestamp_resolution, srcFrameIntervalS))
 
         logger.info(
-            'src video frame rate={:.2f} Hz with slowmotion_factor={:.2f}, '
+            'Src video frame rate={:.2f} Hz with slowmotion_factor={:.2f}, \n'
             'timestamp resolution={:.3f} ms, computed slomo upsampling factor={}'
                 .format(
                 srcFps, input_slowmotion_factor, timestamp_resolution * 1000,
@@ -234,7 +234,7 @@ def main():
 
         if slomoTimestampResolutionS > timestamp_resolution:
             logger.warning(
-                'upsampled src frame intervals of {}s is larger than '
+                'Upsampled src frame intervals of {}s is larger than\n '
                 'the desired DVS timestamp resolution of {}s'
                     .format(slomoTimestampResolutionS, timestamp_resolution))
 
@@ -263,36 +263,37 @@ def main():
                 'DVS video will have blank frames'.format(
                     dvsFps, (1 / slomoTimestampResolutionS)))
 
+    logger.info(
+        'Source video {} has total {} frames with total duration {}s. '
+        '\nSource video is {}fps with slowmotion_factor {} '
+        '(frame interval {}s),'
+        '\nWill convert frames {} to {}\n'
+        '(From {}s to {}s, duration {}s)'
+            .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
+                    EngNumber(srcFps), EngNumber(input_slowmotion_factor),
+                    EngNumber(srcFrameIntervalS),
+                    start_frame,stop_frame,
+                    start_time,stop_time,(stop_time-start_time)))
+
     if exposure_mode == ExposureMode.DURATION:
         dvsNumFrames = np.math.floor(
             dvsFps * srcDurationToBeProcessed / input_slowmotion_factor)
         dvsDuration = dvsNumFrames / dvsFps
         dvsPlaybackDuration = dvsNumFrames / avi_frame_rate
-        logger.info(
-            '\n\n{} has {} frames with duration {}s, '
-            '\nsource video is {}fps with slowmotion_factor {} '
-            '(frame interval {}s),'
-            '\n v2e DVS video will have {}fps (accumulation time {}s), '
-            '\n DVS video will have {} frames with duration {}s '
-            'and playback duration {}s\n'
-                .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
-                        EngNumber(srcFps), EngNumber(input_slowmotion_factor),
-                        EngNumber(srcFrameIntervalS),
-                        EngNumber(dvsFps), EngNumber(1 / dvsFps),
-                        dvsNumFrames, EngNumber(dvsDuration),
-                        EngNumber(dvsPlaybackDuration)))
+        start_time = start_frame / srcFps
+        stop_time = stop_frame / srcFps  # todo something replicated here, already have start and stop times
 
+        logger.info('v2e DVS video will have constant-duration frames \n'
+                    'at {}fps (accumulation time {}s), '
+                    '\nDVS video will have {} frames with duration {}s '
+                    'and playback duration {}s\n'
+                    .format(EngNumber(dvsFps), EngNumber(1 / dvsFps),
+                            dvsNumFrames, EngNumber(dvsDuration),
+                            EngNumber(dvsPlaybackDuration)))
     else:
-        logger.info(
-            '\n\n{} has {} frames with duration {}s, '
-            '\nsource video is {}fps (frame interval {}s),'
-            '\n slomo will have {}fps,'
-            '\n v2e DVS video will have constant count '
+        logger.info('v2e DVS video will have constant-count '
             'frames with {} events), '
-                .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
-                        EngNumber(srcFps), EngNumber(srcFrameIntervalS),
-                        EngNumber(srcFps * slowdown_factor),
-                        exposure_val))
+                .format(exposure_val))
 
     emulator = EventEmulator(
         pos_thres=pos_thres, neg_thres=neg_thres,
@@ -410,7 +411,7 @@ def main():
                     interpFramesFilenames.append(tgt_file_path)
                     n+=1
                     cv2.imwrite(tgt_file_path, src_frame)
-                interpTimes=np.array([0,n])
+                interpTimes=np.array(range(n))
 
 
             # compute times of output integrated frames
