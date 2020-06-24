@@ -422,6 +422,7 @@ def main():
             # debug
             # dt = np.diff(interpTimes)
             plt.plot(interpTimes)
+            plt.plot(interpTimes,'x')
             plt.xlabel('frame')
             plt.ylabel('frame time (s)')
             plt.show()

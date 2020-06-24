@@ -292,8 +292,8 @@ class SuperSloMo(object):
             self.name = str(__file__)
             cv2.namedWindow(self.name, cv2.WINDOW_NORMAL)
 
-        frameCounter=0
-        batchCounter=0
+        outputFrameCounter=0 # counts frames written out (input + interpolated)
+        inputFrameCounter=0 # counts source video input frames
         # torch.cuda.empty_cache()
         upsamplingSum=0 #stats
         nUpsamplingSamples=0
@@ -328,7 +328,7 @@ class SuperSloMo(object):
                 # dimensions [batch, flow[vx,vy], loc_x,loc_y]
 
                 if self.preview:
-                    start_frame_count = frameCounter
+                    start_frame_count = outputFrameCounter
 
                 # compute the upsampling factor
                 if self.auto_upsample:
@@ -365,10 +365,12 @@ class SuperSloMo(object):
                 upsamplingSum+=upsampling_factor
                 # compute normalized frame times where 1 is full interval between frames
                 # each src frame increments time by 1 unit, interframes fill between.
-                numFramesThisBatch= upsampling_factor*self.batch_size
+                numOutputFramesThisBatch= upsampling_factor*num_batch_frames
                 interframeTime = 1/upsampling_factor
-                interframeTimes = batchCounter*self.batch_size + np.array(range(numFramesThisBatch))*interframeTime
-                interframeTimes = interframeTimes.squeeze()
+                # compute the times of *all* the new frames, covering upsampling_factor * numFramesThisBatch total frames
+                # they all share the same upsampling_factor within this batch, hence same interframeTime
+                interframeTimes = inputFrameCounter + np.array(range(numOutputFramesThisBatch))*interframeTime
+                interframeTimes = interframeTimes.squeeze() # remove trailing , dimension
                 if interpTimes is None:
                     interpTimes=interframeTimes
                 else:
@@ -412,7 +414,7 @@ class SuperSloMo(object):
                         img = self.to_image(Ft_p[batchIndex].cpu().detach())
                         img_resize = img.resize(ori_dim, Image.BILINEAR)
                         # the output frame index is computed
-                        outputFrameIdx=frameCounter + upsampling_factor * batchIndex + intermediateIndex
+                        outputFrameIdx=outputFrameCounter + upsampling_factor * batchIndex + intermediateIndex
                         save_path = os.path.join(
                             output_folder,
                             str(outputFrameIdx) + ".png")
@@ -420,7 +422,7 @@ class SuperSloMo(object):
 
                 # for preview
                 if self.preview:
-                    stop_frame_count = frameCounter
+                    stop_frame_count = outputFrameCounter
 
                     for frame_idx in range(
                             start_frame_count,
@@ -434,9 +436,9 @@ class SuperSloMo(object):
                             self.preview_resized = True
                         # wait minimally since interp takes time anyhow
                         cv2.waitKey(1)
-                batchCounter+=1 # finished a batch of frames
                 # Set counter accounting for batching of frames
-                frameCounter += upsampling_factor * (self.batch_size) # batch_size-1 because we repeat frame1 as frame0
+                inputFrameCounter += num_batch_frames # batch_size-1 because we repeat frame1 as frame0
+                outputFrameCounter += numOutputFramesThisBatch # batch_size-1 because we repeat frame1 as frame0
 
             # write input frames into video
             # don't duplicate each frame if called using rotating buffer
