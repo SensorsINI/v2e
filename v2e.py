@@ -415,7 +415,9 @@ def main():
 
             # compute times of output integrated frames
             nFrames=len(interpFramesFilenames)
-            interpTimes = interpTimes*srcVideoRealProcessedDuration # compute actual times from video times
+            # interpTimes is in units of 1 per input frame, normalize it to src video time range
+            f=srcVideoRealProcessedDuration/(np.max(interpTimes)-np.min(interpTimes))
+            interpTimes = f*interpTimes # compute actual times from video times
             # debug
             # dt = np.diff(interpTimes)
             plt.plot(interpTimes)
