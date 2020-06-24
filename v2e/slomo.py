@@ -311,6 +311,10 @@ class SuperSloMo(object):
             for _, (frame0, frame1) in enumerate(
                     tqdm(video_frame_loader, desc='slomo-interp',
                          unit=unit), 0):
+                # video_frame_loader delivers batch of frame0 and frame1
+                # frame0 is actually frame0, frame1,.... frameN
+                # frame1 is actually frame1, frame2, .... frameN+1, where N is batch_size-1
+                # that way the slomo computes in parallel the flow from 0->1, 1->2, 2->3... N-1->N
 
                 I0 = frame0.to(self.device)
                 I1 = frame1.to(self.device)
@@ -325,7 +329,7 @@ class SuperSloMo(object):
                 if self.preview:
                     start_frame_count = frameCounter
 
-                # Generate intermediate frames
+                # compute the upsampling factor
                 if self.auto_upsample:
                     # compute automatic sample time from maximum flow magnitude such that
                     #                 #  dt(s)*speed(pix/s)=1pix,
@@ -366,6 +370,8 @@ class SuperSloMo(object):
                 else:
                     interpTimes=np.concatenate((interpTimes,interframeTimes))
 
+                # Generate intermediate frames using upsampling_factor
+                # this part is also done in batch mode
                 for intermediateIndex in range(0, upsampling_factor):
                     t = (intermediateIndex + 0.5) / upsampling_factor
                     temp = -t * (1 - t)
@@ -397,16 +403,17 @@ class SuperSloMo(object):
                             wCoeff[1] * V_t_1 * g_I1_F_t_1_f) / \
                            (wCoeff[0] * V_t_0 + wCoeff[1] * V_t_1)
 
-                    # Save intermediate frame
+                    # Save intermediate frames from this particular upsampling point between src frames
                     for batchIndex in range(num_batch_frames):
                         img = self.to_image(Ft_p[batchIndex].cpu().detach())
                         img_resize = img.resize(ori_dim, Image.BILINEAR)
+                        # the output frame index is computed
                         outputFrameCounter=frameCounter + upsampling_factor * batchIndex
                         save_path = os.path.join(
                             output_folder,
                             str(outputFrameCounter) + ".png")
                         img_resize.save(save_path)
-                    frameCounter += 1
+                    frameCounter += 1 # go to next upsampling time
 
                 # for preview
                 if self.preview:
@@ -424,7 +431,8 @@ class SuperSloMo(object):
                             self.preview_resized = True
                         # wait minimally since interp takes time anyhow
                         cv2.waitKey(1)
-                batchCounter+=1
+                batchCounter+=1 # finished a batch of frames
+
                 # Set counter accounting for batching of frames
                 frameCounter += upsampling_factor * (self.batch_size - 1) # batch_size-1 because we repeat frame1 as frame0
 
