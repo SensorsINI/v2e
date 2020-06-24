@@ -18,7 +18,7 @@ import argcomplete
 import cv2
 import numpy as np
 import os
-from tempfile import TemporaryDirectory
+from tempfile import TemporaryDirectory, TemporaryFile
 from engineering_notation import EngNumber  # only from pip
 from tqdm import tqdm
 
@@ -134,12 +134,13 @@ def main():
     start_time = args.start_time
     stop_time = args.stop_time
 
-    input_slowmotion_factor = args.input_slowmotion_factor
-    timestamp_resolution = args.timestamp_resolution
+    input_slowmotion_factor:float = args.input_slowmotion_factor
+    timestamp_resolution:float = args.timestamp_resolution
+    auto_timestamp_resolution:bool=args.auto_timestamp_resolution
 
-    if args.timestamp_resolution is None:
-        logger.error('--timestamp_resolution must be set to '
-                     'some DVS event timestamp resolution in seconds, '
+    if auto_timestamp_resolution==False and timestamp_resolution is None:
+        logger.error('if --auto_timestamp_resolution=False, then --timestamp_resolution must be set to '
+                     'some desired DVS event timestamp resolution in seconds, '
                      'e.g. 0.01')
         v2e_quit()
 
@@ -190,47 +191,12 @@ def main():
         logger.error('source {} fps is 0'.format(input_file))
         v2e_quit()
 
-    srcFrameIntervalS = (1. / srcFps) / input_slowmotion_factor
-
-    slowdown_factor = int(np.ceil(srcFrameIntervalS / timestamp_resolution))
-    if slowdown_factor < 1:
-        slowdown_factor = 1
-        logger.warning(
-            'timestamp resolution={}s is greater than source '
-            'frame interval={}s, will not use upsampling'
-                .format(timestamp_resolution, srcFrameIntervalS))
-
-    logger.info(
-        'src video frame rate={:.2f} Hz with slowmotion_factor={:.2f}, '
-        'timestamp resolution={:.3f} ms, computed slomo upsampling factor={}'
-            .format(
-            srcFps, input_slowmotion_factor, timestamp_resolution * 1000,
-            slowdown_factor))
-
-    slomoTimestampResolutionS = srcFrameIntervalS / slowdown_factor
     # https://stackoverflow.com/questions/25359288/how-to-know-total-number-of-frame-in-a-file-with-cv2-in-python
     srcNumFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     if srcNumFrames < 2:
         logger.warning(
             'num frames is less than 2, probably cannot be determined '
             'from cv2.CAP_PROP_FRAME_COUNT')
-
-    if slomoTimestampResolutionS > timestamp_resolution:
-        logger.warning(
-            'upsampled src frame intervals of {}s is larger than '
-            'the desired DVS timestamp resolution of {}s'
-                .format(slomoTimestampResolutionS, timestamp_resolution))
-
-    check_lowpass(cutoff_hz, 1 / slomoTimestampResolutionS, logger)
-
-    # the SloMo model, set no SloMo model if no slowdown
-    if slowdown_factor != NO_SLOWDOWN:
-        slomo = SuperSloMo(
-            model=args.slomo_model, upsampling_factor=slowdown_factor,
-            video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo,
-            preview=preview, batch_size=batch_size)
-    else:
-        slomo = None
 
     srcTotalDuration = (srcNumFrames - 1) / srcFps
     start_frame = int(srcNumFrames * (start_time / srcTotalDuration)) \
@@ -240,10 +206,63 @@ def main():
     srcNumFramesToBeProccessed = stop_frame - start_frame + 1
     srcDurationToBeProcessed = srcNumFramesToBeProccessed / srcFps
     start_time = start_frame / srcFps
-    stop_time = stop_frame / srcFps
+    stop_time = stop_frame / srcFps  # todo something replicated here, already have start and stop times
+
+    srcFrameIntervalS = (1. / srcFps) / input_slowmotion_factor
+
+    slomoTimestampResolutionS = None
+
+    slowdown_factor=None
+    if not auto_timestamp_resolution:
+        slowdown_factor = int(np.ceil(srcFrameIntervalS / timestamp_resolution))
+        if slowdown_factor < 1:
+            slowdown_factor = 1
+            logger.warning(
+                'timestamp resolution={}s is greater than source '
+                'frame interval={}s, will not use upsampling'
+                    .format(timestamp_resolution, srcFrameIntervalS))
+
+        logger.info(
+            'src video frame rate={:.2f} Hz with slowmotion_factor={:.2f}, '
+            'timestamp resolution={:.3f} ms, computed slomo upsampling factor={}'
+                .format(
+                srcFps, input_slowmotion_factor, timestamp_resolution * 1000,
+                slowdown_factor))
+
+        slomoTimestampResolutionS = srcFrameIntervalS / slowdown_factor
+
+        if slomoTimestampResolutionS > timestamp_resolution:
+            logger.warning(
+                'upsampled src frame intervals of {}s is larger than '
+                'the desired DVS timestamp resolution of {}s'
+                    .format(slomoTimestampResolutionS, timestamp_resolution))
+
+        check_lowpass(cutoff_hz, 1 / slomoTimestampResolutionS, logger)
+    else: # auto_timestamp_resolution
+        pass
+
+    # the SloMo model, set no SloMo model if no slowdown
+    if auto_timestamp_resolution or slowdown_factor != NO_SLOWDOWN:
+        slomo = SuperSloMo(
+            model=args.slomo_model, auto_upsample=auto_timestamp_resolution, upsampling_factor=slowdown_factor,
+            video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo,
+            preview=preview, batch_size=batch_size)
+    else:
+        slomo = None
 
     if exposure_mode == ExposureMode.DURATION:
         dvsFps = 1. / exposure_val
+
+    if not auto_timestamp_resolution:
+        logger.info('\n events will have timestamp resolution {}s,'.format(slomoTimestampResolutionS))
+        if exposure_mode == ExposureMode.DURATION and dvsFps > (1 / slomoTimestampResolutionS):
+            logger.warning(
+                'DVS video frame rate={}Hz is larger than '
+                'the effective DVS frame rate of {}Hz; '
+                'DVS video will have blank frames'.format(
+                    dvsFps, (1 / slomoTimestampResolutionS)))
+
+    if exposure_mode == ExposureMode.DURATION:
         dvsNumFrames = np.math.floor(
             dvsFps * srcDurationToBeProcessed / input_slowmotion_factor)
         dvsDuration = dvsNumFrames / dvsFps
@@ -252,37 +271,26 @@ def main():
             '\n\n{} has {} frames with duration {}s, '
             '\nsource video is {}fps with slowmotion_factor {} '
             '(frame interval {}s),'
-            '\n slomo will have {}fps,'
-            '\n events will have timestamp resolution {}s,'
             '\n v2e DVS video will have {}fps (accumulation time {}s), '
             '\n DVS video will have {} frames with duration {}s '
             'and playback duration {}s\n'
                 .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
                         EngNumber(srcFps), EngNumber(input_slowmotion_factor),
                         EngNumber(srcFrameIntervalS),
-                        EngNumber(srcFps * slowdown_factor),
-                        EngNumber(slomoTimestampResolutionS),
                         EngNumber(dvsFps), EngNumber(1 / dvsFps),
                         dvsNumFrames, EngNumber(dvsDuration),
                         EngNumber(dvsPlaybackDuration)))
-        if dvsFps > (1 / slomoTimestampResolutionS):
-            logger.warning(
-                'DVS video frame rate={}Hz is larger than '
-                'the effective DVS frame rate of {}Hz; '
-                'DVS video will have blank frames'.format(
-                    dvsFps, (1 / slomoTimestampResolutionS)))
+
     else:
         logger.info(
             '\n\n{} has {} frames with duration {}s, '
             '\nsource video is {}fps (frame interval {}s),'
             '\n slomo will have {}fps,'
-            '\n events will have timestamp resolution {}s,'
             '\n v2e DVS video will have constant count '
             'frames with {} events), '
                 .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
                         EngNumber(srcFps), EngNumber(srcFrameIntervalS),
                         EngNumber(srcFps * slowdown_factor),
-                        EngNumber(slomoTimestampResolutionS),
                         exposure_val))
 
     emulator = EventEmulator(
@@ -374,19 +382,24 @@ def main():
         cap.release()
 
         with TemporaryDirectory() as interpFramesFolder:
+            interpTimes=None
             # make input to slomo
             if slowdown_factor != NO_SLOWDOWN:
                 # interpolated frames are stored to tmpfolder as
                 # 1.png, 2.png, etc
-                slomo.interpolate(
+                interpTimes=slomo.interpolate(
                     source_frames_dir, interpFramesFolder,
                     (output_width, output_height))
+
                 # read back to memory
                 interpFramesFilenames = all_images(interpFramesFolder)
+                # number of frames
+                n = len(interpFramesFilenames)
             else:
                 logger.info('turning npy frame files to png from {}'
                             .format(source_frames_dir))
                 interpFramesFilenames = []
+                n=0
                 src_files = sorted(
                     glob.glob("{}".format(source_frames_dir) + "/*.npy"))
                 for frame_idx, src_file_path in tqdm(
@@ -395,23 +408,21 @@ def main():
                     tgt_file_path = os.path.join(
                         interpFramesFolder, str(frame_idx) + ".png")
                     interpFramesFilenames.append(tgt_file_path)
+                    n+=1
                     cv2.imwrite(tgt_file_path, src_frame)
+                interpTimes=np.array([0,n])
 
-            # number of frames
-            n = len(interpFramesFilenames)
 
             # compute times of output integrated frames
-            interpTimes = np.linspace(
-                start=ts0, stop=ts1, num=n, endpoint=False)
+            nFrames=len(interpTimes)
+            interpTimes = interpTimes*(ts1-ts0)
 
             # interpolate events
-            # get some progress bar
-            #  events = np.zeros((0, 4), dtype=np.float32)
-            num_batches = (n // (slowdown_factor * batch_size)) + 1
+            num_batches = (nFrames // batch_size) + 1
 
             with tqdm(
-                    total=num_batches * slowdown_factor * batch_size,
-                    desc='dvs', unit='fr') as pbar:
+                    total=nFrames,
+                    desc='dvs', unit='fr') as pbar: # instantiate progress bar
                 for batch_idx in (range(num_batches)):
                     events = np.zeros((0, 4), dtype=np.float32)
                     for sub_img_idx in range(slowdown_factor * batch_size):

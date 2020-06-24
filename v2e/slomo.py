@@ -44,6 +44,7 @@ class SuperSloMo(object):
     def __init__(
             self,
             model: str,
+            auto_upsample: bool,
             upsampling_factor: object,
             batch_size=1,
             video_path=None,
@@ -85,19 +86,22 @@ class SuperSloMo(object):
             logger.warning('CUDA not available, will be slow :-(')
         self.checkpoint = model
         self.batch_size = batch_size
-        if (not isinstance(upsampling_factor, int) or upsampling_factor < 2) or (isinstance(upsampling_factor,str) and not upsampling_factor=='auto'):
+        if not auto_upsample and (not isinstance(upsampling_factor, int) or upsampling_factor < 2):
             raise ValueError(
-                'slowdown_factor={} but must be an int value>1 or "auto"'
+                'upsampling_factor={} but must be an int value>1 when auto_upsample=True'
                 .format(upsampling_factor))
-        if upsampling_factor=='auto':
+
+        if upsampling_factor is not None and auto_upsample:
+            raise ValueError('auto_upsample=True and upsampling_factor is not None; do not set upsampling_factor if using auto_upsample')
+
+        self.upsampling_factor=upsampling_factor
+        self.auto_upsample=auto_upsample
+
+        if self.auto_upsample:
             logger.info('using automatic upsampling mode')
-            self.upsampling_factor=None
-            self.auto_upsample=True
         else:
             logger.info('upsampling by fixed factor of {}'.format(self.upsampling_factor))
-            self.auto_upsample=False
-            self.upsampling_factor = upsampling_factor
-            
+
         self.video_path = video_path
         self.preview = preview
         self.preview_resized = False
@@ -253,10 +257,10 @@ class SuperSloMo(object):
 
         Returns
         deltaTimes: np.array
-            Array of delta times, if 'auto' is the upsampling_factor. TODO add batch frame return
+            Array of delta times relative to src frame intervals. This array must be multiplied by the source frame interval to obtain the times of the frames. There will be a variable number of times depending on auto_upsample and upsampling_factor.
         """
         if not output_folder:
-            raise Exception(
+            raise ValueError(
                 'output_folder is None; it must be supplied to store '
                 'the interpolated frames')
 
@@ -289,6 +293,7 @@ class SuperSloMo(object):
             self.name = str(__file__)
             cv2.namedWindow(self.name, cv2.WINDOW_NORMAL)
 
+
         frameCounter = 1
         # torch.cuda.empty_cache()
         with torch.no_grad():
@@ -296,6 +301,11 @@ class SuperSloMo(object):
             #      "using " + str(output_folder) +
             #      " to store interpolated frames")
             nImages = len(video_frame_loader)
+            if nImages<2:
+                raise Exception('there are less than 2 images in {}'.format(source_frame_path))
+
+            interpTimes=None # array to hold times normalized to 1 unit per input frame interval
+
             #  nImages = images.shape[0]
             disableTqdm = nImages <= max(self.batch_size, 4)
             unit = ' fr' if self.batch_size == 1 \
@@ -310,8 +320,9 @@ class SuperSloMo(object):
                 num_batch_frames = I0.shape[0]
 
                 flowOut = self.flow_estimator(torch.cat((I0, I1), dim=1))
-                F_0_1 = flowOut[:, :2, :, :]
-                F_1_0 = flowOut[:, 2:, :, :]
+                F_0_1 = flowOut[:, :2, :, :] # flow from 0 to 1
+                F_1_0 = flowOut[:, 2:, :, :] # flow from 1 to 0
+                # dimensions [batch, flow[x,y?], x,y]
 
                 # for preview
                 if self.preview:
@@ -320,12 +331,44 @@ class SuperSloMo(object):
                 # Generate intermediate frames
                 
                 if self.auto_upsample:
-                    # compute utomatic sample time from maximum flow magnitude such that
+                    # compute automatic sample time from maximum flow magnitude such that
                     #                 #  dt(s)*speed(pix/s)=1pix,
                     #                 #  i.e., dt(s)=1pix/speed(pix/s)
-                    maxFlow= # TODO compute from tensor taking into account batch
+                    # we have no time here, so our flow is computed in pixels of motion between frames
+                    # we need to compute speed, so first compute the sum square of x and y vel components
+                    vFlat=torch.flatten(flowOut,2,3) # [batch, [v01x, v01y, v10x, v10y] ]
+                    vx0=vFlat[:,0,:]
+                    vx1=vFlat[:,2,:]
+                    vy0=vFlat[:,1,:]
+                    vy1=vFlat[:,3,:]
+
+                    sp0=torch.sqrt(vx0*vx0+vy0*vy0)
+                    sp1=torch.sqrt(vx1*vx1+vy1*vy1)
+                    sp=torch.cat((sp0,sp1),1)
+
+
+                    maxSpeed= torch.max(torch.max(sp,dim=1)[0]).cpu().item() # this is maximimum movement between frames in pixels dim [batch]
+                    # dim=1 gets max over all pixels
+                    # [0] gets value of max, rather than idx which would be 1
+                    # outer max get max over entire batch
+                    # .cpu() moves to cpu to get actual value as float
+                    # outer .item() gets first element of 0-dim tensor which is the speed
+                    upsampling_factor=int(np.ceil(maxSpeed)) # use ceil to ensure oversampling. compute overall maximum needed upsampling ratio
+                    # it is shared over all frames in batch so just use max value for all of them
+                    logger.debug('upsampling factor={}'.format(upsampling_factor))
+
                 else:
                     upsampling_factor=self.upsampling_factor
+
+                # compute normalized frame times where 1 is full interval between frames
+                interframeTime=1/upsampling_factor
+                interframeTimes=np.array(range(upsampling_factor))*interframeTime
+                interframeTimes=interframeTimes.squeeze()
+                if interpTimes is None:
+                    interpTimes=interframeTimes
+                else:
+                    interpTimes=np.concatenate((interpTimes,interframeTimes))
+
                 for intermediateIndex in range(0, upsampling_factor):
                     t = (intermediateIndex + 0.5) / upsampling_factor
                     temp = -t * (1 - t)
@@ -416,6 +459,8 @@ class SuperSloMo(object):
                     self.numSlomoVideoFramesWritten += 1
                     # if cv2.waitKey(int(1000/30)) & 0xFF == ord('q'):
                     #     break
+
+        return interpTimes
 
     def __all_images(self, data_path):
         """Return path of all input images. Assume that the ascending order of

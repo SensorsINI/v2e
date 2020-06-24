@@ -42,9 +42,13 @@ def v2e_args(parser):
     # DVS model parameters
     modelGroup = parser.add_argument_group('DVS model')
     modelGroup.add_argument(
+        "--auto_timestamp_resolution", action='store_true',
+        help="if False, --timestamp_resolution sets the upsampling factor for input video. "
+             "If True, upsampling_factor is automatically determined to limit maximum movement between frames to 1 pixel")
+    modelGroup.add_argument(
         "--timestamp_resolution", type=float,
         help="Desired DVS timestamp reolution in seconds; "
-             "determines slow motion factor;  "
+             "determines slow motion upsampling factor;  "
              "the video will be upsampled from source fps to "
              "achieve the desired timestamp resolution."
              "I.e. slowdown_factor = (1/fps)/timestamp_resolution; "
