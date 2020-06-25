@@ -60,7 +60,9 @@ class SuperSloMo(object):
         model: str,
             path of the stored Pytorch checkpoint.
         upsampling_factor: object,
-            slow motion factor, or 'auto' to generate upsampling automatically based on flow.
+            slow motion factor.
+        auto_upsample: bool,
+            Use automatic upsampling, but limit minimum to upsampling_factor
         batch_size: int,
             batch size.
         video_path: str or None,
@@ -92,7 +94,7 @@ class SuperSloMo(object):
                 .format(upsampling_factor))
 
         if upsampling_factor is not None and auto_upsample:
-            raise ValueError('auto_upsample=True and upsampling_factor is not None; do not set upsampling_factor if using auto_upsample')
+            logger.info('Using auto_upsample and upsampling_factor; setting minimum upsampling to {}'.format(upsampling_factor))
 
         self.upsampling_factor=upsampling_factor
         self.auto_upsample=auto_upsample
@@ -255,8 +257,10 @@ class SuperSloMo(object):
         Frame1 is *not* included, so that it can be fed as input for the next interpolation.
 
         Returns
-        deltaTimes: np.array
+        deltaTimes: np.array,
             Array of delta times relative to src frame intervals. This array must be multiplied by the source frame interval to obtain the times of the frames. There will be a variable number of times depending on auto_upsample and upsampling_factor.
+        avg_upsampling_factor: float,
+            Average upsampling factor, which can be used to compute the average timestamp resolution.
         """
         if not output_folder:
             raise ValueError(
@@ -286,6 +290,8 @@ class SuperSloMo(object):
                 ori_dim[1],
                 ori_dim[0], frame_rate=self.avi_frame_rate
             )
+
+        numUpsamplingReportsLeft=3 # number of times to report automatic upsampling
 
         # prepare preview
         if self.preview:
@@ -354,6 +360,11 @@ class SuperSloMo(object):
                     upsampling_factor=int(np.ceil(maxSpeed)) # use ceil to ensure oversampling. compute overall maximum needed upsampling ratio
                     # it is shared over all frames in batch so just use max value for all of them
                     # logger.info('upsampling factor={}'.format(upsampling_factor))
+                    if self.upsampling_factor is not None and self.upsampling_factor>upsampling_factor:
+                        upsampling_factor=self.upsampling_factor
+                    if numUpsamplingReportsLeft>0:
+                        logger.info('upsampled by factor {}'.format(upsampling_factor))
+                        numUpsamplingReportsLeft-=1
                 else:
                     upsampling_factor=self.upsampling_factor
 
@@ -467,7 +478,7 @@ class SuperSloMo(object):
         nTimePoints=len(interpTimes)
         avgUpsampling=upsamplingSum/nUpsamplingSamples
         logger.info('Wrote {} frames and returning {} frame times.\nAverage upsampling factor={:5.1f}'.format(nFramesWritten,nTimePoints,avgUpsampling))
-        return interpTimes
+        return interpTimes, avgUpsampling
 
     def __all_images(self, data_path):
         """Return path of all input images. Assume that the ascending order of

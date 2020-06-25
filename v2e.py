@@ -19,9 +19,8 @@ import cv2
 import numpy as np
 import os
 from tempfile import TemporaryDirectory, TemporaryFile
-from engineering_notation import EngNumber  # only from pip
+from engineering_notation import EngNumber  as eng # only from pip
 from tqdm import tqdm
-from matplotlib import pyplot as plt # TODO debug
 
 # may only apply to windows
 try:
@@ -164,6 +163,7 @@ def main():
     dvs_text = args.dvs_text
     vid_orig = args.vid_orig
     vid_slomo = args.vid_slomo
+    slomo_stats_plot=args.slomo_stats_plot
 
     preview = not args.no_preview
     rotate180 = args.rotate180
@@ -240,7 +240,9 @@ def main():
 
         check_lowpass(cutoff_hz, 1 / slomoTimestampResolutionS, logger)
     else: # auto_timestamp_resolution
-        pass
+        logger.info('--auto_timestamp_resolution=True, \n'
+                    'so source video will be automatically upsampled to limit'
+                    'maximum interframe motion to 1 pixel')
 
     # the SloMo model, set no SloMo model if no slowdown
     if auto_timestamp_resolution or slowdown_factor != NO_SLOWDOWN:
@@ -269,9 +271,9 @@ def main():
         '(frame interval {}s),'
         '\nWill convert frames {} to {}\n'
         '(From {}s to {}s, duration {}s)'
-            .format(input_file, srcNumFrames, EngNumber(srcTotalDuration),
-                    EngNumber(srcFps), EngNumber(input_slowmotion_factor),
-                    EngNumber(srcFrameIntervalS),
+            .format(input_file, srcNumFrames, eng(srcTotalDuration),
+                    eng(srcFps), eng(input_slowmotion_factor),
+                    eng(srcFrameIntervalS),
                     start_frame,stop_frame,
                     start_time,stop_time,(stop_time-start_time)))
 
@@ -287,9 +289,9 @@ def main():
                     'at {}fps (accumulation time {}s), '
                     '\nDVS video will have {} frames with duration {}s '
                     'and playback duration {}s\n'
-                    .format(EngNumber(dvsFps), EngNumber(1 / dvsFps),
-                            dvsNumFrames, EngNumber(dvsDuration),
-                            EngNumber(dvsPlaybackDuration)))
+                    .format(eng(dvsFps), eng(1 / dvsFps),
+                            dvsNumFrames, eng(dvsDuration),
+                            eng(dvsPlaybackDuration)))
     else:
         logger.info('v2e DVS video will have constant-count '
             'frames with {} events), '
@@ -342,8 +344,8 @@ def main():
             logger.warning(
                 'output size ({}x{}) was set automatically to '
                 'input video size\n    Are you sure you want this? '
-                'It might be slow.\n    Consider using '
-                '--output_width and --output_height'
+                'It might be slow.\n Consider using\n '
+                '    --output_width=346 --output_height=260\n to match Davis346.'
                     .format(output_width, output_height))
 
         logger.info('Resizing input frames to output size '
@@ -388,10 +390,12 @@ def main():
             if slowdown_factor != NO_SLOWDOWN:
                 # interpolated frames are stored to tmpfolder as
                 # 1.png, 2.png, etc
-                interpTimes=slomo.interpolate(
+                interpTimes,avgUpsamplingFactor=slomo.interpolate(
                     source_frames_dir, interpFramesFolder,
                     (output_width, output_height))
-
+                avgTs = srcFrameIntervalS / avgUpsamplingFactor
+                logger.info('SloMo average upsampling factor={:5.2f}; average DVS timestamp resolution={}s'
+                            .format(avgUpsamplingFactor, eng(avgTs)))
                 # read back to memory
                 interpFramesFilenames = all_images(interpFramesFolder)
                 # number of frames
@@ -420,12 +424,21 @@ def main():
             f=srcVideoRealProcessedDuration/(np.max(interpTimes)-np.min(interpTimes))
             interpTimes = f*interpTimes # compute actual times from video times
             # debug
-            # dt = np.diff(interpTimes)
-            plt.plot(interpTimes)
-            plt.plot(interpTimes,'x')
-            plt.xlabel('frame')
-            plt.ylabel('frame time (s)')
-            plt.show()
+            if slomo_stats_plot:
+                from matplotlib import pyplot as plt  # TODO debug
+                dt = np.diff(interpTimes)
+                fig=plt.figure()
+                ax1=fig.add_subplot(111)
+                ax1.set_title('Slo-Mo frame interval stats (close to continue)')
+                ax1.plot(interpTimes)
+                ax1.plot(interpTimes,'x')
+                ax1.set_xlabel('frame')
+                ax1.set_ylabel('frame time (s)')
+                ax2=ax1.twinx()
+                ax2.plot(dt*1e3)
+                ax2.set_ylabel('frame interval (ms)')
+                logger.info('close plot to continue')
+                fig.show()
 
             events = np.zeros((0, 4), dtype=np.float32)  # array to batch events for rendering to DVS frames
             with tqdm(total=nFrames, desc='dvs', unit='fr') as pbar: # instantiate progress bar
@@ -454,24 +467,24 @@ def main():
     totalTime = (time.time() - time_run_started)
     framePerS = num_frames / totalTime
     sPerFrame = 1 / framePerS
-    throughputStr = (str(EngNumber(framePerS)) + 'fr/s') \
-        if framePerS > 1 else (str(EngNumber(sPerFrame)) + 's/fr')
+    throughputStr = (str(eng(framePerS)) + 'fr/s') \
+        if framePerS > 1 else (str(eng(sPerFrame)) + 's/fr')
     logger.info(
         'done processing {} frames in {}s ({})\n see output folder {}'
             .format(num_frames,
-                    EngNumber(totalTime),
+                    eng(totalTime),
                     throughputStr,
                     output_folder))
     logger.info('generated total {} events ({} on, {} off)'
-                .format(EngNumber(emulator.num_events_total),
-                        EngNumber(emulator.num_events_on),
-                        EngNumber(emulator.num_events_off)))
+                .format(eng(emulator.num_events_total),
+                        eng(emulator.num_events_on),
+                        eng(emulator.num_events_off)))
     logger.info(
         'avg event rate {}Hz ({}Hz on, {}Hz off)'
             .format(
-            EngNumber(emulator.num_events_total / srcDurationToBeProcessed),
-            EngNumber(emulator.num_events_on / srcDurationToBeProcessed),
-            EngNumber(emulator.num_events_off / srcDurationToBeProcessed)))
+            eng(emulator.num_events_total / srcDurationToBeProcessed),
+            eng(emulator.num_events_on / srcDurationToBeProcessed),
+            eng(emulator.num_events_off / srcDurationToBeProcessed)))
     try:
         desktop.open(os.path.abspath(output_folder))
     except Exception as e:

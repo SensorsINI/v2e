@@ -21,14 +21,14 @@ def v2e_args(parser):
     # general arguments for output folder, overwriting, etc
     outGroupGeneral = parser.add_argument_group('Output: General')
     outGroupGeneral.add_argument(
-        "-o", "--output_folder", type=str, required=True,
+        "-o", "--output_folder", type=str, default='v2e-output',
         help="folder to store outputs.")
     outGroupGeneral.add_argument(
         "--overwrite", action="store_true",
         help="overwrites files in existing folder "
              "(checks existence of non-empty output_folder).")
     outGroupGeneral.add_argument(
-        "--unique_output_folder", action="store_true",
+        "--unique_output_folder", default=True,
         help="makes unique output folder based on output_folder "
              "if non-empty output_folder already exists")
     outGroupGeneral.add_argument(
@@ -39,26 +39,39 @@ def v2e_args(parser):
         help="frame rate of output AVI video files; "
              "only affects playback rate. ")
 
-    # DVS model parameters
-    modelGroup = parser.add_argument_group('DVS model')
-    modelGroup.add_argument(
-        "--auto_timestamp_resolution", action='store_true',
+    # timestamp resolution
+    timestampResolutionGroup= parser.add_argument_group('DVS timestamp resolution')
+    timestampResolutionGroup.add_argument(
+        "--auto_timestamp_resolution", default=True,
         help="if False, --timestamp_resolution sets the upsampling factor for input video. "
              "If True, upsampling_factor is automatically determined to limit maximum movement between frames to 1 pixel")
-    modelGroup.add_argument(
+    timestampResolutionGroup.add_argument(
         "--timestamp_resolution", type=float,
-        help="Desired DVS timestamp reolution in seconds; "
+        help="Desired DVS timestamp resolution in seconds; "
              "determines slow motion upsampling factor;  "
              "the video will be upsampled from source fps to "
-             "achieve the desired timestamp resolution."
+             "achieve the at least this timestamp resolution."
              "I.e. slowdown_factor = (1/fps)/timestamp_resolution; "
              "using a high resolution e.g. of 1ms will result in slow "
              "rendering since it will force high upsampling ratio."
+             "Can be combind with --auto_timestamp_resolution to limit upsamplingt to a minimum value."
              )
+
+
+    # DVS model parameters
+    modelGroup = parser.add_argument_group('DVS model')
+    modelGroup.add_argument(
+        "--output_height", type=int, default=None,
+        help="Height of output DVS data in pixels. "
+             "If None, same as input video. Use --output_height=346 for Davis346. ")
+    modelGroup.add_argument(
+        "--output_width", type=int, default=None,
+        help="Width of output DVS data in pixels. "
+             "If None, same as input video. Use --output_width=260 for Davis346.")
     modelGroup.add_argument(
         "--dvs_params", type=str,
         help="Easy optional setting of parameters for DVS model:"
-             "'clean', 'noisy'")
+             "'clean', 'noisy'; 'clean' turns off noise and makes threshold variation zero. 'noisy' sets limited bandwidth and adds leak events and shot noise.")
     modelGroup.add_argument(
         "--pos_thres", type=float, default=0.2,
         help="threshold in log_e intensity change to "
@@ -71,7 +84,7 @@ def v2e_args(parser):
         "--sigma_thres", type=float, default=0.03,
         help="1-std deviation threshold variation in log_e intensity change.")
     modelGroup.add_argument(
-        "--cutoff_hz", type=float, default=0,
+        "--cutoff_hz", type=float, default=300,
         help="photoreceptor second-order IIR lowpass filter "
              "cutoff-off 3dB frequency in Hz - "
              "see https://ieeexplore.ieee.org/document/4444573")
@@ -80,23 +93,17 @@ def v2e_args(parser):
         help="leak event rate per pixel in Hz - "
              "see https://ieeexplore.ieee.org/abstract/document/7962235")
     modelGroup.add_argument(
-        "--shot_noise_rate_hz", type=float, default=0,
+        "--shot_noise_rate_hz", type=float, default=0.01,
         help="Temporal noise rate of ON+OFF events in "
              "darkest parts of scene; reduced in brightest parts. ")
 
     # slow motion frame synthesis
-    sloMoGroup = parser.add_argument_group('SloMo upsampling')
+    sloMoGroup = parser.add_argument_group('SloMo upsampling (see also "DVS timestamp resolution" group)')
     sloMoGroup.add_argument(
         "--slomo_model", type=str, default=prepend+"input/SuperSloMo39.ckpt",
         help="path of slomo_model checkpoint.")
-    #  sloMoGroup.add_argument(
-    #      "--segment_size", type=int, default=1,
-    #      help="Segment size for SuperSloMo. Video is split to chunks of "
-    #           "this many frames, and within each segment, "
-    #           "batch mode CNN inference of optic flow takes place. "
-    #           "Video will be processed segment by segment.")
     sloMoGroup.add_argument(
-        "--batch_size", type=int, default=1,
+        "--batch_size", type=int, default=8,
         help="Batch size in frames for SuperSloMo. Batch size 8-16 is recommended if your GPU has sufficient memory.")
     sloMoGroup.add_argument(
         "--vid_orig", type=str, default="video_orig.avi",
@@ -111,6 +118,7 @@ def v2e_args(parser):
     #     help="Use previously-generated vid_slomo as input video "
     #          "instead of generating new one. "
     #          "Caution: saved video must have correct slowdown_factor.")
+    sloMoGroup.add_argument('--slomo_stats_plot', action='store_true', help="show a plot of slomo statistics")
 
     # input file handling
     inGroup = parser.add_argument_group('Input')
@@ -124,13 +132,20 @@ def v2e_args(parser):
              "it means that each input frame represents (1/10)s/2=50ms.")
     inGroup.add_argument(
         "--start_time", type=float, default=None,
-        help="Start at this time in seconds in video.")
+        help="Start at this time in seconds in video. Use None to start at beginning of source video.")
     inGroup.add_argument(
         "--stop_time", type=float, default=None,
-        help="Stop at this time in seconds in video.")
+        help="Stop at this time in seconds in video. Use None to end at end of source video.")
 
     # DVS output video including address space size in pixels
     outGroupDvsVideo = parser.add_argument_group('Output: DVS video')
+    outGroupDvsVideo.add_argument(
+        "--dvs_exposure", nargs='+', type=str, default=('duration','0.01'),
+        help="Mode to finish DVS frame event integration: "
+             "duration time: Use fixed accumulation time in seconds, e.g. -dvs_exposure duration .005; "
+             "count n: Count n events per frame, -dvs_exposure count 5000; "
+             "area_event N M: frame ends when any area of M x M pixels "
+             "fills with N events, -dvs_exposure area_count 500 64")
     outGroupDvsVideo.add_argument(
         "--dvs_vid", type=str, default="dvs-video.avi",
         help="Output DVS events as AVI video at frame_rate.")
@@ -138,27 +153,13 @@ def v2e_args(parser):
         "--dvs_vid_full_scale", type=int, default=2,
         help="Set full scale event count histogram count for DVS videos "
              "to be this many ON or OFF events for full white or black.")
-    outGroupDvsVideo.add_argument(
-        "--output_height", type=int, default=None,
-        help="Height of output DVS data in pixels. "
-             "If None, same as input video.")
-    outGroupDvsVideo.add_argument(
-        "--output_width", type=int, default=None,
-        help="Width of output DVS data in pixels. "
-             "If None, same as input video.")
     # outGroupDvsVideo.add_argument(
     #     "--frame_rate", type=float,
     #     help="implies --dvs_exposure duration 1/framerate.  "
     #          "Equivalent frame rate of --dvs_vid output video; "
     #          "the events will be accummulated as this sample rate; "
     #          "DVS frames will be accumulated for duration 1/frame_rate")
-    outGroupDvsVideo.add_argument(
-        "--dvs_exposure", nargs='+', type=str,
-        help="Mode to finish DVS event integration: "
-             "duration time: accumulation time in seconds; "
-             "count n: count n events per frame; "
-             "area_event N M: frame ends when any area of M x M pixels "
-             "fills with N events")
+
 
     # DVS output as events
     dvsEventOutputGroup = parser.add_argument_group('Output: DVS events')
