@@ -108,23 +108,28 @@ The default value of --slomo_model argument is set to this location.
 
 _v2e.py_ reads a standard video (e.g. in .avi, .mp4, .mov, or .wmv) and generates emulated DVS events at upsampled timestamp resolution.
 
+Do not be intimidated by the huge number of options. Running _v2e.py_ with no arguments sets reasonable values and opens a file browser to let you select an input video. Inspect the logging output for hints.
+
 ```
 (base)$ conda activate pt-v2e # activate your workspace
 (pt-v2e)$ python v2e.py -h
-usage: v2e.py [-h] -o OUTPUT_FOLDER [--overwrite] [--unique_output_folder]
-              [--no_preview] [--avi_frame_rate AVI_FRAME_RATE]
+usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--overwrite]
+              [--unique_output_folder UNIQUE_OUTPUT_FOLDER] [--no_preview]
+              [--avi_frame_rate AVI_FRAME_RATE]
+              [--auto_timestamp_resolution AUTO_TIMESTAMP_RESOLUTION]
               [--timestamp_resolution TIMESTAMP_RESOLUTION]
+              [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
               [--dvs_params DVS_PARAMS] [--pos_thres POS_THRES]
               [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
               [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
               [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ]
               [--slomo_model SLOMO_MODEL] [--batch_size BATCH_SIZE]
-              [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO] [-i INPUT]
+              [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO]
+              [--slomo_stats_plot] [-i INPUT]
               [--input_slowmotion_factor INPUT_SLOWMOTION_FACTOR]
               [--start_time START_TIME] [--stop_time STOP_TIME]
-              [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
-              [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
               [--dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]]
+              [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
               [--dvs_h5 DVS_H5] [--dvs_aedat2 DVS_AEDAT2]
               [--dvs_text DVS_TEXT] [--dvs_numpy DVS_NUMPY]
               [--rotate180 ROTATE180]
@@ -135,30 +140,48 @@ optional arguments:
                         rotate all output 180 deg. (default: False)
 Output: General:
   -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
-                        folder to store outputs. (default: None)
+                        folder to store outputs. (default: v2e-output)
   --overwrite           overwrites files in existing folder (checks existence
                         of non-empty output_folder). (default: False)
-  --unique_output_folder
+  --unique_output_folder UNIQUE_OUTPUT_FOLDER
                         makes unique output folder based on output_folder if
-                        non-empty output_folder already exists (default:
-                        False)
+                        non-empty output_folder already exists (default: True)
   --no_preview          disable preview in cv2 windows for faster processing.
                         (default: False)
   --avi_frame_rate AVI_FRAME_RATE
                         frame rate of output AVI video files; only affects
                         playback rate. (default: 30)
-DVS model:
+DVS timestamp resolution:
+  --auto_timestamp_resolution AUTO_TIMESTAMP_RESOLUTION
+                        if False, --timestamp_resolution sets the upsampling
+                        factor for input video. If True, upsampling_factor is
+                        automatically determined to limit maximum movement
+                        between frames to 1 pixel (default: True)
   --timestamp_resolution TIMESTAMP_RESOLUTION
-                        Desired DVS timestamp reolution in seconds; determines
-                        slow motion factor; the video will be upsampled from
-                        source fps to achieve the desired timestamp
-                        resolution.I.e. slowdown_factor =
+                        Desired DVS timestamp resolution in seconds;
+                        determines slow motion upsampling factor; the video
+                        will be upsampled from source fps to achieve the at
+                        least this timestamp resolution.I.e. slowdown_factor =
                         (1/fps)/timestamp_resolution; using a high resolution
                         e.g. of 1ms will result in slow rendering since it
-                        will force high upsampling ratio. (default: None)
+                        will force high upsampling ratio.Can be combind with
+                        --auto_timestamp_resolution to limit upsamplingt to a
+                        minimum value. (default: None)
+DVS model:
+  --output_height OUTPUT_HEIGHT
+                        Height of output DVS data in pixels. If None, same as
+                        input video. Use --output_height=346 for Davis346.
+                        (default: None)
+  --output_width OUTPUT_WIDTH
+                        Width of output DVS data in pixels. If None, same as
+                        input video. Use --output_width=260 for Davis346.
+                        (default: None)
   --dvs_params DVS_PARAMS
                         Easy optional setting of parameters for DVS
-                        model:'clean', 'noisy' (default: None)
+                        model:'clean', 'noisy'; 'clean' turns off noise and
+                        makes threshold variation zero. 'noisy' sets limited
+                        bandwidth and adds leak events and shot noise.
+                        (default: None)
   --pos_thres POS_THRES
                         threshold in log_e intensity change to trigger a
                         positive event. (default: 0.2)
@@ -172,25 +195,28 @@ DVS model:
                         photoreceptor second-order IIR lowpass filter cutoff-
                         off 3dB frequency in Hz - see
                         https://ieeexplore.ieee.org/document/4444573 (default:
-                        0)
+                        300)
   --leak_rate_hz LEAK_RATE_HZ
                         leak event rate per pixel in Hz - see
                         https://ieeexplore.ieee.org/abstract/document/7962235
                         (default: 0.01)
   --shot_noise_rate_hz SHOT_NOISE_RATE_HZ
                         Temporal noise rate of ON+OFF events in darkest parts
-                        of scene; reduced in brightest parts. (default: 0)
-SloMo upsampling:
+                        of scene; reduced in brightest parts. (default: 0.01)
+SloMo upsampling (see also "DVS timestamp resolution" group):
   --slomo_model SLOMO_MODEL
                         path of slomo_model checkpoint. (default:
                         input/SuperSloMo39.ckpt)
   --batch_size BATCH_SIZE
-                        Batch size in frames for SuperSloMo. (default: 1)
+                        Batch size in frames for SuperSloMo. Batch size 8-16
+                        is recommended if your GPU has sufficient memory.
+                        (default: 8)
   --vid_orig VID_ORIG   Output src video at same rate as slomo video (with
                         duplicated frames). (default: video_orig.avi)
   --vid_slomo VID_SLOMO
                         Output slomo of src video slowed down by
                         slowdown_factor. (default: video_slomo.avi)
+  --slomo_stats_plot    show a plot of slomo statistics (default: False)
 Input:
   -i INPUT, --input INPUT
                         Input video file; leave empty for file chooser dialog.
@@ -201,28 +227,26 @@ Input:
                         slowmotion_factor=2, it means that each input frame
                         represents (1/10)s/2=50ms. (default: 1.0)
   --start_time START_TIME
-                        Start at this time in seconds in video. (default:
-                        None)
+                        Start at this time in seconds in video. Use None to
+                        start at beginning of source video. (default: None)
   --stop_time STOP_TIME
-                        Stop at this time in seconds in video. (default: None)
+                        Stop at this time in seconds in video. Use None to end
+                        at end of source video. (default: None)
 Output: DVS video:
+  --dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]
+                        Mode to finish DVS frame event integration: duration
+                        time: Use fixed accumulation time in seconds, e.g.
+                        -dvs_exposure duration .005; count n: Count n events
+                        per frame, -dvs_exposure count 5000; area_event N M:
+                        frame ends when any area of M x M pixels fills with N
+                        events, -dvs_exposure area_count 500 64 (default:
+                        ('duration', '0.01'))
   --dvs_vid DVS_VID     Output DVS events as AVI video at frame_rate.
                         (default: dvs-video.avi)
   --dvs_vid_full_scale DVS_VID_FULL_SCALE
                         Set full scale event count histogram count for DVS
                         videos to be this many ON or OFF events for full white
                         or black. (default: 2)
-  --output_height OUTPUT_HEIGHT
-                        Height of output DVS data in pixels. If None, same as
-                        input video. (default: None)
-  --output_width OUTPUT_WIDTH
-                        Width of output DVS data in pixels. If None, same as
-                        input video. (default: None)
-  --dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]
-                        Mode to finish DVS event integration: duration time:
-                        accumulation time in seconds; count n: count n events
-                        per frame; area_event N M: frame ends when any area of
-                        M x M pixels fills with N events (default: None)
 Output: DVS events:
   --dvs_h5 DVS_H5       Output DVS events as hdf5 event database. (default:
                         None)
@@ -241,7 +265,7 @@ Output: DVS events:
 Run with no --input to open file dialog
 Process finished with exit code 0
 ```
-You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.
+You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.  Or leave out all options and just use the file chooser to select the movie.
 
 ```
 python v2e.py -i input/tennis.mov --timestamp_resolution=.005 --dvs_exposure duration 0.005 --output_folder=output/tennis --overwrite --pos_thres=.15 --neg_thres=.15 --sigma_thres=0.03 --dvs_aedat2 tennis.aedat --output_width=346 --output_height=260 --stop_time=3
