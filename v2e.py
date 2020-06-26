@@ -22,12 +22,6 @@ from tempfile import TemporaryDirectory, TemporaryFile
 from engineering_notation import EngNumber  as eng # only from pip
 from tqdm import tqdm
 
-# may only apply to windows
-try:
-    from scripts.regsetup import description
-    from gooey import Gooey  # pip install Gooey
-except Exception:
-    pass
 
 import v2e.desktop as desktop
 from v2e.v2e_utils import all_images, read_image, \
@@ -52,10 +46,14 @@ logging.addLevelName(
         logging.ERROR))
 logger = logging.getLogger(__name__)
 
+# may only apply to windows
+try:
+    from scripts.regsetup import description
+    from gooey import Gooey  # pip install Gooey
+except Exception:
+    logger.warning('Gooey GUI builder not available, will use command line arguments.\n'
+                   'Install with "pip install Gooey". See README')
 
-# uncomment if you are lucky enough to be able to install Gooey,
-# which requires wxPython
-# @Gooey(program_name="v2e", default_size=(575, 600))
 def get_args():
     parser = argparse.ArgumentParser(
         description='v2e: generate simulated DVS events from video.',
@@ -72,7 +70,6 @@ def get_args():
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
     return args
-
 
 def makeOutputFolder(output_folder_base, suffix_counter,
                      overwrite, unique_output_folder):
@@ -102,7 +99,15 @@ def makeOutputFolder(output_folder_base, suffix_counter,
 
 
 def main():
-    args = get_args()
+    try:
+        ga=Gooey(get_args, program_name="v2e", default_size=(575, 600))
+        logger.info('Use --ignore-gooey to disable GUI and run with command line arguments')
+        ga()
+    except:
+        logger.warning('Gooey GUI not available, using command line arguments. \n'
+                       'You can try to install with "pip install Gooey"')
+    args=get_args()
+    # args=get_args()
     overwrite: bool = args.overwrite
     output_folder: str = args.output_folder
     unique_output_folder: bool = args.unique_output_folder

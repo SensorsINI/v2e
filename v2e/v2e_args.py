@@ -28,7 +28,7 @@ def v2e_args(parser):
         help="overwrites files in existing folder "
              "(checks existence of non-empty output_folder).")
     outGroupGeneral.add_argument(
-        "--unique_output_folder", default=True,
+        "--unique_output_folder", type=bool, default=True,
         help="makes unique output folder based on output_folder "
              "if non-empty output_folder already exists")
     outGroupGeneral.add_argument(
