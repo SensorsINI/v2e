@@ -85,7 +85,7 @@ See https://stackoverflow.com/questions/19048732/python-setup-py-develop-vs-inst
 _v2e_ serves multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for generating DVS events from conventional video and from specific datasets.
 
 ### GUI interface
-Uncommenting the line in _v2e.py_ with decorator _@Gooey_ and installing Gooey with _pip install Gooey_ enables a GUI interface. It is commented out, because Gooey depends on wxPython which can be difficult to install on linux systems.
+A GUI based on Gooey is automatically started if Gooey is installed. (Gooey uses wxPython which can be hard to install on linux systems.)  To disable the GUI, you can use the --ignore-gooey option.  Gooey preloads its GUI with the command line options you provide. You can then run v2e multiple times from the same GUI.
 
 ![v2e_gooey](media/v2e_Gooey.png)
 
