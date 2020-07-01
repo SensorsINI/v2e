@@ -58,6 +58,7 @@ def v2e_args(parser):
              )
 
 
+
     # DVS model parameters
     modelGroup = parser.add_argument_group('DVS model')
     modelGroup.add_argument(
@@ -96,6 +97,16 @@ def v2e_args(parser):
         "--shot_noise_rate_hz", type=float, default=0.001, # default for good lighting, very low rate
         help="Temporal noise rate of ON+OFF events in "
              "darkest parts of scene; reduced in brightest parts. ")
+
+    # common camera types
+    camGroup = modelGroup.add_argument_group('DVS camera sizes (overrides --output_width and --output_height')
+    camAction = camGroup.add_mutually_exclusive_group()
+    camAction.add_argument('--dvs128', action='store_true', help='Set size for 128x128 DVS (DVS128)')
+    camAction.add_argument('--dvs240', action='store_true', help='Set size for 240x180 DVS (Davis240)')
+    camAction.add_argument('--dvs346', action='store_true', help='Set size for 346x260 DVS (Davis346)')
+    camAction.add_argument('--dvs640', action='store_true', help='Set size for 640x480 DVS')
+    camAction.add_argument('--dvs1024', action='store_true', help='Set size for 1024x768 DVS')
+
 
     # slow motion frame synthesis
     sloMoGroup = parser.add_argument_group('SloMo upsampling (see also "DVS timestamp resolution" group)')
@@ -137,7 +148,7 @@ def v2e_args(parser):
         "--stop_time", type=float, default=None,
         help="Stop at this time in seconds in video. Use None to end at end of source video.")
 
-    # DVS output video including address space size in pixels
+    # DVS output video
     outGroupDvsVideo = parser.add_argument_group('Output: DVS video')
     outGroupDvsVideo.add_argument(
         "--dvs_exposure", nargs='+', type=str, default='duration 0.01',

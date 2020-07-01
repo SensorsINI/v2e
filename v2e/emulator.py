@@ -315,7 +315,7 @@ class EventEmulator(object):
         inten01 = None  # define for later
         if self.cutoff_hz > 0 or self.shot_noise_rate_hz > 0:  # will use later
             # make sure we get no zero time constants
-            inten01 = (np.array(new_frame, float)+1)/256
+            inten01 = (np.array(new_frame, float)+20)/275 # limit max time constant to ~1/10 of white intensity level
         if self.cutoff_hz <= 0:
             eps = 1
         else:

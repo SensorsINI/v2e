@@ -114,10 +114,6 @@ def main():
 
     output_folder = makeOutputFolder(output_folder, 0, overwrite, unique_output_folder)
 
-    if (args.output_width is not None) ^ (args.output_width is not None):
-        logger.error(
-            'provide both or neither of output_width and output_height')
-        v2e_quit()
     input_file = args.input
     if not input_file:
         input_file = inputVideoFileDialog()
@@ -125,11 +121,33 @@ def main():
             logger.info('no file selected, quitting')
             v2e_quit()
 
+
     output_width: int = args.output_width
     output_height: int = args.output_height
     if (output_width is None) ^ (output_height is None):
         logger.error('set neither or both of output_width and output_height')
         v2e_quit()
+    dvs128=args.dvs128
+    dvs240=args.dvs240
+    dvs346=args.dvs346
+    dvs640=args.dvs640
+    dvs1024=args.dvs1024
+
+    if dvs128:
+        output_width=128
+        output_height=128
+    elif dvs240:
+        output_width=240
+        output_height=180
+    elif dvs346:
+        output_width=346
+        output_height=260
+    elif dvs640:
+        output_width=640
+        output_height=480
+    elif dvs1024:
+        output_width=1024
+        output_height=768
 
     # input file checking
     if not input_file or not Path(input_file).exists():
