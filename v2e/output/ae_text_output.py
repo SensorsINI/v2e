@@ -2,7 +2,6 @@ import numpy as np
 import logging
 from engineering_notation import EngNumber  # only from pip
 import atexit
-import struct
 
 logger = logging.getLogger(__name__)
 
@@ -37,13 +36,12 @@ class DVSTextOutput:
         self.sizey=260 # adjust to your needs
 
     def cleanup(self):
-        if self.file:
-            logger.info("Closing {} after writing {} events".format(self.filepath, EngNumber(self.numEventsWritten)))
-            self.file.close()
+        self.close()
 
     def close(self):
         if self.file:
-            self.file.cleanup()
+            logger.info("Closing {} after writing {} events".format(self.filepath, EngNumber(self.numEventsWritten)))
+            self.file.close()
             self.file = None
 
     def _writeHeader(self):
