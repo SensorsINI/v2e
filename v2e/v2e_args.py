@@ -89,11 +89,11 @@ def v2e_args(parser):
              "cutoff-off 3dB frequency in Hz - "
              "see https://ieeexplore.ieee.org/document/4444573")
     modelGroup.add_argument(
-        "--leak_rate_hz", type=float, default=0.01,
+        "--leak_rate_hz", type=float, default=0.01, # typical for normal illumination levels with Davis cameras
         help="leak event rate per pixel in Hz - "
              "see https://ieeexplore.ieee.org/abstract/document/7962235")
     modelGroup.add_argument(
-        "--shot_noise_rate_hz", type=float, default=0.01,
+        "--shot_noise_rate_hz", type=float, default=0.001, # default for good lighting, very low rate
         help="Temporal noise rate of ON+OFF events in "
              "darkest parts of scene; reduced in brightest parts. ")
 
@@ -140,7 +140,7 @@ def v2e_args(parser):
     # DVS output video including address space size in pixels
     outGroupDvsVideo = parser.add_argument_group('Output: DVS video')
     outGroupDvsVideo.add_argument(
-        "--dvs_exposure", nargs='+', type=str, default=('duration','0.01'),
+        "--dvs_exposure", nargs='+', type=str, default='duration 0.01',
         help="Mode to finish DVS frame event integration: "
              "duration time: Use fixed accumulation time in seconds, e.g. -dvs_exposure duration .005; "
              "count n: Count n events per frame, -dvs_exposure count 5000; "
@@ -167,11 +167,11 @@ def v2e_args(parser):
         "--dvs_h5", type=str, default=None,
         help="Output DVS events as hdf5 event database.")
     dvsEventOutputGroup.add_argument(
-        "--dvs_aedat2", type=str, default=None,
+        "--dvs_aedat2", type=str, default='v2e-dvs-events.aedat',
         help="Output DVS events as DAVIS346 camera AEDAT-2.0 event file "
              "for jAER; one file for real and one file for v2e events.")
     dvsEventOutputGroup.add_argument(
-        "--dvs_text", type=str, default=None,
+        "--dvs_text", type=str, default='v2e-dvs-events.txt',
         help="Output DVS events as text file with one event per "
              "line [timestamp (float s), x, y, polarity (0,1)].")
     dvsEventOutputGroup.add_argument(

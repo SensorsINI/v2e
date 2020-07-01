@@ -348,9 +348,11 @@ class EventEmulator(object):
         # equivalent to some hz of ON events.
         # Actual leak rate depends on threshold for each pixel.
         # We want nominal rate leak_rate_Hz, so
+        # R_l=(dI/dt)/Theta_on, so
+        # R_l*Theta_on=dI/dt, so
+        # dI=R_l*Theta_on*dt
         if self.leak_rate_hz > 0:
-            deltaLeak = deltaTime*self.leak_rate_hz / \
-                self.pos_thres_nominal  # scalars
+            deltaLeak = deltaTime*self.leak_rate_hz * self.pos_thres_nominal  # scalars
             self.baseLogFrame -= deltaLeak  # subract so it increases ON events
 
         # log intensity (brightness) change from memorized values is computed
