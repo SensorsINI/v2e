@@ -112,9 +112,11 @@ _v2e.py_ reads a standard video (e.g. in .avi, .mp4, .mov, or .wmv) and generate
 
 Do not be intimidated by the huge number of options. Running _v2e.py_ with no arguments sets reasonable values and opens a file browser to let you select an input video. Inspect the logging output for hints.
 
+**Hint:** Note the options _[--dvs128 | --dvs240 | --dvs346 | --dvs640 | --dvs1024]_; they set output size and width to popular cameras.
+
 ```
 (base)$ conda activate pt-v2e # activate your workspace
-(pt-v2e)$ python v2e.py -h
+(pt-v2e)$ python v2e.py -h --ignore-gooey
 usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--overwrite]
               [--unique_output_folder UNIQUE_OUTPUT_FOLDER] [--no_preview]
               [--avi_frame_rate AVI_FRAME_RATE]
@@ -125,6 +127,7 @@ usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--overwrite]
               [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
               [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
               [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ]
+              [--dvs128 | --dvs240 | --dvs346 | --dvs640 | --dvs1024]
               [--slomo_model SLOMO_MODEL] [--batch_size BATCH_SIZE]
               [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO]
               [--slomo_stats_plot] [-i INPUT]
@@ -204,7 +207,7 @@ DVS model:
                         (default: 0.01)
   --shot_noise_rate_hz SHOT_NOISE_RATE_HZ
                         Temporal noise rate of ON+OFF events in darkest parts
-                        of scene; reduced in brightest parts. (default: 0.01)
+                        of scene; reduced in brightest parts. (default: 0.001)
 SloMo upsampling (see also "DVS timestamp resolution" group):
   --slomo_model SLOMO_MODEL
                         path of slomo_model checkpoint. (default:
@@ -242,7 +245,7 @@ Output: DVS video:
                         per frame, -dvs_exposure count 5000; area_event N M:
                         frame ends when any area of M x M pixels fills with N
                         events, -dvs_exposure area_count 500 64 (default:
-                        ('duration', '0.01'))
+                        duration 0.01)
   --dvs_vid DVS_VID     Output DVS events as AVI video at frame_rate.
                         (default: dvs-video.avi)
   --dvs_vid_full_scale DVS_VID_FULL_SCALE
@@ -255,17 +258,16 @@ Output: DVS events:
   --dvs_aedat2 DVS_AEDAT2
                         Output DVS events as DAVIS346 camera AEDAT-2.0 event
                         file for jAER; one file for real and one file for v2e
-                        events. (default: None)
+                        events. (default: v2e-dvs-events.aedat)
   --dvs_text DVS_TEXT   Output DVS events as text file with one event per line
                         [timestamp (float s), x, y, polarity (0,1)]. (default:
-                        None)
+                        v2e-dvs-events.txt)
   --dvs_numpy DVS_NUMPY
                         Accumulates DVS events to memory and writes final
                         numpy data file with this name holding vector of
                         events. WARNING: memory use is unbounded. (default:
                         None)
 Run with no --input to open file dialog
-Process finished with exit code 0
 ```
 You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.  Or leave out all options and just use the file chooser to select the movie.
 
