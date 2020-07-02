@@ -139,8 +139,10 @@ def v2e_args(parser):
     inGroup.add_argument(
         "--input_slowmotion_factor", type=float, default=1.0,
         help="Sets the known slow-motion factor of the input video, "
-             "i.e. if the input video is 10fps with slowmotion_factor=2, "
-             "it means that each input frame represents (1/10)s/2=50ms.")
+             "i.e. if an input video is sampled at 120fps yet is presented as a 30fps video "
+             "(has specified playback frame rate of 30Hz), "
+             "then set --input_slowdown_factor=4."
+             "It means that each input frame represents (1/30)/4s=(1/120)s")
     inGroup.add_argument(
         "--start_time", type=float, default=None,
         help="Start at this time in seconds in video. Use None to start at beginning of source video.")
