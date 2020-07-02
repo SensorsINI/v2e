@@ -138,8 +138,8 @@ def v2e_args(parser):
         help="Input video file; leave empty for file chooser dialog.")
     inGroup.add_argument(
         "--input_slowmotion_factor", type=float, default=1.0,
-        help="Sets the known slow-motion factor of the input video, "
-             "i.e. if an input video is sampled at 120fps yet is presented as a 30fps video "
+        help="Sets the known slow-motion factor of the input video, i.e. ratio of shooting frame rate to playback frame rate. "
+             "If an input video is shot at 120fps yet is presented as a 30fps video "
              "(has specified playback frame rate of 30Hz), "
              "then set --input_slowdown_factor=4."
              "It means that each input frame represents (1/30)/4s=(1/120)s")
