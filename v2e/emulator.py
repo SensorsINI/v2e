@@ -542,7 +542,7 @@ class EventEmulator(object):
 
         if len(events) > 0:
             events = np.vstack(events)
-            if self.dvs_h5 is not None:  # todo add h5 output
+            if self.dvs_h5 is not None:
                 # convert data to uint32 (microsecs) format
                 temp_events = np.copy(events)
                 temp_events[:, 0] = temp_events[:, 0] * 1e6
