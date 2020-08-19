@@ -479,7 +479,7 @@ class EventEmulator(object):
                     shotOnCord = rand01 > (1-shotOnProbThisSample)
 
                     shotOffProbThisSample = shotNoiseFactor*np.divide(
-                        self.pos_thres_nominal, self.pos_thres)
+                        self.neg_thres_nominal, self.neg_thres)
                     # array with True where OFF noise event
                     shotOffCord = rand01 < shotOffProbThisSample
 
