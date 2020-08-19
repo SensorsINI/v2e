@@ -513,7 +513,7 @@ class EventEmulator(object):
                         events_curr_iters = np.append(
                             events_curr_iters, shotEvents, axis=0)
                         #  events.append(shotEvents)
-                        self.baseLogFrame[shotOffCord] += \
+                        self.baseLogFrame[shotOffCord] -= \
                             shotOffCord[shotOffCord] * \
                             self.neg_thres[shotOffCord]
                     # end temporal noise
