@@ -406,8 +406,8 @@ class EventEmulator(object):
 
             # for each iteration, compute the ON and OFF event locations
             # for that threshold amount of change
-            pos_cord = (pos_frame > self.pos_thres * (i + 1))
-            neg_cord = (neg_frame > self.neg_thres * (i + 1))
+            pos_cord = (pos_frame >= self.pos_thres * (i + 1))
+            neg_cord = (neg_frame >= self.neg_thres * (i + 1))
 
             # generate events
             pos_event_xy = np.where(pos_cord)
