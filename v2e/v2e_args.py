@@ -43,11 +43,12 @@ def v2e_args(parser):
     timestampResolutionGroup= parser.add_argument_group('DVS timestamp resolution')
     timestampResolutionGroup.add_argument(
         "--auto_timestamp_resolution", default=True,
-        help="if False, --timestamp_resolution sets the upsampling factor for input video. "
-             "If True, upsampling_factor is automatically determined to limit maximum movement between frames to 1 pixel")
+        help="(Disabled by --disable_slomo. )If False, --timestamp_resolution sets the upsampling factor for input video. "
+             "If True, upsampling_factor is automatically determined to limit maximum movement between frames to 1 pixel. ")
     timestampResolutionGroup.add_argument(
         "--timestamp_resolution", type=float,
-        help="Desired DVS timestamp resolution in seconds; "
+        help="(Disabled by --disable_slomo.)"
+             "Desired DVS timestamp resolution in seconds; "
              "determines slow motion upsampling factor;  "
              "the video will be upsampled from source fps to "
              "achieve the at least this timestamp resolution."
@@ -110,6 +111,9 @@ def v2e_args(parser):
 
     # slow motion frame synthesis
     sloMoGroup = parser.add_argument_group('SloMo upsampling (see also "DVS timestamp resolution" group)')
+    sloMoGroup.add_argument(
+        "--disable_slomo", action='store_true',
+        help="Disables slomo interpolation; the output DVS events will have exactly the timestamp resolution of the source video (which is perhaps modified by --input_slowmotion_factor).")
     sloMoGroup.add_argument(
         "--slomo_model", type=str, default=prepend+"input/SuperSloMo39.ckpt",
         help="path of slomo_model checkpoint.")

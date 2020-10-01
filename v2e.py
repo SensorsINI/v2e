@@ -160,8 +160,9 @@ def main():
     input_slowmotion_factor:float = args.input_slowmotion_factor
     timestamp_resolution:float = args.timestamp_resolution
     auto_timestamp_resolution:bool=args.auto_timestamp_resolution
+    disable_slomo:bool=args.disable_slomo
 
-    if auto_timestamp_resolution==False and timestamp_resolution is None:
+    if not disable_slomo and auto_timestamp_resolution==False and timestamp_resolution is None:
         logger.error('if --auto_timestamp_resolution=False, then --timestamp_resolution must be set to '
                      'some desired DVS event timestamp resolution in seconds, '
                      'e.g. 0.01')
@@ -237,10 +238,12 @@ def main():
     slomoTimestampResolutionS = None
 
     slowdown_factor=None
-    if not auto_timestamp_resolution:
-        slowdown_factor = int(np.ceil(srcFrameIntervalS / timestamp_resolution))
-        if slowdown_factor <= 1:
-            slowdown_factor = 1
+    if disable_slomo:
+        logger.info('slomo interpolation disabled by command line option; output DVS timestamps will have source frame interval resolution')
+        slowdown_factor=NO_SLOWDOWN
+    elif not auto_timestamp_resolution:
+        if slowdown_factor < NO_SLOWDOWN:
+            slowdown_factor = NO_SLOWDOWN
             logger.warning(
                 'timestamp resolution={}s is >= source '
                 'frame interval={}s, will not upsample'
@@ -268,7 +271,7 @@ def main():
                     'maximum interframe motion to 1 pixel')
 
     # the SloMo model, set no SloMo model if no slowdown
-    if auto_timestamp_resolution or slowdown_factor != NO_SLOWDOWN:
+    if not disable_slomo and ( auto_timestamp_resolution or slowdown_factor != NO_SLOWDOWN ):
         slomo = SuperSloMo(
             model=args.slomo_model, auto_upsample=auto_timestamp_resolution, upsampling_factor=slowdown_factor,
             video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo,
