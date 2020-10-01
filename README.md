@@ -128,9 +128,9 @@ usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--overwrite]
               [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
               [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ]
               [--dvs128 | --dvs240 | --dvs346 | --dvs640 | --dvs1024]
-              [--slomo_model SLOMO_MODEL] [--batch_size BATCH_SIZE]
-              [--vid_orig VID_ORIG] [--vid_slomo VID_SLOMO]
-              [--slomo_stats_plot] [-i INPUT]
+              [--disable_slomo] [--slomo_model SLOMO_MODEL]
+              [--batch_size BATCH_SIZE] [--vid_orig VID_ORIG]
+              [--vid_slomo VID_SLOMO] [--slomo_stats_plot] [-i INPUT]
               [--input_slowmotion_factor INPUT_SLOWMOTION_FACTOR]
               [--start_time START_TIME] [--stop_time STOP_TIME]
               [--dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]]
@@ -158,15 +158,17 @@ Output: General:
                         playback rate. (default: 30)
 DVS timestamp resolution:
   --auto_timestamp_resolution AUTO_TIMESTAMP_RESOLUTION
-                        if False, --timestamp_resolution sets the upsampling
-                        factor for input video. If True, upsampling_factor is
+                        (Disabled by --disable_slomo. )If False,
+                        --timestamp_resolution sets the upsampling factor for
+                        input video. If True, upsampling_factor is
                         automatically determined to limit maximum movement
-                        between frames to 1 pixel (default: True)
+                        between frames to 1 pixel. (default: True)
   --timestamp_resolution TIMESTAMP_RESOLUTION
-                        Desired DVS timestamp resolution in seconds;
-                        determines slow motion upsampling factor; the video
-                        will be upsampled from source fps to achieve the at
-                        least this timestamp resolution.I.e. slowdown_factor =
+                        (Disabled by --disable_slomo.)Desired DVS timestamp
+                        resolution in seconds; determines slow motion
+                        upsampling factor; the video will be upsampled from
+                        source fps to achieve the at least this timestamp
+                        resolution.I.e. slowdown_factor =
                         (1/fps)/timestamp_resolution; using a high resolution
                         e.g. of 1ms will result in slow rendering since it
                         will force high upsampling ratio.Can be combind with
@@ -209,6 +211,10 @@ DVS model:
                         Temporal noise rate of ON+OFF events in darkest parts
                         of scene; reduced in brightest parts. (default: 0.001)
 SloMo upsampling (see also "DVS timestamp resolution" group):
+  --disable_slomo       Disables slomo interpolation; the output DVS events
+                        will have exactly the timestamp resolution of the
+                        source video (which is perhaps modified by
+                        --input_slowmotion_factor). (default: False)
   --slomo_model SLOMO_MODEL
                         path of slomo_model checkpoint. (default:
                         input/SuperSloMo39.ckpt)
@@ -228,9 +234,13 @@ Input:
                         (default: None)
   --input_slowmotion_factor INPUT_SLOWMOTION_FACTOR
                         Sets the known slow-motion factor of the input video,
-                        i.e. if the input video is 10fps with
-                        slowmotion_factor=2, it means that each input frame
-                        represents (1/10)s/2=50ms. (default: 1.0)
+                        i.e. ratio of shooting frame rate to playback frame
+                        rate. If an input video is shot at 120fps yet is
+                        presented as a 30fps video (has specified playback
+                        frame rate of 30Hz, according to file's FPS setting),
+                        then set --input_slowdown_factor=4.It means that each
+                        input frame represents (1/30)/4s=(1/120)s (default:
+                        1.0)
   --start_time START_TIME
                         Start at this time in seconds in video. Use None to
                         start at beginning of source video. (default: None)
