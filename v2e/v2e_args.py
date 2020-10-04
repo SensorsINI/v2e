@@ -42,7 +42,7 @@ def v2e_args(parser):
     # timestamp resolution
     timestampResolutionGroup= parser.add_argument_group('DVS timestamp resolution')
     timestampResolutionGroup.add_argument(
-        "--auto_timestamp_resolution", default=True,
+        "--auto_timestamp_resolution", action='store_true',
         help="(Disabled by --disable_slomo. )If False, --timestamp_resolution sets the upsampling factor for input video. "
              "If True, upsampling_factor is automatically determined to limit maximum movement between frames to 1 pixel. ")
     timestampResolutionGroup.add_argument(

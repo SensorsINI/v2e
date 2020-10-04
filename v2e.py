@@ -362,7 +362,8 @@ def main():
     with TemporaryDirectory() as source_frames_dir:
         inputWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         inputHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        inputChannels = 3
+        inputChannels = 1 if int(cap.get(cv2.CAP_PROP_MONOCHROME)) else 3
+        logger.info('Input video {} has W={} x H={} frames each with {} channels'.format(input_file, inputWidth,inputHeight,inputChannels))
 
         if (output_width is None) and (output_height is None):
             output_width = inputWidth
