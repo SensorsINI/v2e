@@ -313,6 +313,18 @@ The _-dvs_params_ argument sets reasonable DVS model parameters for high and low
 
 See our technical paper for futher information about these parameters.
  
+ ### Automatic vs manual DVS timestamp resolution
+ The output DVS timestamps will be quantized to some value depending on options chosen.
+ 
+  *  _--disable_slomo_ will disable slomo interpolation and the DVS events will have exactly the times of the input video, perhaps modified by --input_slowmotion_factor
+  *  _--timestamp_resolution=X_ will upsample as needed to obtain this desired timestamp resolution _X_ in seconds
+  *  _--auto_timestamp_resolution_ will upsample in each _--batch_size_ frames using the computed optical flow to limit motion per frame to at most 1 pixel. In this case, turning on _--slomo_stats_plot_ will generate a plot like the following, which came from a driving video where the car sped up during part of the video:
+ 
+ ![auto_slomo_stats](media/slomo_stats.png)
+ 
+ This plot shows the actual timestamps of the interpolated frames (in orange) and the frame intervals for each batch of frames (in blue).
+ 
+ 
  ### Frame rate and DVS timestamp resolution in v2e
 There are several different 'frame rates' in v2e. On opening the input video, v2e reads the frame rate of the video and assumes the video is shot in real time, except that you can specify a _--input_slowmotion_factor_ slowdown_factor if the video is already a slow-motion video. The desired DVS timestamp resolution is combined with the source frame rate to compute the slow-motion upsampling factor. The output DVS AVI video is then generated using a _--dvs-exposure_ method.
 
