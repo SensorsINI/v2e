@@ -33,7 +33,7 @@ CUDA GPU
 
 Code includes pycharm project files for your convenience.
 
-We highly recommend running the code in virtual environment. Conda is always your best friend. :).
+We highly recommend running the code in a virtual environment. Conda is always your best friend. :).
 See https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#create-env-from-file
 
 
@@ -41,6 +41,7 @@ For conda users, you can create your _v2e_ environment and install everything to
 ```bash
 conda env create -f environment.yml
 ```
+
 
 You can then update everything in your _v2e_ conda environment with the following:
 
@@ -60,6 +61,10 @@ Part of the v2e is `numba` accelerated, please install it via:
 ```bash
 pip install numba
 ```
+#### Note about Gooey during environment install
+If you get error about installing the Gooey library, you can comment it out from requirements.txt or environment.yml.
+[Gooey](https://github.com/chriskiehl/Gooey) is a libary that enables a GUI inteface for running v2e. It is optional. If you do not install Gooey then you run v2e from the command line or IDE launchers.
+On some platforms (linux) Gooey can be very hard to install because the required python wheels are not available. (A python _wheel_ is an archive named in a particular way to indentify the target platform.)
 
 ## Install the Package
 
@@ -85,7 +90,7 @@ See https://stackoverflow.com/questions/19048732/python-setup-py-develop-vs-inst
 _v2e_ serves multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for generating DVS events from conventional video and from specific datasets.
 
 ### GUI interface
-A GUI based on Gooey is automatically started if Gooey is installed. (Gooey uses wxPython which can be hard to install on linux systems.)  To disable the GUI, you can use the --ignore-gooey option.  Gooey preloads its GUI with the command line options you provide. You can then run v2e multiple times from the same GUI.
+A GUI based on Gooey is automatically started if Gooey is installed. (Gooey uses wxPython which can be hard to install on linux systems; see above.)  To disable the GUI, you can use the --ignore-gooey option.  Gooey preloads its GUI with the command line options you provide. You can then run v2e multiple times from the same GUI.
 
 ![v2e_gooey](media/v2e_Gooey.png)
 
