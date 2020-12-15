@@ -122,9 +122,9 @@ Do not be intimidated by the huge number of options. Running _v2e.py_ with no ar
 ```
 (base)$ conda activate pt-v2e # activate your workspace
 (pt-v2e)$ python v2e.py -h --ignore-gooey
-usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--overwrite]
-              [--unique_output_folder UNIQUE_OUTPUT_FOLDER] [--no_preview]
-              [--avi_frame_rate AVI_FRAME_RATE]
+usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--output_in_place OUTPUT_IN_PLACE]
+              [--overwrite] [--unique_output_folder UNIQUE_OUTPUT_FOLDER]
+              [--no_preview] [--avi_frame_rate AVI_FRAME_RATE]
               [--auto_timestamp_resolution AUTO_TIMESTAMP_RESOLUTION]
               [--timestamp_resolution TIMESTAMP_RESOLUTION]
               [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
@@ -132,6 +132,7 @@ usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--overwrite]
               [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
               [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
               [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ]
+              [--show_dvs_model_state SHOW_DVS_MODEL_STATE]
               [--dvs128 | --dvs240 | --dvs346 | --dvs640 | --dvs1024]
               [--disable_slomo] [--slomo_model SLOMO_MODEL]
               [--batch_size BATCH_SIZE] [--vid_orig VID_ORIG]
@@ -151,6 +152,9 @@ optional arguments:
 Output: General:
   -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
                         folder to store outputs. (default: v2e-output)
+  --output_in_place OUTPUT_IN_PLACE
+                        store output files in same folder as source video.
+                        (default: True)
   --overwrite           overwrites files in existing folder (checks existence
                         of non-empty output_folder). (default: False)
   --unique_output_folder UNIQUE_OUTPUT_FOLDER
@@ -163,13 +167,13 @@ Output: General:
                         playback rate. (default: 30)
 DVS timestamp resolution:
   --auto_timestamp_resolution AUTO_TIMESTAMP_RESOLUTION
-                        (Disabled by --disable_slomo. )If False,
+                        (Ignored by --disable_slomo.) If True (default),
+                        upsampling_factor is automatically determined to limit
+                        maximum movement between frames to 1 pixel.If False,
                         --timestamp_resolution sets the upsampling factor for
-                        input video. If True, upsampling_factor is
-                        automatically determined to limit maximum movement
-                        between frames to 1 pixel. (default: True)
+                        input video. (default: True)
   --timestamp_resolution TIMESTAMP_RESOLUTION
-                        (Disabled by --disable_slomo.)Desired DVS timestamp
+                        (Ignored by --disable_slomo.) Desired DVS timestamp
                         resolution in seconds; determines slow motion
                         upsampling factor; the video will be upsampled from
                         source fps to achieve the at least this timestamp
@@ -177,8 +181,8 @@ DVS timestamp resolution:
                         (1/fps)/timestamp_resolution; using a high resolution
                         e.g. of 1ms will result in slow rendering since it
                         will force high upsampling ratio.Can be combind with
-                        --auto_timestamp_resolution to limit upsamplingt to a
-                        minimum value. (default: None)
+                        --auto_timestamp_resolution to limit upsampling to a
+                        maximum limit value. (default: None)
 DVS model:
   --output_height OUTPUT_HEIGHT
                         Height of output DVS data in pixels. If None, same as
@@ -215,6 +219,9 @@ DVS model:
   --shot_noise_rate_hz SHOT_NOISE_RATE_HZ
                         Temporal noise rate of ON+OFF events in darkest parts
                         of scene; reduced in brightest parts. (default: 0.001)
+  --show_dvs_model_state SHOW_DVS_MODEL_STATE
+                        one of new_frame baseLogFrame lpLogFrame0 lpLogFrame1
+                        diff_frame (without quotes) (default: None)
 SloMo upsampling (see also "DVS timestamp resolution" group):
   --disable_slomo       Disables slomo interpolation; the output DVS events
                         will have exactly the timestamp resolution of the
@@ -244,8 +251,10 @@ Input:
                         presented as a 30fps video (has specified playback
                         frame rate of 30Hz, according to file's FPS setting),
                         then set --input_slowdown_factor=4.It means that each
-                        input frame represents (1/30)/4s=(1/120)s (default:
-                        1.0)
+                        input frame represents (1/30)/4 s=(1/120)s.If input is
+                        video with intended frame intervals of 1ms that is in
+                        AVI file with default 30 FPS playback spec, then use
+                        ((1/30)s)*(1000Hz)=33.33333. (default: 1.0)
   --start_time START_TIME
                         Start at this time in seconds in video. Use None to
                         start at beginning of source video. (default: None)

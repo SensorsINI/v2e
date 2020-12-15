@@ -39,21 +39,32 @@ logger = logging.getLogger(__name__)
 def lin_log(x, threshold=20):
     """
     linear mapping + logrithmic mapping.
-    @author: Zhe He
-    @contact: hezhehz@live.cn
+
+    :param x: float or ndarray
+        the input linear value
+    :param threshold: float threshold 0-255
+        the threshold for transisition from linear to log mapping
+
+    @author: Tobi Delbruck, Zhe He
+    @contact: tobi@ini.uzh.ch
     """
 
     # converting x into np.float32.
-    if x.dtype is not np.float32:
-        x = x.astype(np.float32)
+    if x.dtype is not np.float64: # note float64 to get rounding to work
+        x = x.astype(np.float64)
     f = (1 / (threshold)) * np.log(threshold)
 
     y = np.piecewise(
         x,
-        [x < threshold, x >= threshold],
+        [x <= threshold, x > threshold],
         [lambda x: x * f,
          lambda x: np.log(x)]
     )
+    # important, we do a floating point round to some digits of precision
+    # to avoid that adding threshold and subtracting it again results in different
+    # number because first addition shoots some bits off to never-never land, thus preventing the OFF events
+    # that ideally follow ON events when object moves by
+    y=np.around(y,5)
 
     return y
 
@@ -82,7 +93,7 @@ class EventEmulator(object):
             dvs_text: str = None,
             # change as you like to see 'baseLogFrame',
             # 'lpLogFrame', 'diff_frame'
-            show_input: str = None
+            show_dvs_model_state: str = None
             # dvs_rosbag=None
     ):
         """
@@ -108,8 +119,8 @@ class EventEmulator(object):
             fix it to nonzero value to get same mismatch every time
         dvs_aedat2, dvs_h5, dvs_text: str
             names of output data files or None
-        show_input: str,
-            None or 'new_frame' 'baseLogFrame','lpLogFrame', 'diff_frame'
+        show_dvs_model_state: str,
+            None or 'new_frame' 'baseLogFrame','lpLogFrame0','lpLogFrame1', 'diff_frame'
         """
 
         logger.info(
@@ -130,7 +141,7 @@ class EventEmulator(object):
         self.shot_noise_rate_hz = shot_noise_rate_hz
         self.output_width = None
         self.output_height = None  # set on first frame
-        self.show_input = show_input
+        self.show_input = show_dvs_model_state
         if seed > 0:
             np.random.seed(seed)
 
@@ -205,13 +216,14 @@ class EventEmulator(object):
         # so diff will be zero for first frame
         self.lpLogFrame1 = np.copy(self.baseLogFrame)
         # take the variance of threshold into account.
-        self.pos_thres = np.random.normal(
-            self.pos_thres, self.sigma_thres, firstFrameLinear.shape)
-        # to avoid the situation where the threshold is too small.
-        self.pos_thres[self.pos_thres < 0.01] = 0.01
-        self.neg_thres = np.random.normal(
-            self.neg_thres, self.sigma_thres, firstFrameLinear.shape)
-        self.neg_thres[self.neg_thres < 0.01] = 0.01
+        if self.sigma_thres>0:
+            self.pos_thres = np.random.normal(
+                self.pos_thres, self.sigma_thres, firstFrameLinear.shape)
+            # to avoid the situation where the threshold is too small.
+            self.pos_thres[self.pos_thres < 0.01] = 0.01
+            self.neg_thres = np.random.normal(
+                self.neg_thres, self.sigma_thres, firstFrameLinear.shape)
+            self.neg_thres[self.neg_thres < 0.01] = 0.01
 
     def set_dvs_params(self, model: str):
         if model == 'clean':
@@ -265,7 +277,7 @@ class EventEmulator(object):
     def _show(self, inp: np.ndarray):
         min = np.min(inp)
         img = ((inp - min) / (np.max(inp) - min))
-        cv2.imshow(__name__, img)
+        cv2.imshow(__name__+':'+self.show_input, img)
         cv2.waitKey(30)
 
     def generate_events(
@@ -317,16 +329,18 @@ class EventEmulator(object):
             # make sure we get no zero time constants
             inten01 = (np.array(new_frame, float)+20)/275 # limit max time constant to ~1/10 of white intensity level
         if self.cutoff_hz <= 0:
-            eps = 1
+            self.lpLogFrame0 = logNewFrame
+            # then 2nd internal state (output) is updated from first
+            self.lpLogFrame1 = logNewFrame
         else:
             tau = (1 / (np.pi * 2 * self.cutoff_hz))
             # make the update proportional to the local intensity
             eps = inten01 * (deltaTime / tau)
             eps[eps[:] > 1] = 1  # keep filter stable
-        # first internal state is updated
-        self.lpLogFrame0 = (1-eps)*self.lpLogFrame0+eps*logNewFrame
-        # then 2nd internal state (output) is updated from first
-        self.lpLogFrame1 = (1-eps)*self.lpLogFrame1+eps*self.lpLogFrame0
+            # first internal state is updated
+            self.lpLogFrame0 = (1-eps)*self.lpLogFrame0+eps*logNewFrame
+            # then 2nd internal state (output) is updated from first
+            self.lpLogFrame1 = (1-eps)*self.lpLogFrame1+eps*self.lpLogFrame0
 
         # # Noise: add infinite bandwidth white noise to samples
         # # after lowpass filtering,
@@ -363,9 +377,11 @@ class EventEmulator(object):
         if self.show_input:
             if self.show_input == 'new_frame':
                 self._show(new_frame)
-            elif self.show_input == 'lpLogFrame':
-                self._show(self.lpLogFrame1)
-            elif self.show_input == 'lpLogFrame':
+            elif self.show_input == 'baseLogFrame':
+                self._show(self.baseLogFrame)
+            elif self.show_input == 'lpLogFrame0':
+                self._show(self.lpLogFrame0)
+            elif self.show_input == 'lpLogFrame1':
                 self._show(self.lpLogFrame1)
             elif self.show_input == 'diff_frame':
                 self._show(diff_frame)
@@ -380,11 +396,13 @@ class EventEmulator(object):
         neg_frame[negIdxs] = np.abs(diff_frame[negIdxs])
 
         # compute quantized numbers of ON events for each pixel
-        pos_evts_frame = pos_frame//self.pos_thres
+        pos_evts_frame = pos_frame // self.pos_thres
+        pos_evts_frame=pos_evts_frame.astype(int)
         # compute number of times to pass over array to compute
         # separated ON events
         pos_iters = int(pos_evts_frame.max())
         neg_evts_frame = neg_frame // self.neg_thres  # same for OFF events
+        neg_evts_frame=neg_evts_frame.astype(int)
         neg_iters = int(neg_evts_frame.max())
 
         # ERROR: why are you here?
@@ -406,8 +424,10 @@ class EventEmulator(object):
 
             # for each iteration, compute the ON and OFF event locations
             # for that threshold amount of change
-            pos_cord = (pos_frame >= self.pos_thres * (i + 1))
-            neg_cord = (neg_frame >= self.neg_thres * (i + 1))
+            # pos_cord = (pos_frame >= self.pos_thres * (i + 1))
+            # neg_cord = (neg_frame >= self.neg_thres * (i + 1))
+            pos_cord = (pos_evts_frame == i+1)
+            neg_cord = (neg_evts_frame == i+1)
 
             # generate events
             pos_event_xy = np.where(pos_cord)
@@ -534,10 +554,10 @@ class EventEmulator(object):
                 # the current frame brightness
                 if num_pos_events > 0:
                     self.baseLogFrame[pos_cord] += \
-                        pos_evts_frame[pos_cord] * self.pos_thres[pos_cord]
+                        pos_evts_frame[pos_cord] * ( self.pos_thres[pos_cord] if self.sigma_thres>0 else self.pos_thres)
                 if num_neg_events > 0:
                     self.baseLogFrame[neg_cord] -= \
-                        neg_evts_frame[neg_cord] * self.neg_thres[neg_cord]
+                        neg_evts_frame[neg_cord] * ( self.neg_thres[neg_cord] if self.sigma_thres>0 else self.neg_thres)
                     # neg_thres is >0
 
         if len(events) > 0:

@@ -84,7 +84,7 @@ def checkAddSuffix(path: str, suffix: str):
         return os.path.splitext(path)[0]+suffix
 
 
-def video_writer(output_path, height, width, frame_rate=30):
+def video_writer(output_path, height, width, frame_rate=30, fourcc=OUTPUT_VIDEO_CODEC_FOURCC):
     """ Return a video writer.
 
     Parameters
@@ -97,13 +97,13 @@ def video_writer(output_path, height, width, frame_rate=30):
         width of a frame.
     frame_rate: int
         playback frame rate in Hz
-
+    fourcc: cv2.VideoWriter_fourcc
+        codec, None results in default XVID
     Returns
     -------
     an instance of cv2.VideoWriter.
     """
-
-    fourcc = cv2.VideoWriter_fourcc(*OUTPUT_VIDEO_CODEC_FOURCC)
+    fourcc = cv2.VideoWriter_fourcc(*fourcc)
     out = cv2.VideoWriter(
                 output_path,
                 fourcc,

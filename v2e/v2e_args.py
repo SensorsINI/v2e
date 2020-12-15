@@ -24,6 +24,9 @@ def v2e_args(parser):
         "-o", "--output_folder", type=str, default='v2e-output',
         help="folder to store outputs.")
     outGroupGeneral.add_argument(
+        "--output_in_place", type=bool, default=True,
+        help="store output files in same folder as source video.")
+    outGroupGeneral.add_argument(
         "--overwrite", action="store_true",
         help="overwrites files in existing folder "
              "(checks existence of non-empty output_folder).")
@@ -99,6 +102,9 @@ def v2e_args(parser):
         "--shot_noise_rate_hz", type=float, default=0.001, # default for good lighting, very low rate
         help="Temporal noise rate of ON+OFF events in "
              "darkest parts of scene; reduced in brightest parts. ")
+    modelGroup.add_argument(
+        "--show_dvs_model_state", type=str, default=None, # default for good lighting, very low rate
+        help="one of new_frame baseLogFrame lpLogFrame0 lpLogFrame1 diff_frame (without quotes)")
 
     # common camera types
     camGroup = modelGroup.add_argument_group('DVS camera sizes (overrides --output_width and --output_height')
@@ -147,7 +153,9 @@ def v2e_args(parser):
              "If an input video is shot at 120fps yet is presented as a 30fps video "
              "(has specified playback frame rate of 30Hz, according to file's FPS setting), "
              "then set --input_slowdown_factor=4."
-             "It means that each input frame represents (1/30)/4s=(1/120)s")
+             "It means that each input frame represents (1/30)/4 s=(1/120)s."
+             "If input is video with intended frame intervals of 1ms that is in AVI file "
+             "with default 30 FPS playback spec, then use ((1/30)s)*(1000Hz)=33.33333.")
     inGroup.add_argument(
         "--start_time", type=float, default=None,
         help="Start at this time in seconds in video. Use None to start at beginning of source video.")

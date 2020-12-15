@@ -108,18 +108,24 @@ def main():
                        'You can try to install with "pip install Gooey"')
     args=get_args()
     # args=get_args()
-    overwrite: bool = args.overwrite
-    output_folder: str = args.output_folder
-    unique_output_folder: bool = args.unique_output_folder
-
-    output_folder = makeOutputFolder(output_folder, 0, overwrite, unique_output_folder)
-
     input_file = args.input
     if not input_file:
         input_file = inputVideoFileDialog()
         if not input_file:
             logger.info('no file selected, quitting')
             v2e_quit()
+
+    overwrite: bool = args.overwrite
+    output_folder: str = args.output_folder
+    unique_output_folder: bool = args.unique_output_folder
+    output_in_place: bool=args.output_in_place
+
+    if output_in_place:
+        parts=os.path.split(input_file)
+        output_folder=parts[0]
+    else:
+        output_folder = makeOutputFolder(output_folder, 0, overwrite, unique_output_folder)
+
 
 
     output_width: int = args.output_width
@@ -328,7 +334,7 @@ def main():
         sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,
         leak_rate_hz=leak_rate_hz, shot_noise_rate_hz=shot_noise_rate_hz,
         output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2,
-        dvs_text=dvs_text)
+        dvs_text=dvs_text, show_dvs_model_state=args.show_dvs_model_state)
 
     if args.dvs_params:
         emulator.set_dvs_params(args.dvs_params)

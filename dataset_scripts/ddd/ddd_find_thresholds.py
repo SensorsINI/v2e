@@ -113,7 +113,7 @@ if __name__ == "__main__":
         off_diffs = np.zeros_like(thresholds)
         off_diffs[:]=np.nan
 
-        emulator = EventEmulator(output_folder=None, show_input=None) # 'baseLogFrame'
+        emulator = EventEmulator(output_folder=None, show_dvs_model_state=None) # 'baseLogFrame'
         k=0
         min_pos_diff=np.inf
         min_neg_diff=np.inf
