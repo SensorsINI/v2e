@@ -2,11 +2,14 @@
 
 Python torch + opencv code to go from conventional stroboscopic video frames with low frame rate into realistic synthetic DVS event streams with much higher effective timing precision. v2e includes finite photoreceptor bandwidth, pixel to pixel event threshold variation, and noise 'leak' events.
 
-![v2e-tennis-example](media/v2e-tennis-split-screen.gif)
-
 See the [v2e home page](https://sites.google.com/view/video2events/home) for videos and further information.
 
+![v2e-tennis-example](media/v2e-tennis-split-screen.gif)
+
 Vote for [new v2e features](https://docs.google.com/forms/d/e/1FAIpQLSdJoIH3wBkPANWTng56VeXiItkh_fl5Lz3QwZIpQ6ut1AMFCw/viewform?usp=sf_link).
+
+## News
+ - 19 Dec 2020: Added ability to generate input frames from python class. See [moving-dot.py](https://github.com/SensorsINI/v2e/blob/master/moving_dot.py) and command line argument --synthetic_input=<module_name>
 
 ## Contact
 Yuhuang Hu (yuhuang.hu@ini.uzh.ch)

@@ -170,7 +170,11 @@ def v2e_args(parser):
         help=f"Input from class SYNTHETIC_INPUT that has methods next_frame() and total_frames()."
              "Disables file input and SuperSloMo frame interpolation. "
              f"SYNTHETIC_INPUT.next_frame() should return a frame of the correct resolution (see DVS model arguments) which is array[y][x] with "
-             "pixel [0][0] at upper left corner and pixel values 0-255. SYNTHETIC_INPUT must be resolvable from the classpath. See example moving_dot.py.")
+             "pixel [0][0] at upper left corner and pixel values 0-255. "
+             "SYNTHETIC_INPUT must be resolvable from the classpath. "
+             "SYNTHETIC_INPUT is the module name without .py suffix."
+             "See example moving_dot.py."
+    )
 
     # DVS output video
     outGroupDvsVideo = parser.add_argument_group('Output: DVS video')
