@@ -143,7 +143,7 @@ def v2e_args(parser):
     sloMoGroup.add_argument('--slomo_stats_plot', action='store_true', help="show a plot of slomo statistics")
 
     # input file handling
-    inGroup = parser.add_argument_group('Input')
+    inGroup = parser.add_argument_group('Input file handling')
     inGroup.add_argument(
         "-i", "--input", type=str,
         help="Input video file; leave empty for file chooser dialog.")
@@ -162,6 +162,15 @@ def v2e_args(parser):
     inGroup.add_argument(
         "--stop_time", type=float, default=None,
         help="Stop at this time in seconds in video. Use None to end at end of source video.")
+
+    # synthetic input handling
+    syntheticInputGroup = parser.add_argument_group('Synthetic input')
+    syntheticInputGroup.add_argument(
+        "--synthetic_input", type=str,
+        help=f"Input from class SYNTHETIC_INPUT that has methods next_frame() and total_frames()."
+             "Disables file input and SuperSloMo frame interpolation. "
+             f"SYNTHETIC_INPUT.next_frame() should return a frame of the correct resolution (see DVS model arguments) which is array[y][x] with "
+             "pixel [0][0] at upper left corner and pixel values 0-255. SYNTHETIC_INPUT must be resolvable from the classpath. See example moving_dot.py.")
 
     # DVS output video
     outGroupDvsVideo = parser.add_argument_group('Output: DVS video')

@@ -281,7 +281,7 @@ Output: DVS events:
                         None)
   --dvs_aedat2 DVS_AEDAT2
                         Output DVS events as DAVIS346 camera AEDAT-2.0 event
-                        file for jAER; one file for real and one file for v2e
+                        file for jAER; one file for real events (when using ddd20-v2e) and one file for v2e
                         events. (default: v2e-dvs-events.aedat)
   --dvs_text DVS_TEXT   Output DVS events as text file with one event per line
                         [timestamp (float s), x, y, polarity (0,1)]. (default:

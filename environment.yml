@@ -43,6 +43,6 @@ dependencies:
   - numba
   - pip:
     - engineering-notation==0.6.0
-    - Gooey
+#    - Gooey
 prefix: C:\Users\tobid\miniconda3\envs\v2e
 
