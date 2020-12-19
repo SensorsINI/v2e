@@ -139,6 +139,7 @@ usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--output_in_place OUTPUT_IN_PLACE]
               [--vid_slomo VID_SLOMO] [--slomo_stats_plot] [-i INPUT]
               [--input_slowmotion_factor INPUT_SLOWMOTION_FACTOR]
               [--start_time START_TIME] [--stop_time STOP_TIME]
+              [--synthetic_input SYNTHETIC_INPUT]
               [--dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]]
               [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
               [--dvs_h5 DVS_H5] [--dvs_aedat2 DVS_AEDAT2]
@@ -240,7 +241,7 @@ SloMo upsampling (see also "DVS timestamp resolution" group):
                         Output slomo of src video slowed down by
                         slowdown_factor. (default: video_slomo.avi)
   --slomo_stats_plot    show a plot of slomo statistics (default: False)
-Input:
+Input file handling:
   -i INPUT, --input INPUT
                         Input video file; leave empty for file chooser dialog.
                         (default: None)
@@ -261,6 +262,17 @@ Input:
   --stop_time STOP_TIME
                         Stop at this time in seconds in video. Use None to end
                         at end of source video. (default: None)
+Synthetic input:
+  --synthetic_input SYNTHETIC_INPUT
+                        Input from class SYNTHETIC_INPUT that has methods
+                        next_frame() and total_frames().Disables file input
+                        and SuperSloMo frame interpolation.
+                        SYNTHETIC_INPUT.next_frame() should return a frame of
+                        the correct resolution (see DVS model arguments) which
+                        is array[y][x] with pixel [0][0] at upper left corner
+                        and pixel values 0-255. SYNTHETIC_INPUT must be
+                        resolvable from the classpath. See example
+                        moving_dot.py. (default: None)
 Output: DVS video:
   --dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]
                         Mode to finish DVS frame event integration: duration
@@ -281,7 +293,7 @@ Output: DVS events:
                         None)
   --dvs_aedat2 DVS_AEDAT2
                         Output DVS events as DAVIS346 camera AEDAT-2.0 event
-                        file for jAER; one file for real events (when using ddd20-v2e) and one file for v2e
+                        file for jAER; one file for real and one file for v2e
                         events. (default: v2e-dvs-events.aedat)
   --dvs_text DVS_TEXT   Output DVS events as text file with one event per line
                         [timestamp (float s), x, y, polarity (0,1)]. (default:
