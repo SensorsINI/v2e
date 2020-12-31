@@ -281,8 +281,7 @@ def main():
         if disable_slomo:
             logger.info('slomo interpolation disabled by command line option; output DVS timestamps will have source frame interval resolution')
         elif not auto_timestamp_resolution:
-            slowdown_factor=int(np.ceil(1/(srcFps*input_slowmotion_factor*timestamp_resolution)))
-            logger.info(f'--auto_timestamp_resolution is False, srcFps={srcFps} input_slowmotion_factor={input_slowmotion_factor} so slowdown_factor={slowdown_factor}')
+            slowdown_factor=int(np.ceil(srcFrameIntervalS/timestamp_resolution))
             if slowdown_factor < NO_SLOWDOWN:
                 slowdown_factor = NO_SLOWDOWN
                 logger.warning(
@@ -290,14 +289,9 @@ def main():
                     'frame interval={}s, will not upsample'
                         .format(timestamp_resolution, srcFrameIntervalS))
 
-            logger.info(
-                'Src video frame rate={:.2f} Hz with slowmotion_factor={:.2f}, \n'
-                'timestamp resolution={:.3f} ms, computed slomo upsampling factor={}'
-                    .format(
-                    srcFps, input_slowmotion_factor, timestamp_resolution * 1000,
-                    slowdown_factor))
-
             slomoTimestampResolutionS = srcFrameIntervalS / slowdown_factor
+
+            logger.info(f'--auto_timestamp_resolution is False, srcFps={srcFps}Hz input_slowmotion_factor={input_slowmotion_factor}, real src FPS={srcFps*input_slowmotion_factor}Hz, srcFrameIntervalS={eng(srcFrameIntervalS)}s, timestamp_resolution={eng(timestamp_resolution)}s, so SuperSloMo will use slowdown_factor={slowdown_factor} and have slomoTimestampResolutionS={eng(slomoTimestampResolutionS)}s')
 
             if slomoTimestampResolutionS > timestamp_resolution:
                 logger.warning(
@@ -319,7 +313,7 @@ def main():
                 preview=preview, batch_size=batch_size)
 
     if not synthetic_input and not auto_timestamp_resolution:
-        logger.info('\n events will have timestamp resolution {}s,'.format(slomoTimestampResolutionS))
+        logger.info(f'\n events will have timestamp resolution {eng(slomoTimestampResolutionS)}s,')
         if exposure_mode == ExposureMode.DURATION and dvsFps > (1 / slomoTimestampResolutionS):
             logger.warning(
                 'DVS video frame rate={}Hz is larger than '
