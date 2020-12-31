@@ -38,12 +38,14 @@ logger = logging.getLogger(__name__)
 #              np.log(x[i, j])
 def lin_log(x, threshold=20):
     """
-    linear mapping + logrithmic mapping.
+    linear mapping + logarithmic mapping.
 
     :param x: float or ndarray
-        the input linear value
+        the input linear value in range 0-255
     :param threshold: float threshold 0-255
         the threshold for transisition from linear to log mapping
+
+    :returns: the linlog value, in range 0-np.log(255) which is 0-5.55413
 
     @author: Tobi Delbruck, Zhe He
     @contact: tobi@ini.uzh.ch
@@ -64,7 +66,7 @@ def lin_log(x, threshold=20):
     # to avoid that adding threshold and subtracting it again results in different
     # number because first addition shoots some bits off to never-never land, thus preventing the OFF events
     # that ideally follow ON events when object moves by
-    y=np.around(y,5)
+    y=np.around(y,8)
 
     return y
 

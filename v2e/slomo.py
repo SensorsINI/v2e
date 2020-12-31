@@ -99,6 +99,9 @@ class SuperSloMo(object):
         self.upsampling_factor=upsampling_factor
         self.auto_upsample=auto_upsample
 
+        if upsampling_factor>100:
+            logger.warning(f'upsampling_factor={upsampling_factor} which is large, upsampling will take a long time; consider using auto_upsample to limit maximum optical to 1 pixel per upsampled frame')
+
         if self.auto_upsample:
             logger.info('using automatic upsampling mode')
         else:
@@ -316,7 +319,7 @@ class SuperSloMo(object):
             #      "using " + str(output_folder) +
             #      " to store interpolated frames")
             nImages = len(video_frame_loader)
-            logger.info(f'interpolating {len(video_frame_loader)} batches of frames using batch_size={self.batch_size}')
+            logger.info(f'interpolating {len(video_frame_loader)} batches of frames using batch_size={self.batch_size} with auto_upsample={self.auto_upsample} and upsampling_factor={self.upsampling_factor}')
             if nImages<2:
                 raise Exception('there are only {} batches in {} and we need at least 2; maybe you need to reduce batch size or increase number of input frames'.format(nImages, source_frame_path))
 

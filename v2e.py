@@ -288,7 +288,8 @@ def main():
                     'timestamp resolution={}s is >= source '
                     'frame interval={}s, will not upsample'
                         .format(timestamp_resolution, srcFrameIntervalS))
-
+            elif slowdown_factor>100 and cutoff_hz==0:
+                logger.warning(f'slowdown_factor={slowdown_factor} is >100 but cutoff_hz={cutoff_hz}. We have observed that numerical errors in SuperSloMo can cause noise that makes fake events at the upsampling rate. Recommend to set physical cutoff_hz,  e.g. --cutoff_hz=200 (or leave the default cutoff_hz)')
             slomoTimestampResolutionS = srcFrameIntervalS / slowdown_factor
 
             logger.info(f'--auto_timestamp_resolution is False, srcFps={srcFps}Hz input_slowmotion_factor={input_slowmotion_factor}, real src FPS={srcFps*input_slowmotion_factor}Hz, srcFrameIntervalS={eng(srcFrameIntervalS)}s, timestamp_resolution={eng(timestamp_resolution)}s, so SuperSloMo will use slowdown_factor={slowdown_factor} and have slomoTimestampResolutionS={eng(slomoTimestampResolutionS)}s')
