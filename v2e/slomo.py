@@ -267,6 +267,14 @@ class SuperSloMo(object):
                 'output_folder is None; it must be supplied to store '
                 'the interpolated frames')
 
+        ls=os.listdir(source_frame_path)
+        nframes=len(ls)
+        del ls
+        if nframes/self.batch_size<2:
+            logger.warning(f'only {nframes} input frames with batch_size={self.batch_size}, automatically reducing batch size to provide at least 2 batches')
+            while nframes/self.batch_size<2:
+                self.batch_size=int(self.batch_size/2)
+            logger.info(f'using batch_size={self.batch_size}')
         video_frame_loader, dim, ori_dim = self.__load_data(
             source_frame_path, frame_size)
         if not self.model_loaded:
@@ -308,8 +316,9 @@ class SuperSloMo(object):
             #      "using " + str(output_folder) +
             #      " to store interpolated frames")
             nImages = len(video_frame_loader)
+            logger.info(f'interpolating {len(video_frame_loader)} batches of frames using batch_size={self.batch_size}')
             if nImages<2:
-                raise Exception('there are less than 2 images in {}'.format(source_frame_path))
+                raise Exception('there are only {} batches in {} and we need at least 2; maybe you need to reduce batch size or increase number of input frames'.format(nImages, source_frame_path))
 
             interpTimes=None # array to hold times normalized to 1 unit per input frame interval
 

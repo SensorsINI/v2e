@@ -326,12 +326,12 @@ def main():
             'Source video {} has total {} frames with total duration {}s. '
             '\nSource video is {}fps with slowmotion_factor {} '
             '(frame interval {}s),'
-            '\nWill convert frames {} to {}\n'
+            '\nWill convert {} frames {} to {}\n'
             '(From {}s to {}s, duration {}s)'
                 .format(input_file, srcNumFrames, eng(srcTotalDuration),
                         eng(srcFps), eng(input_slowmotion_factor),
                         eng(srcFrameIntervalS),
-                        start_frame,stop_frame,
+                        stop_frame-start_frame+1, start_frame,stop_frame,
                         start_time,stop_time,(stop_time-start_time)))
 
         if exposure_mode == ExposureMode.DURATION:
@@ -425,7 +425,7 @@ def main():
                     '    --output_width=346 --output_height=260\n to match Davis346.'
                         .format(output_width, output_height))
 
-            logger.info('Resizing input frames to output size '
+            logger.info(f'Resizing {srcNumFramesToBeProccessed} input frames to output size '
                         '(with possible RGG to luma conversion)')
             for inputFrameIndex in tqdm(
                     range(srcNumFramesToBeProccessed),

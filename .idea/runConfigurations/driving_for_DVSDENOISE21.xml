@@ -13,7 +13,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/v2e.py" />
-    <option name="PARAMETERS" value="--input=input/driving.mp4 --output_folder=output/driving --timestamp_resolution=0.0001 --auto_timestamp_resolution=False --leak_rate=0 --shot=0 --cutoff_hz=0 --sigma_thr=0 --dvs_exposure duration .01 --dvs_aedat2=v2e.aedat --output_width=346 --output_height=260 --batch=32 --start=37 --stop=40 --input_slowmotion_factor=0.5" />
+    <option name="PARAMETERS" value="--input=input/driving.mp4 --output_folder=G:/Downloads/v2e-driving-dataset --timestamp_resolution=0.0001 --auto_timestamp_resolution=False --leak_rate=0 --shot=0 --cutoff_hz=0 --sigma_thr=0 --dvs_exposure duration .01 --dvs_aedat2=v2e.aedat --output_width=346 --output_height=260 --batch=32 --start=39.5 --stop=40 --input_slowmotion_factor=0.5 --show_dvs_model_state=diff_frame --pos_thres=.3 --neg_thres=.3" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="true" />
     <option name="MODULE_MODE" value="false" />
