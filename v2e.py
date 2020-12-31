@@ -145,15 +145,17 @@ def main():
     overwrite: bool = args.overwrite
     output_folder: str = args.output_folder
     unique_output_folder: bool = args.unique_output_folder
-    output_in_place: bool=args.output_in_place if not synthetic_input else False
+    output_in_place: bool=args.output_in_place if (not synthetic_input and output_folder is None) else False
     num_frames=0
     srcNumFramesToBeProccessed=0
 
     if output_in_place:
         parts=os.path.split(input_file)
         output_folder=parts[0]
+        logger.info(f'output_in_place==True so output_folder={output_folder}')
     else:
         output_folder = makeOutputFolder(output_folder, 0, overwrite, unique_output_folder)
+        logger.info(f'output_in_place==False so made output_folder={output_folder}')
 
 
 
