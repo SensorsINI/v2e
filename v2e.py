@@ -124,7 +124,7 @@ def main():
         try:
             synthetic_input_module = importlib.import_module(synthetic_input)
             synthetic_input_class = getattr(synthetic_input_module,synthetic_input)
-            synthetic_input_instance=synthetic_input_class(width=output_width, height=output_height)
+            synthetic_input_instance=synthetic_input_class(width=output_width, height=output_height,preview=not args.no_preview)
             synthetic_input_next_frame_method=getattr(synthetic_input_class,'next_frame')
             logger.info(f'successfully instanced {synthetic_input_instance} with method {synthetic_input_next_frame_method}: {synthetic_input_module.__doc__}')
 
@@ -146,6 +146,8 @@ def main():
     output_folder: str = args.output_folder
     unique_output_folder: bool = args.unique_output_folder
     output_in_place: bool=args.output_in_place if not synthetic_input else False
+    num_frames=0
+    srcNumFramesToBeProccessed=0
 
     if output_in_place:
         parts=os.path.split(input_file)
@@ -189,11 +191,16 @@ def main():
     timestamp_resolution:float = args.timestamp_resolution
     auto_timestamp_resolution:bool=args.auto_timestamp_resolution
     disable_slomo:bool=args.disable_slomo
+    slomo=None # make it later on
 
     if not disable_slomo and auto_timestamp_resolution==False and timestamp_resolution is None:
         logger.error('if --auto_timestamp_resolution=False, then --timestamp_resolution must be set to '
                      'some desired DVS event timestamp resolution in seconds, '
                      'e.g. 0.01')
+        v2e_quit()
+
+    if auto_timestamp_resolution==True and timestamp_resolution is not None:
+        logger.error(f'auto_timestamp_resolution=True and timestamp_resolution={timestamp_resolution}: Disable auto_timestamp_resolution if you want to set the timestamp_resolution.')
         v2e_quit()
 
     pos_thres = args.pos_thres
@@ -239,13 +246,13 @@ def main():
     time_run_started = time.time()
 
     slomoTimestampResolutionS = None
-    if not synthetic_input:
+    if synthetic_input is None:
         logger.info("opening video input file " + input_file)
 
         cap = cv2.VideoCapture(input_file)
         srcFps = cap.get(cv2.CAP_PROP_FPS)
         if srcFps == 0:
-            logger.error('source {} fps is 0'.format(input_file))
+            logger.error('source {} fps is 0; v2e needs to have a timescale for input video'.format(input_file))
             v2e_quit()
 
         # https://stackoverflow.com/questions/25359288/how-to-know-total-number-of-frame-in-a-file-with-cv2-in-python
@@ -268,11 +275,12 @@ def main():
         srcFrameIntervalS = (1. / srcFps) / input_slowmotion_factor
 
 
-        slowdown_factor=None
+        slowdown_factor=NO_SLOWDOWN # start with factor 1 for upsampling
         if disable_slomo:
             logger.info('slomo interpolation disabled by command line option; output DVS timestamps will have source frame interval resolution')
-            slowdown_factor=NO_SLOWDOWN
         elif not auto_timestamp_resolution:
+            slowdown_factor=int(np.ceil(1/(srcFps*input_slowmotion_factor*timestamp_resolution)))
+            logger.info(f'--auto_timestamp_resolution is False, srcFps={srcFps} input_slowmotion_factor={input_slowmotion_factor} so slowdown_factor={slowdown_factor}')
             if slowdown_factor < NO_SLOWDOWN:
                 slowdown_factor = NO_SLOWDOWN
                 logger.warning(
@@ -307,9 +315,6 @@ def main():
                 model=args.slomo_model, auto_upsample=auto_timestamp_resolution, upsampling_factor=slowdown_factor,
                 video_path=output_folder, vid_orig=vid_orig, vid_slomo=vid_slomo,
                 preview=preview, batch_size=batch_size)
-        else:
-            slomo = None
-
 
     if not synthetic_input and not auto_timestamp_resolution:
         logger.info('\n events will have timestamp resolution {}s,'.format(slomoTimestampResolutionS))

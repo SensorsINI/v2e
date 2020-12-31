@@ -1,4 +1,4 @@
-
+import argparse
 import os
 import logging
 
@@ -9,6 +9,15 @@ logger = logging.getLogger(__name__)
 # there is no slow down when slowdown_factor = 1
 NO_SLOWDOWN = 1
 
+def str2bool(v): # https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError(f'Boolean value expected, got {v}')
 
 def v2e_args(parser):
     # check and add prefix if running script in subfolder
@@ -24,14 +33,14 @@ def v2e_args(parser):
         "-o", "--output_folder", type=str, default='v2e-output',
         help="folder to store outputs.")
     outGroupGeneral.add_argument(
-        "--output_in_place", type=bool, default=True,
+        "--output_in_place", default=True, type=str2bool, const=True, nargs='?',
         help="store output files in same folder as source video.")
     outGroupGeneral.add_argument(
         "--overwrite", action="store_true",
         help="overwrites files in existing folder "
              "(checks existence of non-empty output_folder).")
     outGroupGeneral.add_argument(
-        "--unique_output_folder", type=bool, default=True,
+        "--unique_output_folder", default=True, type=str2bool, const=True, nargs='?',
         help="makes unique output folder based on output_folder "
              "if non-empty output_folder already exists")
     outGroupGeneral.add_argument(
@@ -45,7 +54,7 @@ def v2e_args(parser):
     # timestamp resolution
     timestampResolutionGroup= parser.add_argument_group('DVS timestamp resolution')
     timestampResolutionGroup.add_argument(
-        "--auto_timestamp_resolution", default=True,
+        "--auto_timestamp_resolution", default=True, type=str2bool, const=True, nargs='?',
         help="(Ignored by --disable_slomo.) "
              "If True (default), upsampling_factor is automatically determined to limit maximum movement between frames to 1 pixel."
              "If False, --timestamp_resolution sets the upsampling factor for input video.")
@@ -149,7 +158,8 @@ def v2e_args(parser):
         help="Input video file; leave empty for file chooser dialog.")
     inGroup.add_argument(
         "--input_slowmotion_factor", type=float, default=1.0,
-        help="Sets the known slow-motion factor of the input video, i.e. ratio of shooting frame rate to playback frame rate. "
+        help="Sets the known slow-motion factor of the input video, i.e. how much the video is slowed down, i.e., "
+             "the ratio of shooting frame rate to playback frame rate. "
              "If an input video is shot at 120fps yet is presented as a 30fps video "
              "(has specified playback frame rate of 30Hz, according to file's FPS setting), "
              "then set --input_slowdown_factor=4."

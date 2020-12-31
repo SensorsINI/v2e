@@ -15,7 +15,7 @@ import time
 import cv2
 import numpy as np
 import numba as nb
-from numba import jit
+from numba import jit, njit
 import logging
 import h5py
 from engineering_notation import EngNumber  # only from pip
@@ -279,6 +279,7 @@ class EventEmulator(object):
         img = ((inp - min) / (np.max(inp) - min))
         cv2.imshow(__name__+':'+self.show_input, img)
         cv2.waitKey(30)
+
 
     def generate_events(
             self, new_frame: np.ndarray,

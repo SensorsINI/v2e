@@ -7,7 +7,7 @@ from tqdm import tqdm
 from typing import List
 from engineering_notation import EngNumber  # only from pip
 from enum import Enum
-from numba import jit
+from numba import jit, njit
 
 from v2e.emulator import EventEmulator
 from v2e.v2e_utils import video_writer, read_image, checkAddSuffix
