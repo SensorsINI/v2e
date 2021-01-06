@@ -9,6 +9,11 @@ logger = logging.getLogger(__name__)
 # there is no slow down when slowdown_factor = 1
 NO_SLOWDOWN = 1
 
+def output_file_check(arg):
+    if arg.lower() == "none":
+        return None
+    return arg
+
 def str2bool(v): # https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
     if isinstance(v, bool):
         return v
@@ -214,18 +219,18 @@ def v2e_args(parser):
     # DVS output as events
     dvsEventOutputGroup = parser.add_argument_group('Output: DVS events')
     dvsEventOutputGroup.add_argument(
-        "--dvs_h5", type=str, default=None,
+        "--dvs_h5", type=output_file_check, default="None",
         help="Output DVS events as hdf5 event database.")
     dvsEventOutputGroup.add_argument(
-        "--dvs_aedat2", type=str, default='v2e-dvs-events.aedat',
+        "--dvs_aedat2", type=output_file_check, default='v2e-dvs-events.aedat',
         help="Output DVS events as DAVIS346 camera AEDAT-2.0 event file "
              "for jAER; one file for real and one file for v2e events.")
     dvsEventOutputGroup.add_argument(
-        "--dvs_text", type=str, default='v2e-dvs-events.txt',
+        "--dvs_text", type=output_file_check, default='v2e-dvs-events.txt',
         help="Output DVS events as text file with one event per "
              "line [timestamp (float s), x, y, polarity (0,1)].")
     dvsEventOutputGroup.add_argument(
-        "--dvs_numpy", type=str, default=None,
+        "--dvs_numpy", type=output_file_check, default="None",
         help="Accumulates DVS events to memory and writes final numpy data "
              "file with this name holding vector of events. "
              "WARNING: memory use is unbounded.")
