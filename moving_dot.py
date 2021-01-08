@@ -1,7 +1,6 @@
 # generates a moving dot for DVSDENOISE21 paper
 import numpy as np
 import cv2
-import numpy as np
 import os
 from tqdm import tqdm
 from v2e.v2e_utils import *
