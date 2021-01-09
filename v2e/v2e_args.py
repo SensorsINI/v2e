@@ -41,8 +41,8 @@ def v2e_args(parser):
              "(checks existence of non-empty output_folder).")
     outGroupGeneral.add_argument(
         "--unique_output_folder", default=True, type=str2bool, const=True, nargs='?',
-        help="makes unique output folder based on output_folder "
-             "if non-empty output_folder already exists")
+        help="If specifying --output_folder, makes unique output folder based on output_folder, e.g. output1 "
+             "(if non-empty output_folder already exists)")
     outGroupGeneral.add_argument(
         "--no_preview", action="store_true",
         help="disable preview in cv2 windows for faster processing.")
