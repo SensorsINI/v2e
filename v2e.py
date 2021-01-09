@@ -75,7 +75,7 @@ def get_args():
 def makeOutputFolder(output_folder_base, suffix_counter,
                      overwrite, unique_output_folder):
     if overwrite and unique_output_folder:
-        logger.error("specify either --overwrite or --unique_output_folder")
+        logger.error("specify one or the other of --overwrite and --unique_output_folder")
         v2e_quit()
     if suffix_counter > 0:
         output_folder = output_folder_base + '-' + str(suffix_counter)
@@ -144,7 +144,7 @@ def main():
 
     overwrite: bool = args.overwrite
     output_folder: str = args.output_folder
-    unique_output_folder: bool = args.unique_output_folder
+    unique_output_folder: bool = args.unique_output_folder if not overwrite else False # if user specifies overwrite, then override default of making unique output folder
     output_in_place: bool=args.output_in_place if (not synthetic_input and output_folder is None) else False
     num_frames=0
     srcNumFramesToBeProccessed=0
@@ -426,7 +426,7 @@ def main():
                     '    --output_width=346 --output_height=260\n to match Davis346.'
                         .format(output_width, output_height))
 
-            logger.info(f'Resizing {srcNumFramesToBeProccessed} input frames to output size '
+            logger.info(f'*** Stage 1/3: Resizing {srcNumFramesToBeProccessed} input frames to output size '
                         '(with possible RGG to luma conversion)')
             for inputFrameIndex in tqdm(
                     range(srcNumFramesToBeProccessed),
@@ -468,6 +468,8 @@ def main():
                 if slowdown_factor != NO_SLOWDOWN:
                     # interpolated frames are stored to tmpfolder as
                     # 1.png, 2.png, etc
+
+                    logger.info(f'*** Stage 2/3: SloMo upsampling from {source_frames_dir}')
                     interpTimes,avgUpsamplingFactor=slomo.interpolate(
                         source_frames_dir, interpFramesFolder,
                         (output_width, output_height))
@@ -479,8 +481,7 @@ def main():
                     # number of frames
                     n = len(interpFramesFilenames)
                 else:
-                    logger.info('turning npy frame files to png from {}'
-                                .format(source_frames_dir))
+                    logger.info(f'*** Stage 2/3:turning npy frame files to png from {source_frames_dir}')
                     interpFramesFilenames = []
                     n=0
                     src_files = sorted(
@@ -519,6 +520,8 @@ def main():
                     fig.show()
 
                 events = np.zeros((0, 4), dtype=np.float32)  # array to batch events for rendering to DVS frames
+
+                logger.info(f'*** Stage 3/3: emulating DVS events from {nFrames} frames')
                 with tqdm(total=nFrames, desc='dvs', unit='fr') as pbar: # instantiate progress bar
                     for i in range(nFrames):
                         fr = read_image(interpFramesFilenames[i])
