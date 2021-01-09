@@ -36,22 +36,26 @@ def check_lowpass(cutoffhz, fs, logger):
     if cutoffhz == 0 or fs == 0:
         logger.info('lowpass filter is disabled, no need for check')
         return
+    maxeps=0.3
     tau = 1 / (2 * np.pi * cutoffhz)
     dt = 1 / fs
     eps = dt / tau
-    if eps > 0.3:
+    maxdt=tau*maxeps
+    maxcutoff=maxeps/(2*np.pi*dt)
+    if eps > maxeps:
         logger.warning(
-            ' Lowpass cutoff is {}Hz with sample rate {}Hz '
-            '(sample interval {}ms),\nbut this results in tau={}ms,'
-            'and large IIR mixing factor eps={:5.3f}>0.3,\n which means your lowpass '
-            'will filter few or even 1 samples. \nDecrease --timestamp_resolution of DVS events or decrease --cutoff_frequency_hz'.format(
-                eng(cutoffhz), eng(fs), eng(dt*1000), eng(tau*1000), eps))
+            'Lowpass 3dB cutoff is f_3dB={}Hz (time constant tau={}s) with sample rate fs={}Hz (sample interval dt={}s) '
+            ',\n  but this results in large IIR mixing factor eps = dt/tau = {:5.3f} > {:4.1f} (maxeps),'
+            '\n which means the lowpass will filter few or even just last sample, i.e. you will not be lowpassing as expected.'
+            '\nWe recommend either'
+            '\n -decreasing --timestamp_resolution of DVS events below {}s'
+            '\n -decreasing --cutoff_frequency_hz below {}Hz'.format(
+                eng(cutoffhz), eng(tau), eng(fs), eng(dt), eps, maxeps, eng(maxdt),eng(maxcutoff)))
     else:
         logger.info(
-            ' Lowpass cutoff is {}Hz with sample rate {}Hz '
-            '(sample interval {}ms),\nIt has tau={}ms and '
-            'mixing factor eps={:5.3f}'.format(
-                eng(cutoffhz), eng(fs), eng(dt*1000), eng(tau*1000), eps))
+            ' Lowpass cutoff is f_3dB={}Hz with tau={}s and with sample rate fs={}Hz (sample interval dt={}s)'
+            ',\nIt has IIR mixing factor eps={:5.3f} which is less than recommended maxeps={:4.1f}'.format(
+                eng(cutoffhz), eng(tau), eng(fs), eng(dt),  eps,maxeps))
 
 
 def inputVideoFileDialog():
