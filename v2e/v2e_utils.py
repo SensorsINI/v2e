@@ -54,7 +54,7 @@ def check_lowpass(cutoffhz, fs, logger):
     else:
         logger.info(
             ' Lowpass cutoff is f_3dB={}Hz with tau={}s and with sample rate fs={}Hz (sample interval dt={}s)'
-            ',\nIt has IIR mixing factor eps={:5.3f} which is less than recommended maxeps={:4.1f}'.format(
+            ',\nIt has IIR mixing factor eps={:5.3f} which is OK because it is less than recommended maxeps={:4.1f}'.format(
                 eng(cutoffhz), eng(tau), eng(fs), eng(dt),  eps,maxeps))
 
 
