@@ -331,14 +331,14 @@ class EventEmulator(object):
         if self.cutoff_hz > 0 or self.shot_noise_rate_hz > 0:  # will use later
             # make sure we get no zero time constants
             inten01 = (np.array(new_frame, float)+20)/275 # limit max time constant to ~1/10 of white intensity level
-        if self.cutoff_hz <= 0:
+        if self.cutoff_hz <= 0: # no lowpass, just copy log frame to lp stages, note this can cause events at upsampled rates until some conditions like synthetic input from numerical roundoff problems
             self.lpLogFrame0 = logNewFrame
             # then 2nd internal state (output) is updated from first
             self.lpLogFrame1 = logNewFrame
         else:
             tau = (1 / (np.pi * 2 * self.cutoff_hz))
             # make the update proportional to the local intensity
-            eps = inten01 * (deltaTime / tau)
+            eps = inten01 * (deltaTime / tau) # the more intensity, the shorter the time constant
             eps[eps[:] > 1] = 1  # keep filter stable
             # first internal state is updated
             self.lpLogFrame0 = (1-eps)*self.lpLogFrame0+eps*logNewFrame
@@ -426,13 +426,15 @@ class EventEmulator(object):
             ts = self.t_previous + deltaTime * (i + 1) / (num_iters)
 
             # for each iteration, compute the ON and OFF event locations
-            # for that threshold amount of change
+            # for that threshold amount of change or more, these pixels need to output an event in this cycle
             # pos_cord = (pos_frame >= self.pos_thres * (i + 1))
             # neg_cord = (neg_frame >= self.neg_thres * (i + 1))
-            pos_cord = (pos_evts_frame == i+1)
-            neg_cord = (neg_evts_frame == i+1)
-
+            # already have the number of events for each pixel in pos_evts_frame, just find bool array of pixels with events in this iteration of max # events
+            pos_cord = (pos_evts_frame >= i+1)
+            neg_cord = (neg_evts_frame >= i+1)
+# TODO bug right here
             # generate events
+            #  make a list of coordinates x,y addresses of events
             pos_event_xy = np.where(pos_cord)
             num_pos_events = pos_event_xy[0].shape[0]
             neg_event_xy = np.where(neg_cord)
