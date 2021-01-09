@@ -515,7 +515,8 @@ class EventEmulator(object):
                     self.num_events_on += shotOnCount
                     self.num_events_off += shotOffCount
                     self.num_events_total += shotOnCount+shotOffCount
-
+                    pos_thr=self.pos_thres if isinstance(self.pos_thres,float) else self.pos_thres[shotOnCord]
+                    neg_thr=self.neg_thres if isinstance(self.neg_thres,float) else self.neg_thres[shotOffCord]
                     if shotOnCount > 0:
                         shotEvents = np.hstack(
                             (np.ones((shotOnCount, 1), dtype=np.float32) * ts,
@@ -526,7 +527,7 @@ class EventEmulator(object):
                             events_curr_iters, shotEvents, axis=0)
                         #  events.append(shotEvents)
                         self.baseLogFrame[shotOnCord] += \
-                            shotOnCord[shotOnCord] * self.pos_thres[shotOnCord]
+                            shotOnCord[shotOnCord] * pos_thr
                     if shotOffCount > 0:
                         shotEvents = np.hstack(
                             (np.ones((shotOffCount, 1), dtype=np.float32) * ts,
@@ -538,7 +539,7 @@ class EventEmulator(object):
                         #  events.append(shotEvents)
                         self.baseLogFrame[shotOffCord] -= \
                             shotOffCord[shotOffCord] * \
-                            self.neg_thres[shotOffCord]
+                            neg_thr
                     # end temporal noise
 
             # shuffle and append to the events collectors
