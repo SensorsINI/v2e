@@ -319,7 +319,7 @@ class SuperSloMo(object):
             #      "using " + str(output_folder) +
             #      " to store interpolated frames")
             nImages = len(video_frame_loader)
-            logger.info(f'interpolating {len(video_frame_loader)} batches of frames using batch_size={self.batch_size} with auto_upsample={self.auto_upsample} and upsampling_factor={self.upsampling_factor}')
+            logger.info(f'interpolating {len(video_frame_loader)} batches of frames using batch_size={self.batch_size} with auto_upsample={self.auto_upsample} and minimum upsampling_factor={self.upsampling_factor}')
             if nImages<2:
                 raise Exception('there are only {} batches in {} and we need at least 2; maybe you need to reduce batch size or increase number of input frames'.format(nImages, source_frame_path))
 

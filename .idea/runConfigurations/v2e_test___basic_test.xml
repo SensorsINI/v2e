@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="v2e test" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="v2e test - basic test" type="PythonConfigurationType" factoryName="Python">
     <module name="v2e" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />

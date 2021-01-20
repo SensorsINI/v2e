@@ -51,8 +51,8 @@ logger = logging.getLogger(__name__)
 try:
     from scripts.regsetup import description
     from gooey import Gooey  # pip install Gooey
-except Exception:
-    logger.warning('Gooey GUI builder not available, will use command line arguments.\n'
+except Exception as e:
+    logger.warning(f'{e}: Gooey GUI builder not available, will use command line arguments.\n'
                    'Install with "pip install Gooey". See README')
 
 def get_args():
@@ -104,8 +104,8 @@ def main():
         ga=Gooey(get_args, program_name="v2e", default_size=(575, 600))
         logger.info('Use --ignore-gooey to disable GUI and run with command line arguments')
         ga()
-    except:
-        logger.warning('Gooey GUI not available, using command line arguments. \n'
+    except Exception as e:
+        logger.warning(f'{e}: Gooey GUI not available, using command line arguments. \n'
                        'You can try to install with "pip install Gooey"')
     args=get_args()
     output_width: int = args.output_width
@@ -202,8 +202,7 @@ def main():
         v2e_quit()
 
     if auto_timestamp_resolution==True and timestamp_resolution is not None:
-        logger.error(f'auto_timestamp_resolution=True and timestamp_resolution={timestamp_resolution}: Disable auto_timestamp_resolution if you want to set the timestamp_resolution.')
-        v2e_quit()
+        logger.info(f'auto_timestamp_resolution=True and timestamp_resolution={timestamp_resolution}: Limiting automatic upsampling to maximum timestamp interval.')
 
     pos_thres = args.pos_thres
     neg_thres = args.neg_thres
@@ -302,9 +301,11 @@ def main():
 
             check_lowpass(cutoff_hz, 1 / slomoTimestampResolutionS, logger)
         else: # auto_timestamp_resolution
-            logger.info('--auto_timestamp_resolution=True, \n'
-                        'so source video will be automatically upsampled to limit'
-                        'maximum interframe motion to 1 pixel')
+            if timestamp_resolution is not None:
+                slowdown_factor=int(np.ceil(srcFrameIntervalS/timestamp_resolution))
+                logger.info(f'--auto_timestamp_resolution=True and timestamp_resolution={eng(timestamp_resolution)}s: source video will be automatically upsampled but with at least upsampling factor of {slowdown_factor}')
+            else:
+                logger.info('--auto_timestamp_resolution=True and timestamp_resolution is not set: source video will be automatically upsampled to limit maximum interframe motion to 1 pixel')
 
         # the SloMo model, set no SloMo model if no slowdown
         if not disable_slomo and ( auto_timestamp_resolution or slowdown_factor != NO_SLOWDOWN ):
@@ -465,7 +466,7 @@ def main():
             with TemporaryDirectory() as interpFramesFolder:
                 interpTimes=None
                 # make input to slomo
-                if slowdown_factor != NO_SLOWDOWN:
+                if auto_timestamp_resolution or slowdown_factor != NO_SLOWDOWN:
                     # interpolated frames are stored to tmpfolder as
                     # 1.png, 2.png, etc
 
@@ -476,7 +477,22 @@ def main():
                     avgTs = srcFrameIntervalS / avgUpsamplingFactor
                     logger.info('SloMo average upsampling factor={:5.2f}; average DVS timestamp resolution={}s'
                                 .format(avgUpsamplingFactor, eng(avgTs)))
-                    # read back to memory
+                    # check for undersampling wrt the photoreceptor lowpass filtering
+                    if cutoff_hz > 0:
+                        maxeps=0.3
+                        tau = 1 / (2 * np.pi * cutoff_hz)
+                        eps = avgTs / tau
+                        maxcutoff=maxeps/(2*np.pi*avgTs)
+                        if eps > maxeps:
+                            logger.warning(
+                                f'Using auto_timestamp_resolution: Lowpass 3dB cutoff is f_3dB={eng(cutoff_hz)}Hz (time constant tau={eng(tau)}s)  but auto upsampling produced average sample interval dt={eng(avgTs)}s)'
+                                f',\n  but this results in large IIR mixing factor eps = dt/tau = {eps:5.3f} > {maxeps:4.1f} (maxeps),'
+                                '\n which means the lowpass will filter few or even just last sample, i.e. you will not be lowpassing as expected.'
+                                '\nWe recommend using fixed timestamp resolution with nonzero cutoff frequency')
+                        else:
+                            logger.info(f'SuperSloMo auto_upsample resulted in avgTs={eng(avgTs)} which results in IIR lowpass average eps = dt/tau = {eps:5.3f} < {maxeps:4.1f} (maxeps); IIR filtering should be OK')
+
+    # read back to memory
                     interpFramesFilenames = all_images(interpFramesFolder)
                     # number of frames
                     n = len(interpFramesFilenames)
