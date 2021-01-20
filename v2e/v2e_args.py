@@ -61,8 +61,9 @@ def v2e_args(parser):
     timestampResolutionGroup.add_argument(
         "--auto_timestamp_resolution", default=True, type=str2bool, const=True, nargs='?',
         help="(Ignored by --disable_slomo.) "
-             "If True (default), upsampling_factor is automatically determined to limit maximum movement between frames to 1 pixel."
-             "If False, --timestamp_resolution sets the upsampling factor for input video.")
+             "\nIf True (default), upsampling_factor is automatically determined to limit maximum movement between frames to 1 pixel."
+             "\nIf False, --timestamp_resolution sets the upsampling factor for input video."
+             "\nCan be combined with --timestamp_resolution to ensure DVS events have at most some resolution.")
     timestampResolutionGroup.add_argument(
         "--timestamp_resolution", type=float,
         help="(Ignored by --disable_slomo.) "
@@ -73,7 +74,7 @@ def v2e_args(parser):
              "I.e. slowdown_factor = (1/fps)/timestamp_resolution; "
              "using a high resolution e.g. of 1ms will result in slow "
              "rendering since it will force high upsampling ratio."
-             "Can be combind with --auto_timestamp_resolution to limit upsampling to a maximum limit value."
+             "\nCan be combind with --auto_timestamp_resolution to limit upsampling to a maximum limit value."
              )
 
 

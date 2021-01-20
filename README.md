@@ -125,10 +125,10 @@ Do not be intimidated by the huge number of options. Running _v2e.py_ with no ar
 ```
 (base)$ conda activate pt-v2e # activate your workspace
 (pt-v2e)$ python v2e.py -h --ignore-gooey
-usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--output_in_place OUTPUT_IN_PLACE]
-              [--overwrite] [--unique_output_folder UNIQUE_OUTPUT_FOLDER]
+usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--output_in_place [OUTPUT_IN_PLACE]]
+              [--overwrite] [--unique_output_folder [UNIQUE_OUTPUT_FOLDER]]
               [--no_preview] [--avi_frame_rate AVI_FRAME_RATE]
-              [--auto_timestamp_resolution AUTO_TIMESTAMP_RESOLUTION]
+              [--auto_timestamp_resolution [AUTO_TIMESTAMP_RESOLUTION]]
               [--timestamp_resolution TIMESTAMP_RESOLUTION]
               [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
               [--dvs_params DVS_PARAMS] [--pos_thres POS_THRES]
@@ -156,26 +156,29 @@ optional arguments:
 Output: General:
   -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
                         folder to store outputs. (default: v2e-output)
-  --output_in_place OUTPUT_IN_PLACE
+  --output_in_place [OUTPUT_IN_PLACE]
                         store output files in same folder as source video.
                         (default: True)
   --overwrite           overwrites files in existing folder (checks existence
                         of non-empty output_folder). (default: False)
-  --unique_output_folder UNIQUE_OUTPUT_FOLDER
-                        makes unique output folder based on output_folder if
-                        non-empty output_folder already exists (default: True)
+  --unique_output_folder [UNIQUE_OUTPUT_FOLDER]
+                        If specifying --output_folder, makes unique output
+                        folder based on output_folder, e.g. output1 (if non-
+                        empty output_folder already exists) (default: True)
   --no_preview          disable preview in cv2 windows for faster processing.
                         (default: False)
   --avi_frame_rate AVI_FRAME_RATE
                         frame rate of output AVI video files; only affects
                         playback rate. (default: 30)
 DVS timestamp resolution:
-  --auto_timestamp_resolution AUTO_TIMESTAMP_RESOLUTION
+  --auto_timestamp_resolution [AUTO_TIMESTAMP_RESOLUTION]
                         (Ignored by --disable_slomo.) If True (default),
                         upsampling_factor is automatically determined to limit
-                        maximum movement between frames to 1 pixel.If False,
+                        maximum movement between frames to 1 pixel. If False,
                         --timestamp_resolution sets the upsampling factor for
-                        input video. (default: True)
+                        input video. Can be combined with
+                        --timestamp_resolution to ensure DVS events have at
+                        most some resolution. (default: True)
   --timestamp_resolution TIMESTAMP_RESOLUTION
                         (Ignored by --disable_slomo.) Desired DVS timestamp
                         resolution in seconds; determines slow motion
@@ -184,7 +187,7 @@ DVS timestamp resolution:
                         resolution.I.e. slowdown_factor =
                         (1/fps)/timestamp_resolution; using a high resolution
                         e.g. of 1ms will result in slow rendering since it
-                        will force high upsampling ratio.Can be combind with
+                        will force high upsampling ratio. Can be combind with
                         --auto_timestamp_resolution to limit upsampling to a
                         maximum limit value. (default: None)
 DVS model:
@@ -250,14 +253,17 @@ Input file handling:
                         (default: None)
   --input_slowmotion_factor INPUT_SLOWMOTION_FACTOR
                         Sets the known slow-motion factor of the input video,
-                        i.e. ratio of shooting frame rate to playback frame
-                        rate. If an input video is shot at 120fps yet is
-                        presented as a 30fps video (has specified playback
-                        frame rate of 30Hz, according to file's FPS setting),
-                        then set --input_slowdown_factor=4.It means that each
-                        input frame represents (1/30)/4 s=(1/120)s.If input is
-                        video with intended frame intervals of 1ms that is in
-                        AVI file with default 30 FPS playback spec, then use
+                        i.e. how much the video is slowed down, i.e., the
+                        ratio of shooting frame rate to playback frame rate.
+                        input_slowmotion_factor<1 for sped-up video and
+                        input_slowmotion_factor>1 for slowmotion video.If an
+                        input video is shot at 120fps yet is presented as a
+                        30fps video (has specified playback frame rate of
+                        30Hz, according to file's FPS setting), then set
+                        --input_slowdown_factor=4.It means that each input
+                        frame represents (1/30)/4 s=(1/120)s.If input is video
+                        with intended frame intervals of 1ms that is in AVI
+                        file with default 30 FPS playback spec, then use
                         ((1/30)s)*(1000Hz)=33.33333. (default: 1.0)
   --start_time START_TIME
                         Start at this time in seconds in video. Use None to
@@ -274,7 +280,8 @@ Synthetic input:
                         the correct resolution (see DVS model arguments) which
                         is array[y][x] with pixel [0][0] at upper left corner
                         and pixel values 0-255. SYNTHETIC_INPUT must be
-                        resolvable from the classpath. See example
+                        resolvable from the classpath. SYNTHETIC_INPUT is the
+                        module name without .py suffix.See example
                         moving_dot.py. (default: None)
 Output: DVS video:
   --dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]
