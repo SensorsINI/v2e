@@ -360,6 +360,13 @@ See our technical paper for futher information about these parameters.
  
  This plot shows the actual timestamps of the interpolated frames (in orange) and the frame intervals for each batch of frames (in blue).
  
+### Photoreceptor lowpass filtering
+_v2e_ includes an intensity-dependent 2nd-order lowpass filtering of light intensity; see the paper for details. 
+If you set a nonzero --cutofffreq_hz, then it is important that the sample rate be high enough to allow the IIR lowpass filters to update properly, i.e.
+the time constant tau of the lowpass filters must be at least 3 times larger than the frame interval.
+Check the console output for warnings about undersampling for lowpass filtering.
+
+
  
  ### Frame rate and DVS timestamp resolution in v2e
 There are several different 'frame rates' in v2e. On opening the input video, v2e reads the frame rate of the video and assumes the video is shot in real time, except that you can specify a _--input_slowmotion_factor_ slowdown_factor if the video is already a slow-motion video. The desired DVS timestamp resolution is combined with the source frame rate to compute the slow-motion upsampling factor. The output DVS AVI video is then generated using a _--dvs-exposure_ method.
