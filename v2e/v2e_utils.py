@@ -20,9 +20,9 @@ OUTPUT_VIDEO_CODEC_FOURCC = 'XVID'
 logger = logging.getLogger(__name__)
 
 
-def v2e_quit():
+def v2e_quit(code=None):
     try:
-        quit()  # not defined in pydev console, e.g. running in pycharm
+        quit(code)  # not defined in pydev console, e.g. running in pycharm
     finally:
         sys.exit()
 
@@ -36,26 +36,32 @@ def check_lowpass(cutoffhz, fs, logger):
     if cutoffhz == 0 or fs == 0:
         logger.info('lowpass filter is disabled, no need for check')
         return
-    maxeps=0.3
-    tau = 1 / (2 * np.pi * cutoffhz)
-    dt = 1 / fs
-    eps = dt / tau
-    maxdt=tau*maxeps
-    maxcutoff=maxeps/(2*np.pi*dt)
+    maxeps = 0.3
+    tau = 1/(2*np.pi*cutoffhz)
+    dt = 1/fs
+    eps = dt/tau
+    maxdt = tau*maxeps
+    maxcutoff = maxeps/(2*np.pi*dt)
     if eps > maxeps:
         logger.warning(
-            'Lowpass 3dB cutoff is f_3dB={}Hz (time constant tau={}s) with sample rate fs={}Hz (sample interval dt={}s) '
-            ',\n  but this results in large IIR mixing factor eps = dt/tau = {:5.3f} > {:4.1f} (maxeps),'
-            '\n which means the lowpass will filter few or even just last sample, i.e. you will not be lowpassing as expected.'
+            'Lowpass 3dB cutoff is f_3dB={}Hz (time constant tau={}s) with '
+            'sample rate fs={}Hz (sample interval dt={}s) '
+            ',\n  but this results in large IIR mixing factor '
+            'eps = dt/tau = {:5.3f} > {:4.1f} (maxeps),'
+            '\n which means the lowpass will filter few or even just '
+            'last sample, i.e. you will not be lowpassing as expected.'
             '\nWe recommend either'
             '\n -decreasing --timestamp_resolution of DVS events below {}s'
             '\n -decreasing --cutoff_frequency_hz below {}Hz'.format(
-                eng(cutoffhz), eng(tau), eng(fs), eng(dt), eps, maxeps, eng(maxdt),eng(maxcutoff)))
+                eng(cutoffhz), eng(tau), eng(fs), eng(dt), eps,
+                maxeps, eng(maxdt), eng(maxcutoff)))
     else:
         logger.info(
-            ' Lowpass cutoff is f_3dB={}Hz with tau={}s and with sample rate fs={}Hz (sample interval dt={}s)'
-            ',\nIt has IIR mixing factor eps={:5.3f} which is OK because it is less than recommended maxeps={:4.1f}'.format(
-                eng(cutoffhz), eng(tau), eng(fs), eng(dt),  eps,maxeps))
+            'Lowpass cutoff is f_3dB={}Hz with tau={}s and '
+            'with sample rate fs={}Hz (sample interval dt={}s)'
+            ',\nIt has IIR mixing factor eps={:5.3f} which is OK '
+            'because it is less than recommended maxeps={:4.1f}'.format(
+                eng(cutoffhz), eng(tau), eng(fs), eng(dt), eps, maxeps))
 
 
 def inputVideoFileDialog():
@@ -88,7 +94,8 @@ def checkAddSuffix(path: str, suffix: str):
         return os.path.splitext(path)[0]+suffix
 
 
-def video_writer(output_path, height, width, frame_rate=30, fourcc=OUTPUT_VIDEO_CODEC_FOURCC):
+def video_writer(output_path, height, width,
+                 frame_rate=30, fourcc=OUTPUT_VIDEO_CODEC_FOURCC):
     """ Return a video writer.
 
     Parameters

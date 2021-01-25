@@ -24,5 +24,7 @@ setup(
 
     packages=["v2e"],
 
+    scripts=["v2e.py"],
+
     classifiers=list(filter(None, classifiers.split('\n'))),
 )
