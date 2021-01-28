@@ -178,8 +178,8 @@ def main():
             and timestamp_resolution is not None:
         logger.info(
             f'auto_timestamp_resolution=True and '
-            'timestamp_resolution={timestamp_resolution}: '
-            'Limiting automatic upsampling to maximum timestamp interval.')
+            f'timestamp_resolution={timestamp_resolution}: '
+            f'Limiting automatic upsampling to maximum timestamp interval.')
 
     # DVS pixel thresholds
     pos_thres = args.pos_thres
@@ -267,10 +267,12 @@ def main():
 
         slowdown_factor = NO_SLOWDOWN  # start with factor 1 for upsampling
         if disable_slomo:
-            logger.info(
+            logger.warning(
                 'slomo interpolation disabled by command line option; '
                 'output DVS timestamps will have source frame interval '
                 'resolution')
+            # time stamp resolution equals to source frame interval
+            slomoTimestampResolutionS = srcFrameIntervalS
         elif not auto_timestamp_resolution:
             slowdown_factor = int(
                 np.ceil(srcFrameIntervalS/timestamp_resolution))
@@ -292,14 +294,14 @@ def main():
 
             logger.info(
                 f'--auto_timestamp_resolution is False, '
-                'srcFps={srcFps}Hz '
-                'input_slowmotion_factor={input_slowmotion_factor}, '
-                'real src FPS={srcFps*input_slowmotion_factor}Hz, '
-                'srcFrameIntervalS={eng(srcFrameIntervalS)}s, '
-                'timestamp_resolution={eng(timestamp_resolution)}s, '
-                'so SuperSloMo will use slowdown_factor={slowdown_factor} '
-                'and have '
-                'slomoTimestampResolutionS={eng(slomoTimestampResolutionS)}s')
+                f'srcFps={srcFps}Hz '
+                f'input_slowmotion_factor={input_slowmotion_factor}, '
+                f'real src FPS={srcFps*input_slowmotion_factor}Hz, '
+                f'srcFrameIntervalS={eng(srcFrameIntervalS)}s, '
+                f'timestamp_resolution={eng(timestamp_resolution)}s, '
+                f'so SuperSloMo will use slowdown_factor={slowdown_factor} '
+                f'and have '
+                f'slomoTimestampResolutionS={eng(slomoTimestampResolutionS)}s')
 
             if slomoTimestampResolutionS > timestamp_resolution:
                 logger.warning(
@@ -315,9 +317,9 @@ def main():
 
                 logger.info(
                     f'--auto_timestamp_resolution=True and '
-                    'timestamp_resolution={eng(timestamp_resolution)}s: '
-                    'source video will be automatically upsampled but '
-                    'with at least upsampling factor of {slowdown_factor}')
+                    f'timestamp_resolution={eng(timestamp_resolution)}s: '
+                    f'source video will be automatically upsampled but '
+                    f'with at least upsampling factor of {slowdown_factor}')
             else:
                 logger.info(
                     '--auto_timestamp_resolution=True and '
@@ -339,7 +341,7 @@ def main():
     if not synthetic_input and not auto_timestamp_resolution:
         logger.info(
             f'\n events will have timestamp resolution '
-            '{eng(slomoTimestampResolutionS)}s,')
+            f'{eng(slomoTimestampResolutionS)}s,')
         if exposure_mode == ExposureMode.DURATION \
                 and dvsFps > (1 / slomoTimestampResolutionS):
             logger.warning(
@@ -464,9 +466,9 @@ def main():
 
             logger.info(
                 f'*** Stage 1/3: '
-                'Resizing {srcNumFramesToBeProccessed} input frames '
-                'to output size '
-                '(with possible RGB to luma conversion)')
+                f'Resizing {srcNumFramesToBeProccessed} input frames '
+                f'to output size '
+                f'(with possible RGB to luma conversion)')
             for inputFrameIndex in tqdm(
                     range(srcNumFramesToBeProccessed),
                     desc='rgb2luma', unit='fr'):
@@ -510,7 +512,7 @@ def main():
 
                     logger.info(
                         f'*** Stage 2/3: SloMo upsampling from '
-                        '{source_frames_dir}')
+                        f'{source_frames_dir}')
                     interpTimes, avgUpsamplingFactor = slomo.interpolate(
                         source_frames_dir, interpFramesFolder,
                         (output_width, output_height))
@@ -535,7 +537,7 @@ def main():
                 else:
                     logger.info(
                         f'*** Stage 2/3:turning npy frame files to png '
-                        'from {source_frames_dir}')
+                        f'from {source_frames_dir}')
                     interpFramesFilenames = []
                     n = 0
                     src_files = sorted(

@@ -239,16 +239,16 @@ def v2e_args(parser):
     syntheticInputGroup = parser.add_argument_group('Synthetic input')
     syntheticInputGroup.add_argument(
         "--synthetic_input", type=str,
-        help=f"Input from class SYNTHETIC_INPUT that "
-             f"has methods next_frame() and total_frames()."
-             f"Disables file input and SuperSloMo frame interpolation. "
-             f"SYNTHETIC_INPUT.next_frame() should return a frame of "
-             f"the correct resolution (see DVS model arguments) "
-             f"which is array[y][x] with "
-             f"pixel [0][0] at upper left corner and pixel values 0-255. "
-             f"SYNTHETIC_INPUT must be resolvable from the classpath. "
-             f"SYNTHETIC_INPUT is the module name without .py suffix."
-             f"See example moving_dot.py."
+        help="Input from class SYNTHETIC_INPUT that "
+             "has methods next_frame() and total_frames()."
+             "Disables file input and SuperSloMo frame interpolation. "
+             "SYNTHETIC_INPUT.next_frame() should return a frame of "
+             "the correct resolution (see DVS model arguments) "
+             "which is array[y][x] with "
+             "pixel [0][0] at upper left corner and pixel values 0-255. "
+             "SYNTHETIC_INPUT must be resolvable from the classpath. "
+             "SYNTHETIC_INPUT is the module name without .py suffix."
+             "See example moving_dot.py."
     )
 
     # DVS output video
@@ -257,7 +257,7 @@ def v2e_args(parser):
         "--dvs_exposure", nargs='+', type=str, default='duration 0.01',
         help="Mode to finish DVS frame event integration: "
              "duration time: Use fixed accumulation time in seconds, "
-             "e.g. -dvs_exposure duration .005; "
+             "e.g. --dvs_exposure duration .005; "
              "count n: Count n events per frame, -dvs_exposure count 5000; "
              "area_event N M: frame ends when any area of M x M pixels "
              "fills with N events, -dvs_exposure area_count 500 64")
@@ -312,7 +312,7 @@ def v2e_args(parser):
     return parser
 
 
-def write_args_info(args, path)-> str:
+def write_args_info(args, path) -> str:
     '''
     Writes arguments to logger and file named from startup __main__
     Parameters
