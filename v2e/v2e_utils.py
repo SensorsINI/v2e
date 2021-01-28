@@ -8,6 +8,7 @@ import glob
 import tkinter as tk
 from tkinter import filedialog
 from numba import njit
+from engineering_notation import EngNumber as eng
 
 # adjust for different sensor than DAVIS346
 DVS_WIDTH, DVS_HEIGHT = 346, 260
@@ -27,12 +28,86 @@ def v2e_quit(code=None):
         sys.exit()
 
 
+def make_output_folder(output_folder_base, suffix_counter,
+                       overwrite, unique_output_folder):
+    if overwrite and unique_output_folder:
+        logger.error(
+            "specify one or the other of "
+            "--overwrite and --unique_output_folder")
+        v2e_quit()
+
+    output_folder = output_folder_base+"-{}".format(suffix_counter) \
+        if suffix_counter > 0 else output_folder_base
+
+    non_empty_folder_exists = not overwrite and \
+        os.path.exists(output_folder) and os.listdir(output_folder)
+
+    if non_empty_folder_exists and not overwrite and not unique_output_folder:
+        logger.error(
+            'non-empty output folder {} already exists \n '
+            '- use --overwrite or --unique_output_folder'.format(
+                os.path.abspath(output_folder), non_empty_folder_exists))
+        v2e_quit()
+
+    if non_empty_folder_exists and unique_output_folder:
+        return make_output_folder(
+            output_folder_base, suffix_counter+1,
+            overwrite, unique_output_folder)
+    else:
+        logger.info('using output folder {}'.format(output_folder))
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+        return output_folder
+
+
+def set_output_folder(output_folder,
+                      input_file,
+                      unique_output_folder,
+                      overwrite,
+                      output_in_place,
+                      logger):
+    """Set output folder in a single function."""
+
+    if output_in_place:
+        parts = os.path.split(input_file)
+        output_folder = parts[0]
+        logger.info(f'output_in_place==True so output_folder={output_folder}')
+    else:
+        output_folder = make_output_folder(
+            output_folder, 0, overwrite, unique_output_folder)
+        logger.info(
+            f'output_in_place==False so made output_folder={output_folder}')
+
+    return output_folder
+
+
+def set_output_dimension(output_width, output_height,
+                         dvs128, dvs240, dvs346, dvs640, dvs1024,
+                         logger):
+    """Return output_height and output_width based on arguments."""
+
+    if dvs128:
+        output_width, output_height = 128, 128
+    elif dvs240:
+        output_width, output_height = 240, 180
+    elif dvs346:
+        output_width, output_height = 346, 260
+    elif dvs640:
+        output_width, output_height = 640, 480
+    elif dvs1024:
+        output_width, output_height = 1024, 768
+
+    if (output_width is None) ^ (output_height is None):
+        logger.error('set neither or both of output_width and output_height')
+        v2e_quit()
+
+    return output_width, output_height
+
+
 def check_lowpass(cutoffhz, fs, logger):
     """ checks if cutoffhz is ok given sample rate fs
 
     """
-    import numpy as np
-    from engineering_notation import EngNumber as eng
     if cutoffhz == 0 or fs == 0:
         logger.info('lowpass filter is disabled, no need for check')
         return

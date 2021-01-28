@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 NO_SLOWDOWN = 1
 
 
+def expandpath(path):
+    return os.path.abspath(os.path.expandvars(os.path.expanduser(path)))
+
+
 def output_file_check(arg):
     if arg.lower() == "none":
         return None
@@ -39,8 +43,13 @@ def v2e_args(parser):
     # general arguments for output folder, overwriting, etc
     outGroupGeneral = parser.add_argument_group('Output: General')
     outGroupGeneral.add_argument(
-        "-o", "--output_folder", type=str, default='v2e-output',
+        "-o", "--output_folder", type=expandpath, default='v2e-output',
         help="folder to store outputs.")
+    outGroupGeneral.add_argument(
+        "--avi_frame_rate", type=int, default=30,
+        help="frame rate of output AVI video files; "
+             "only affects playback rate. ")
+
     outGroupGeneral.add_argument(
         "--output_in_place", default=True, type=str2bool,
         const=True, nargs='?',
@@ -58,10 +67,6 @@ def v2e_args(parser):
     outGroupGeneral.add_argument(
         "--no_preview", action="store_true",
         help="disable preview in cv2 windows for faster processing.")
-    outGroupGeneral.add_argument(
-        "--avi_frame_rate", type=int, default=30,
-        help="frame rate of output AVI video files; "
-             "only affects playback rate. ")
 
     # timestamp resolution
     timestampResolutionGroup = parser.add_argument_group(
@@ -101,8 +106,9 @@ def v2e_args(parser):
         help="Width of output DVS data in pixels. "
              "If None, same as input video. "
              "Use --output_width=260 for Davis346.")
+
     modelGroup.add_argument(
-        "--dvs_params", type=str,
+        "--dvs_params", type=str, default="noisy",
         help="Easy optional setting of parameters for DVS model:"
              "'clean', 'noisy'; 'clean' turns off noise and "
              "makes threshold variation zero. 'noisy' sets "
@@ -118,6 +124,7 @@ def v2e_args(parser):
     modelGroup.add_argument(
         "--sigma_thres", type=float, default=0.03,
         help="1-std deviation threshold variation in log_e intensity change.")
+
     modelGroup.add_argument(
         "--cutoff_hz", type=float, default=300,
         help="photoreceptor second-order IIR lowpass filter "
@@ -133,6 +140,7 @@ def v2e_args(parser):
         # default for good lighting, very low rate
         help="Temporal noise rate of ON+OFF events in "
              "darkest parts of scene; reduced in brightest parts. ")
+
     modelGroup.add_argument(
         "--show_dvs_model_state", type=str, default=None,
         # default for good lighting, very low rate
@@ -169,7 +177,8 @@ def v2e_args(parser):
              "the source video "
              "(which is perhaps modified by --input_slowmotion_factor).")
     sloMoGroup.add_argument(
-        "--slomo_model", type=str, default=prepend+"input/SuperSloMo39.ckpt",
+        "--slomo_model", type=expandpath,
+        default=prepend+"input/SuperSloMo39.ckpt",
         help="path of slomo_model checkpoint.")
     sloMoGroup.add_argument(
         "--batch_size", type=int, default=8,
@@ -198,7 +207,7 @@ def v2e_args(parser):
     # input file handling
     inGroup = parser.add_argument_group('Input file handling')
     inGroup.add_argument(
-        "-i", "--input", type=str,
+        "-i", "--input", type=expandpath,
         help="Input video file; leave empty for file chooser dialog.")
     inGroup.add_argument(
         "--input_slowmotion_factor", type=float, default=1.0,
@@ -231,15 +240,15 @@ def v2e_args(parser):
     syntheticInputGroup.add_argument(
         "--synthetic_input", type=str,
         help=f"Input from class SYNTHETIC_INPUT that "
-             "has methods next_frame() and total_frames()."
-             "Disables file input and SuperSloMo frame interpolation. "
+             f"has methods next_frame() and total_frames()."
+             f"Disables file input and SuperSloMo frame interpolation. "
              f"SYNTHETIC_INPUT.next_frame() should return a frame of "
-             "the correct resolution (see DVS model arguments) "
-             "which is array[y][x] with "
-             "pixel [0][0] at upper left corner and pixel values 0-255. "
-             "SYNTHETIC_INPUT must be resolvable from the classpath. "
-             "SYNTHETIC_INPUT is the module name without .py suffix."
-             "See example moving_dot.py."
+             f"the correct resolution (see DVS model arguments) "
+             f"which is array[y][x] with "
+             f"pixel [0][0] at upper left corner and pixel values 0-255. "
+             f"SYNTHETIC_INPUT must be resolvable from the classpath. "
+             f"SYNTHETIC_INPUT is the module name without .py suffix."
+             f"See example moving_dot.py."
     )
 
     # DVS output video
@@ -259,6 +268,10 @@ def v2e_args(parser):
         "--dvs_vid_full_scale", type=int, default=2,
         help="Set full scale event count histogram count for DVS videos "
              "to be this many ON or OFF events for full white or black.")
+    outGroupDvsVideo.add_argument(
+        "--skip_video_output", action="store_true",
+        help="Skip producing video outputs, including the original video, "
+             "SloMo video, and DVS video")
     # outGroupDvsVideo.add_argument(
     #     "--frame_rate", type=float,
     #     help="implies --dvs_exposure duration 1/framerate.  "

@@ -282,7 +282,6 @@ class EventEmulator(object):
         cv2.imshow(__name__+':'+self.show_input, img)
         cv2.waitKey(30)
 
-
     def generate_events(
             self, new_frame: np.ndarray,
             t_frame: float) -> np.ndarray:

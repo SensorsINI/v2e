@@ -6,14 +6,12 @@ frames from the original video frames.
 
 @author: Tobi Delbruck, Yuhuang Hu, Zhe He
 @contact: tobi@ini.uzh.ch, yuhuang.hu@ini.uzh.ch, zhehe@student.ethz.ch
-@latest update: Apr 2020
 """
 # todo refractory period for pixel
 
 import glob
 import argparse
 import importlib
-from pathlib import Path
 
 import argcomplete
 import cv2
@@ -27,6 +25,8 @@ from tqdm import tqdm
 import v2e.desktop as desktop
 from v2e.v2e_utils import all_images, read_image, \
     check_lowpass, v2e_quit
+from v2e.v2e_utils import set_output_dimension
+from v2e.v2e_utils import set_output_folder
 from v2e.v2e_args import v2e_args, write_args_info, v2e_check_dvs_exposure_args
 from v2e.v2e_args import NO_SLOWDOWN
 from v2e.renderer import EventRenderer, ExposureMode
@@ -53,8 +53,8 @@ try:
     from gooey import Gooey  # pip install Gooey
 except Exception as e:
     logger.warning(f"{e}: Gooey GUI builder not available, "
-                   "will use command line arguments.\n"
-                   "Install with 'pip install Gooey'. See README")
+                   f"will use command line arguments.\n"
+                   f"Install with 'pip install Gooey'. See README")
 
 
 def get_args():
@@ -65,9 +65,9 @@ def get_args():
 
     parser = v2e_args(parser)
 
-    parser.add_argument(
-        "--rotate180", type=bool, default=False,
-        help="rotate all output 180 deg.")
+    #  parser.add_argument(
+    #      "--rotate180", type=bool, default=False,
+    #      help="rotate all output 180 deg.")
     # https://kislyuk.github.io/argcomplete/#global-completion
     # Shellcode (only necessary if global completion is not activated -
     # see Global completion below), to be put in e.g. .bashrc:
@@ -76,40 +76,6 @@ def get_args():
 
     args = parser.parse_args()
     return args
-
-
-def make_output_folder(output_folder_base, suffix_counter,
-                       overwrite, unique_output_folder):
-    if overwrite and unique_output_folder:
-        logger.error(
-            "specify one or the other of "
-            "--overwrite and --unique_output_folder")
-        v2e_quit()
-
-    if suffix_counter > 0:
-        output_folder = output_folder_base + '-' + str(suffix_counter)
-    else:
-        output_folder = output_folder_base
-
-    non_empty_folder_exists = not overwrite and \
-        os.path.exists(output_folder) and os.listdir(output_folder)
-
-    if non_empty_folder_exists and not overwrite and not unique_output_folder:
-        logger.error(
-            'non-empty output folder {} already exists \n '
-            '- use --overwrite or --unique_output_folder'.format(
-                os.path.abspath(output_folder), non_empty_folder_exists))
-        v2e_quit()
-
-    if non_empty_folder_exists and unique_output_folder:
-        return make_output_folder(
-            output_folder_base, suffix_counter+1,
-            overwrite, unique_output_folder)
-    else:
-        logger.info('using output folder {}'.format(output_folder))
-        if not os.path.exists(output_folder):
-            os.makedirs(output_folder)
-        return output_folder
 
 
 def main():
@@ -122,17 +88,18 @@ def main():
     except Exception as e:
         logger.warning(
             f'{e}: Gooey GUI not available, using command line arguments. \n'
-            'You can try to install with "pip install Gooey"')
+            f'You can try to install with "pip install Gooey"')
 
     args = get_args()
 
-    output_width = args.output_width
-    output_height = args.output_height
+    # Set output width and height based on the arguments
+    output_width, output_height = set_output_dimension(
+        args.output_width, args.output_height,
+        args.dvs128, args.dvs240, args.dvs346,
+        args.dvs640, args.dvs1024,
+        logger)
 
-    if (output_width is None) ^ (output_height is None):
-        logger.error('set neither or both of output_width and output_height')
-        v2e_quit()
-
+    # setup synthetic input classes and method
     synthetic_input = args.synthetic_input
     synthetic_input_module = None
     synthetic_input_class = None
@@ -161,6 +128,7 @@ def main():
             logger.error(f'{synthetic_input} method incorrect?: {e}')
             v2e_quit(1)
 
+    # set input file
     input_file = args.input
     if synthetic_input is None and not input_file:
         input_file = inputVideoFileDialog()
@@ -168,47 +136,24 @@ def main():
             logger.info('no file selected, quitting')
             v2e_quit()
 
-    overwrite = args.overwrite
-    output_folder = args.output_folder
-    # if user specifies overwrite, then override default of
-    # making unique output folder
-    unique_output_folder = args.unique_output_folder \
-        if not overwrite else False
-    output_in_place = args.output_in_place \
-        if (not synthetic_input and output_folder is None) else False
-    num_frames = 0
-    srcNumFramesToBeProccessed = 0
-
-    if output_in_place:
-        parts = os.path.split(input_file)
-        output_folder = parts[0]
-        logger.info(f'output_in_place==True so output_folder={output_folder}')
-    else:
-        output_folder = make_output_folder(
-            output_folder, 0, overwrite, unique_output_folder)
-        logger.info(
-            f'output_in_place==False so made output_folder={output_folder}')
-
-    # define DVS camera parameters
-    dvs128, dvs240, dvs346, dvs640, dvs1024 = \
-        args.dvs128, args.dvs240, args.dvs346, args.dvs640, args.dvs1024
-
-    if dvs128:
-        output_width, output_height = 128, 128
-    elif dvs240:
-        output_width, output_height = 240, 180
-    elif dvs346:
-        output_width, output_height = 346, 260
-    elif dvs640:
-        output_width, output_height = 640, 480
-    elif dvs1024:
-        output_width, output_height = 1024, 768
+    # Set output folder
+    output_folder = set_output_folder(
+        args.output_folder,
+        input_file,
+        args.unique_output_folder if not args.overwrite else False,
+        args.overwrite,
+        args.output_in_place
+        if (not synthetic_input and args.output_folder is None) else False,
+        logger)
 
     # input file checking
-    if (not input_file or not Path(input_file).exists()) \
+    if (not input_file or not os.path.isfile(input_file)) \
             and not synthetic_input:
         logger.error('input file {} does not exist'.format(input_file))
         v2e_quit(1)
+
+    num_frames = 0
+    srcNumFramesToBeProccessed = 0
 
     # define video parameters
     start_time = args.start_time
@@ -236,9 +181,12 @@ def main():
             'timestamp_resolution={timestamp_resolution}: '
             'Limiting automatic upsampling to maximum timestamp interval.')
 
+    # DVS pixel thresholds
     pos_thres = args.pos_thres
     neg_thres = args.neg_thres
     sigma_thres = args.sigma_thres
+
+    # Cutoff and noise frequencies
     cutoff_hz = args.cutoff_hz
     leak_rate_hz = args.leak_rate_hz
     if leak_rate_hz > 0 and sigma_thres == 0:
@@ -246,25 +194,32 @@ def main():
             'leak_rate_hz>0 but sigma_thres==0, '
             'so all leak events will be synchronous')
     shot_noise_rate_hz = args.shot_noise_rate_hz
+
+    # Visualization
     avi_frame_rate = args.avi_frame_rate
     dvs_vid = args.dvs_vid
     dvs_vid_full_scale = args.dvs_vid_full_scale
+    vid_orig = args.vid_orig
+    vid_slomo = args.vid_slomo
+    preview = not args.no_preview
+
+    # Event saving options
     dvs_h5 = args.dvs_h5
     dvs_aedat2 = args.dvs_aedat2
     dvs_text = args.dvs_text
-    vid_orig = args.vid_orig
-    vid_slomo = args.vid_slomo
-    slomo_stats_plot = args.slomo_stats_plot
 
-    preview = not args.no_preview
+    # Debug feature: if show slomo stats
+    slomo_stats_plot = args.slomo_stats_plot
     #  rotate180 = args.rotate180  # never used, consider removing
     batch_size = args.batch_size
 
+    # DVS exposure
     exposure_mode, exposure_val, area_dimension = \
         v2e_check_dvs_exposure_args(args)
     if exposure_mode == ExposureMode.DURATION:
         dvsFps = 1. / exposure_val
 
+    # Writing the info file
     infofile = write_args_info(args, output_folder)
 
     fh = logging.FileHandler(infofile)
@@ -568,33 +523,10 @@ def main():
                     # photoreceptor lowpass filtering
 
                     if cutoff_hz > 0:
-                        maxeps = 0.3
-                        tau = 1 / (2 * np.pi * cutoff_hz)
-                        eps = avgTs / tau
-                        maxcutoff = maxeps/(2*np.pi*avgTs)
-                        if eps > maxeps:
-                            logger.warning(
-                                f'Using auto_timestamp_resolution: '
-                                'Lowpass 3dB cutoff is '
-                                'f_3dB={eng(cutoff_hz)}Hz '
-                                '(time constant tau={eng(tau)}s) '
-                                'but auto upsampling produced '
-                                'average sample interval dt={eng(avgTs)}s)'
-                                f',\n  but this results in large IIR '
-                                'mixing factor '
-                                'eps=dt/tau={eps:5.3f}>{maxeps:4.1f} (maxeps),'
-                                '\n which means the lowpass will filter few '
-                                'or even just last sample, i.e., '
-                                'you will not be lowpassing as expected.'
-                                '\nWe recommend using fixed timestamp '
-                                'resolution with nonzero cutoff frequency')
-                        else:
-                            logger.info(
-                                f'SuperSloMo auto_upsample resulted in '
-                                'avgTs={eng(avgTs)} which results in '
-                                'IIR lowpass average '
-                                'eps=dt/tau={eps:5.3f}<{maxeps:4.1f} (maxeps);'
-                                'IIR filtering should be OK')
+                        logger.warning('Using auto_timestamp_resolution. '
+                                       'checking if cutoff hz is ok given '
+                                       'samplee rate {}'.format(1/avgTs))
+                        check_lowpass(cutoff_hz, 1/avgTs, logger)
 
                     # read back to memory
                     interpFramesFilenames = all_images(interpFramesFolder)
@@ -649,7 +581,7 @@ def main():
 
                 logger.info(
                     f'*** Stage 3/3: emulating DVS events from '
-                    '{nFrames} frames')
+                    f'{nFrames} frames')
                 with tqdm(total=nFrames, desc='dvs', unit='fr') as pbar:
                     for i in range(nFrames):
                         fr = read_image(interpFramesFilenames[i])
@@ -669,6 +601,7 @@ def main():
                         eventRenderer.render_events_to_frames(
                             events, height=output_height, width=output_width)
 
+    # Clean up
     eventRenderer.cleanup()
     emulator.cleanup()
     if slomo is not None:
@@ -677,6 +610,7 @@ def main():
     if num_frames == 0:
         logger.error('no frames read from file')
         v2e_quit()
+
     totalTime = (time.time()-time_run_started)
     framePerS = num_frames / totalTime
     sPerFrame = 1 / framePerS
@@ -698,11 +632,15 @@ def main():
             eng(emulator.num_events_total / srcDurationToBeProcessed),
             eng(emulator.num_events_on / srcDurationToBeProcessed),
             eng(emulator.num_events_off / srcDurationToBeProcessed)))
-    try:
-        desktop.open(os.path.abspath(output_folder))
-    except Exception as e:
-        logger.warning(
-            '{}: could not open {} in desktop'.format(e, output_folder))
+
+    # try to show desktop
+    # suppress folder opening if it's not necessary
+    if not args.skip_video_output:
+        try:
+            desktop.open(os.path.abspath(output_folder))
+        except Exception as e:
+            logger.warning(
+                '{}: could not open {} in desktop'.format(e, output_folder))
 
 
 if __name__ == "__main__":
