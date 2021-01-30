@@ -278,7 +278,11 @@ class EventEmulator(object):
 
     def _show(self, inp: np.ndarray):
         min = np.min(inp)
-        img = ((inp - min) / (np.max(inp) - min))
+        norm=(np.max(inp) - min)
+        if norm==0:
+            logger.warning('image is blank, max-min=0')
+            norm=1
+        img = ((inp - min) / norm)
         cv2.imshow(__name__+':'+self.show_input, img)
         cv2.waitKey(30)
 
