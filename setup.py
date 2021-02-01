@@ -1,4 +1,4 @@
-"""Setup script for video2events."""
+"""Setup script for v2e."""
 
 from setuptools import setup
 
@@ -22,7 +22,7 @@ setup(
     author="Tobi Delbruck, Yuhuang Hu, Zhe He",
     author_email="tobi@ini.uzh.ch",
 
-    packages=["v2e"],
+    packages=["v2ecore"],
 
     scripts=["v2e.py"],
 

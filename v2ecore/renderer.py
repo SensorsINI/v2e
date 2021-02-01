@@ -9,9 +9,9 @@ from engineering_notation import EngNumber  # only from pip
 from enum import Enum
 from numba import jit, njit
 
-from v2e.emulator import EventEmulator
-from v2e.v2e_utils import video_writer, read_image, checkAddSuffix
-from v2e.v2e_utils import hist2d_numba_seq
+from v2ecore.emulator import EventEmulator
+from v2ecore.v2e_utils import video_writer, read_image, checkAddSuffix
+from v2ecore.v2e_utils import hist2d_numba_seq
 
 logger = logging.getLogger(__name__)
 

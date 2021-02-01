@@ -19,9 +19,10 @@ from numba import jit, njit
 import logging
 import h5py
 from engineering_notation import EngNumber  # only from pip
-from v2e.v2e_utils import all_images, read_image, video_writer, checkAddSuffix
-from v2e.output.aedat2_output import AEDat2Output
-from v2e.output.ae_text_output import DVSTextOutput
+from v2ecore.v2e_utils import all_images, read_image, \
+    video_writer, checkAddSuffix
+from v2ecore.output.aedat2_output import AEDat2Output
+from v2ecore.output.ae_text_output import DVSTextOutput
 
 # import rosbag # not yet for python 3
 

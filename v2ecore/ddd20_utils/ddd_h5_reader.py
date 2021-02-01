@@ -12,9 +12,9 @@ import logging
 import h5py
 from tqdm import tqdm
 import multiprocessing as mp
-from v2e.ddd20_utils.datasets import CHUNK_SIZE
-from v2e.ddd20_interfaces.caer import unpack_data
-from v2e.ddd20_interfaces import caer
+from v2ecore.ddd20_utils.datasets import CHUNK_SIZE
+from v2ecore.ddd20_interfaces.caer import unpack_data
+from v2ecore.ddd20_interfaces import caer
 
 logger = logging.getLogger(__name__)
 

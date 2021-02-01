@@ -2,7 +2,7 @@ import argparse
 import os
 import logging
 
-from v2e.renderer import ExposureMode
+from v2ecore.renderer import ExposureMode
 
 logger = logging.getLogger(__name__)
 

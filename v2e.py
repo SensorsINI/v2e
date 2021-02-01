@@ -22,17 +22,18 @@ from engineering_notation import EngNumber as eng  # only from pip
 from tqdm import tqdm
 
 
-import v2e.desktop as desktop
-from v2e.v2e_utils import all_images, read_image, \
+import v2ecore.desktop as desktop
+from v2ecore.v2e_utils import all_images, read_image, \
     check_lowpass, v2e_quit
-from v2e.v2e_utils import set_output_dimension
-from v2e.v2e_utils import set_output_folder
-from v2e.v2e_args import v2e_args, write_args_info, v2e_check_dvs_exposure_args
-from v2e.v2e_args import NO_SLOWDOWN
-from v2e.renderer import EventRenderer, ExposureMode
-from v2e.slomo import SuperSloMo
-from v2e.emulator import EventEmulator
-from v2e.v2e_utils import inputVideoFileDialog
+from v2ecore.v2e_utils import set_output_dimension
+from v2ecore.v2e_utils import set_output_folder
+from v2ecore.v2e_args import v2e_args, write_args_info
+from v2ecore.v2e_args import v2e_check_dvs_exposure_args
+from v2ecore.v2e_args import NO_SLOWDOWN
+from v2ecore.renderer import EventRenderer, ExposureMode
+from v2ecore.slomo import SuperSloMo
+from v2ecore.emulator import EventEmulator
+from v2ecore.v2e_utils import inputVideoFileDialog
 import logging
 
 logging.basicConfig()
