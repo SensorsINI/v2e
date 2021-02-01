@@ -9,13 +9,9 @@ Compute events from input frames.
 """
 import atexit
 import os
-import sys
-import time
 
 import cv2
 import numpy as np
-import numba as nb
-from numba import jit, njit
 import logging
 import h5py
 from engineering_notation import EngNumber  # only from pip
@@ -171,7 +167,7 @@ class EventEmulator(object):
                 logger.info('opening event output dataset file ' + path)
                 self.dvs_h5 = h5py.File(path, "w")
                 self.dvs_h5_dataset = self.dvs_h5.create_dataset(
-                    name="event",
+                    name="events",
                     shape=(0, 4),
                     maxshape=(None, 4),
                     dtype="uint32")
