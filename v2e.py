@@ -157,8 +157,10 @@ def main():
     srcNumFramesToBeProccessed = 0
 
     # define video parameters
-    start_time = args.start_time
-    stop_time = args.stop_time
+    # the input start and stop time, may be round to actual
+    # frame timestamp
+    input_start_time = args.start_time
+    input_stop_time = args.stop_time
 
     input_slowmotion_factor: float = args.input_slowmotion_factor
     timestamp_resolution: float = args.timestamp_resolution
@@ -256,10 +258,10 @@ def main():
 
         srcTotalDuration = (srcNumFrames-1)/srcFps
         # the index of the frames, from 0 to srcNumFrames-1
-        start_frame = int(srcNumFrames*(start_time/srcTotalDuration)) \
-            if start_time else 0
-        stop_frame = int(srcNumFrames*(stop_time/srcTotalDuration)) \
-            if stop_time else srcNumFrames-1
+        start_frame = int(srcNumFrames*(input_start_time/srcTotalDuration)) \
+            if input_start_time else 0
+        stop_frame = int(srcNumFrames*(input_stop_time/srcTotalDuration)) \
+            if input_stop_time else srcNumFrames-1
         srcNumFramesToBeProccessed = stop_frame-start_frame+1
         # the duration to be processed, should subtract 1 frame when
         # calculating duration
@@ -268,7 +270,7 @@ def main():
         # redefining start and end time using the time calculated
         # from the frames, the minimum resolution there is
         start_time = start_frame/srcFps
-        stop_time = stop_frame/srcFps  # todo something replicated here, already have start and stop times
+        stop_time = stop_frame/srcFps
 
         srcFrameIntervalS = (1./srcFps)/input_slowmotion_factor
 

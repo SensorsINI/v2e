@@ -428,10 +428,13 @@ class EventEmulator(object):
             ts = self.t_previous + deltaTime * (i + 1) / (num_iters+1)
 
             # for each iteration, compute the ON and OFF event locations
-            # for that threshold amount of change or more, these pixels need to output an event in this cycle
+            # for that threshold amount of change or more,
+            # these pixels need to output an event in this cycle
             # pos_cord = (pos_frame >= self.pos_thres * (i + 1))
             # neg_cord = (neg_frame >= self.neg_thres * (i + 1))
-            # already have the number of events for each pixel in pos_evts_frame, just find bool array of pixels with events in this iteration of max # events
+            # already have the number of events for each pixel in
+            # pos_evts_frame, just find bool array of pixels with events in
+            # this iteration of max # events
             pos_cord = (pos_evts_frame >= i+1)
             neg_cord = (neg_evts_frame >= i+1)
 # TODO bug right here
