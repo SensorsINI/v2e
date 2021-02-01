@@ -46,7 +46,7 @@ def make_output_folder(output_folder_base, suffix_counter,
         logger.error(
             'non-empty output folder {} already exists \n '
             '- use --overwrite or --unique_output_folder'.format(
-                os.path.abspath(output_folder), non_empty_folder_exists))
+                os.path.abspath(output_folder)))
         v2e_quit()
 
     if non_empty_folder_exists and unique_output_folder:

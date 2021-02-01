@@ -255,12 +255,18 @@ def main():
                 'from cv2.CAP_PROP_FRAME_COUNT')
 
         srcTotalDuration = (srcNumFrames-1)/srcFps
+        # the index of the frames, from 0 to srcNumFrames-1
         start_frame = int(srcNumFrames*(start_time/srcTotalDuration)) \
             if start_time else 0
         stop_frame = int(srcNumFrames*(stop_time/srcTotalDuration)) \
-            if stop_time else srcNumFrames
+            if stop_time else srcNumFrames-1
         srcNumFramesToBeProccessed = stop_frame-start_frame+1
-        srcDurationToBeProcessed = srcNumFramesToBeProccessed/srcFps
+        # the duration to be processed, should subtract 1 frame when
+        # calculating duration
+        srcDurationToBeProcessed = (srcNumFramesToBeProccessed-1)/srcFps
+
+        # redefining start and end time using the time calculated
+        # from the frames, the minimum resolution there is
         start_time = start_frame/srcFps
         stop_time = stop_frame/srcFps  # todo something replicated here, already have start and stop times
 
@@ -413,7 +419,8 @@ def main():
                 newEvents = emulator.generate_events(fr, time)
                 pbar.update(1)
                 i += 1
-                if newEvents is not None and newEvents.shape[0] > 0:
+                if newEvents is not None and newEvents.shape[0] > 0 \
+                        and not args.skip_video_output:
                     events = np.append(events, newEvents, axis=0)
                     events = np.array(events)
                     if i % batch_size == 0:
@@ -421,7 +428,8 @@ def main():
                             events, height=output_height, width=output_width)
                         events = np.zeros((0, 4), dtype=np.float32)
                 (fr, time) = synthetic_input_instance.next_frame()
-            if len(events) > 0:  # process leftover
+            # process leftover events
+            if len(events) > 0 and not args.skip_video_output:
                 eventRenderer.render_events_to_frames(
                     events, height=output_height, width=output_width)
     else:  # file input
@@ -592,7 +600,8 @@ def main():
                             fr, interpTimes[i])
 
                         pbar.update(1)
-                        if newEvents is not None and newEvents.shape[0] > 0:
+                        if newEvents is not None and newEvents.shape[0] > 0 \
+                                and not args.skip_video_output:
                             events = np.append(events, newEvents, axis=0)
                             events = np.array(events)
                             if i % batch_size == 0:
@@ -600,7 +609,8 @@ def main():
                                     events, height=output_height,
                                     width=output_width)
                                 events = np.zeros((0, 4), dtype=np.float32)
-                    if len(events) > 0:  # process leftover
+                    # process leftover events
+                    if len(events) > 0 and not args.skip_video_output:
                         eventRenderer.render_events_to_frames(
                             events, height=output_height, width=output_width)
 
@@ -638,7 +648,7 @@ def main():
 
     # try to show desktop
     # suppress folder opening if it's not necessary
-    if not args.skip_video_output:
+    if not args.skip_video_output and not args.no_preview:
         try:
             desktop.open(os.path.abspath(output_folder))
         except Exception as e:
