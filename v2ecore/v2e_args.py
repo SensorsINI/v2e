@@ -112,7 +112,10 @@ def v2e_args(parser):
         help="Easy optional setting of parameters for DVS model:"
              "'clean', 'noisy'; 'clean' turns off noise and "
              "makes threshold variation zero. 'noisy' sets "
-             "limited bandwidth and adds leak events and shot noise.")
+             "limited bandwidth and adds leak events and shot noise."
+             "This option by default will disable user set "
+             "DVS parameters. To use custom DVS paramters, "
+             "pass 'custom' instead.")
     modelGroup.add_argument(
         "--pos_thres", type=float, default=0.2,
         help="threshold in log_e intensity change to "
