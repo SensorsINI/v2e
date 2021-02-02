@@ -199,18 +199,31 @@ class EventEmulator(object):
             'from from base frame')
         # base_frame are memorized lin_log pixel values
         self.baseLogFrame = lin_log(firstFrameLinear)
-        # If leak is non-zero, then initialize each pixel memorized value
-        # some fraction of on threshold below to create leak
-        # events from the start; otherwise leak would only gradually
-        # grow over time as pixels spike.
-        if self.leak_rate_hz > 0:
-            self.baseLogFrame -= np.random.uniform(
-                0, self.pos_thres, firstFrameLinear.shape)
+
         # initialize first stage of 2nd order IIR to first input
         self.lpLogFrame0 = np.copy(self.baseLogFrame)
         # 2nd stage is initialized to same,
         # so diff will be zero for first frame
         self.lpLogFrame1 = np.copy(self.baseLogFrame)
+
+        # If leak is non-zero, then initialize each pixel memorized value
+        # some fraction of on threshold below to create leak
+        # events from the start; otherwise leak would only gradually
+        # grow over time as pixels spike.
+        if self.leak_rate_hz > 0:
+            # subtract a small amount from the pos_thres
+            # so that there is less leak events occurred
+            # at the beginning of the video
+            # TODO: not sure if the eps_leak is reasonable
+            # Should be at least 20% of pos_thres
+            eps_leak = min(
+                2*self.leak_rate_hz*self.pos_thres, 0.3*self.pos_thres)
+            eps_leak = max(
+                2*self.leak_rate_hz*self.pos_thres, 0.2*self.pos_thres)
+
+            self.baseLogFrame -= np.random.uniform(
+                0, self.pos_thres-eps_leak, firstFrameLinear.shape)
+
         # take the variance of threshold into account.
         if self.sigma_thres > 0:
             self.pos_thres = np.random.normal(
