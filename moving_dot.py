@@ -58,19 +58,19 @@ class moving_dot():
         """
         self.avi_path = avi_path  # to write AVI
         self.num_dots = 5  # number of dots, spaced around center
-        self.contrast: float = 1.3  # compare this with pos_thres and neg_thres and sigma_thr
+        self.contrast: float = 1.21  # compare this with pos_thres and neg_thres and sigma_thr
         self.bg: int = 100  # background gray level in range 0-255
         self.dt = 30e-6  # frame interval sec
         self.radius = 100  # of circular motion of dot
-        self.dot_sigma: float = 2  # gaussian sigma of dot in pixels
+        self.dot_sigma: float = 1  # gaussian sigma of dot in pixels
         self.speed_pps = 1000  # final speed, pix/s
-        self.cycles = 1
+        self.cycles = 4
         # computed values below here
         # self.t_total = 4 * np.pi * self.radius * self.cycles / self.speed_pps
-        self.t_total = 2 * np.pi * self.radius * self.cycles / self.speed_pps
+        self.circum = 2 * np.pi * self.radius
+        self.t_total = self.circum * self.cycles / self.speed_pps
         # t_total=cycles*period
         self.times = np.arange(0, self.t_total, self.dt)
-        self.circum = 2 * np.pi * self.radius
         self.period = self.circum / self.speed_pps
         # self.theta = (self.speed_pps * self.speed_pps / (8 * np.pi * self.radius * self.radius * self.cycles)) * self.times * self.times
         # constant speed
@@ -122,11 +122,16 @@ class moving_dot():
             return None, self.times[-1]
         time = self.times[self.frame_number]
         pix_arr: np.ndarray = self.bg * np.ones((self.h, self.w), dtype=np.uint8)
+        # radius decreases with time so that dot never overlaps previous path
+        cycles= time/self.period
+        radius=self.radius-cycles*self.d*1.5 # after 1 cycle, radius of circle is decreased by 2*dot radius
         for i in range(self.num_dots):
+            # angle just rotates around
             theta = self.theta[self.frame_number] + (i / self.num_dots) * 2 * np.pi
+
             # actual center of dot
-            x = self.w / 2 + self.radius * np.cos(theta)
-            y = self.h / 2 + self.radius * np.sin(theta)
+            x = self.w / 2 + radius * np.cos(theta)
+            y = self.h / 2 + radius * np.sin(theta)
             # nearest pixel
             x0, y0 = round(x), round(y)
             # range of indexes around x0,y0
