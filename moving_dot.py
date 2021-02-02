@@ -9,7 +9,7 @@ import numpy as np
 import cv2
 import os
 from tqdm import tqdm
-from v2e.v2e_utils import *
+from v2ecore.v2e_utils import *
 import sys
 from typing import Tuple, Optional
 
