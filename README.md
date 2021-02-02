@@ -125,9 +125,9 @@ Do not be intimidated by the huge number of options. Running _v2e.py_ with no ar
 ```
 (base)$ conda activate pt-v2e # activate your workspace
 (pt-v2e)$ python v2e.py -h --ignore-gooey
-usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--output_in_place [OUTPUT_IN_PLACE]]
-              [--overwrite] [--unique_output_folder [UNIQUE_OUTPUT_FOLDER]]
-              [--no_preview] [--avi_frame_rate AVI_FRAME_RATE]
+usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
+              [--output_in_place [OUTPUT_IN_PLACE]] [--overwrite]
+              [--unique_output_folder [UNIQUE_OUTPUT_FOLDER]] [--no_preview]
               [--auto_timestamp_resolution [AUTO_TIMESTAMP_RESOLUTION]]
               [--timestamp_resolution TIMESTAMP_RESOLUTION]
               [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
@@ -145,17 +145,17 @@ usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--output_in_place [OUTPUT_IN_PLACE]]
               [--synthetic_input SYNTHETIC_INPUT]
               [--dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]]
               [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
-              [--dvs_h5 DVS_H5] [--dvs_aedat2 DVS_AEDAT2]
-              [--dvs_text DVS_TEXT] [--dvs_numpy DVS_NUMPY]
-              [--rotate180 ROTATE180]
+              [--skip_video_output] [--dvs_h5 DVS_H5]
+              [--dvs_aedat2 DVS_AEDAT2] [--dvs_text DVS_TEXT]
 v2e: generate simulated DVS events from video.
 optional arguments:
   -h, --help            show this help message and exit
-  --rotate180 ROTATE180
-                        rotate all output 180 deg. (default: False)
 Output: General:
   -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
                         folder to store outputs. (default: v2e-output)
+  --avi_frame_rate AVI_FRAME_RATE
+                        frame rate of output AVI video files; only affects
+                        playback rate. (default: 30)
   --output_in_place [OUTPUT_IN_PLACE]
                         store output files in same folder as source video.
                         (default: True)
@@ -167,9 +167,6 @@ Output: General:
                         empty output_folder already exists) (default: True)
   --no_preview          disable preview in cv2 windows for faster processing.
                         (default: False)
-  --avi_frame_rate AVI_FRAME_RATE
-                        frame rate of output AVI video files; only affects
-                        playback rate. (default: 30)
 DVS timestamp resolution:
   --auto_timestamp_resolution [AUTO_TIMESTAMP_RESOLUTION]
                         (Ignored by --disable_slomo.) If True (default),
@@ -203,8 +200,10 @@ DVS model:
                         Easy optional setting of parameters for DVS
                         model:'clean', 'noisy'; 'clean' turns off noise and
                         makes threshold variation zero. 'noisy' sets limited
-                        bandwidth and adds leak events and shot noise.
-                        (default: None)
+                        bandwidth and adds leak events and shot noise.This
+                        option by default will disable user set DVS
+                        parameters. To use custom DVS paramters, pass 'custom'
+                        instead. (default: noisy)
   --pos_thres POS_THRES
                         threshold in log_e intensity change to trigger a
                         positive event. (default: 0.2)
@@ -287,7 +286,7 @@ Output: DVS video:
   --dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]
                         Mode to finish DVS frame event integration: duration
                         time: Use fixed accumulation time in seconds, e.g.
-                        -dvs_exposure duration .005; count n: Count n events
+                        --dvs_exposure duration .005; count n: Count n events
                         per frame, -dvs_exposure count 5000; area_event N M:
                         frame ends when any area of M x M pixels fills with N
                         events, -dvs_exposure area_count 500 64 (default:
@@ -298,6 +297,8 @@ Output: DVS video:
                         Set full scale event count histogram count for DVS
                         videos to be this many ON or OFF events for full white
                         or black. (default: 2)
+  --skip_video_output   Skip producing video outputs, including the original
+                        video, SloMo video, and DVS video (default: False)
 Output: DVS events:
   --dvs_h5 DVS_H5       Output DVS events as hdf5 event database. (default:
                         None)
@@ -308,11 +309,6 @@ Output: DVS events:
   --dvs_text DVS_TEXT   Output DVS events as text file with one event per line
                         [timestamp (float s), x, y, polarity (0,1)]. (default:
                         v2e-dvs-events.txt)
-  --dvs_numpy DVS_NUMPY
-                        Accumulates DVS events to memory and writes final
-                        numpy data file with this name holding vector of
-                        events. WARNING: memory use is unbounded. (default:
-                        None)
 Run with no --input to open file dialog
 ```
 You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.  Or leave out all options and just use the file chooser to select the movie.
