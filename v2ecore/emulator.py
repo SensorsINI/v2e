@@ -9,19 +9,16 @@ Compute events from input frames.
 """
 import atexit
 import os
-import sys
-import time
 
 import cv2
 import numpy as np
-import numba as nb
-from numba import jit, njit
 import logging
 import h5py
 from engineering_notation import EngNumber  # only from pip
-from v2e.v2e_utils import all_images, read_image, video_writer, checkAddSuffix
-from v2e.output.aedat2_output import AEDat2Output
-from v2e.output.ae_text_output import DVSTextOutput
+from v2ecore.v2e_utils import all_images, read_image, \
+    video_writer, checkAddSuffix
+from v2ecore.output.aedat2_output import AEDat2Output
+from v2ecore.output.ae_text_output import DVSTextOutput
 
 # import rosbag # not yet for python 3
 
@@ -52,7 +49,7 @@ def lin_log(x, threshold=20):
     """
 
     # converting x into np.float32.
-    if x.dtype is not np.float64: # note float64 to get rounding to work
+    if x.dtype is not np.float64:  # note float64 to get rounding to work
         x = x.astype(np.float64)
     f = (1 / (threshold)) * np.log(threshold)
 
@@ -63,10 +60,11 @@ def lin_log(x, threshold=20):
          lambda x: np.log(x)]
     )
     # important, we do a floating point round to some digits of precision
-    # to avoid that adding threshold and subtracting it again results in different
-    # number because first addition shoots some bits off to never-never land, thus preventing the OFF events
+    # to avoid that adding threshold and subtracting it again results
+    # in different number because first addition shoots some bits off
+    # to never-never land, thus preventing the OFF events
     # that ideally follow ON events when object moves by
-    y=np.around(y,8)
+    y = np.around(y, 8)
 
     return y
 
@@ -122,7 +120,8 @@ class EventEmulator(object):
         dvs_aedat2, dvs_h5, dvs_text: str
             names of output data files or None
         show_dvs_model_state: str,
-            None or 'new_frame' 'baseLogFrame','lpLogFrame0','lpLogFrame1', 'diff_frame'
+            None or 'new_frame' 'baseLogFrame','lpLogFrame0','lpLogFrame1',
+            'diff_frame'
         """
 
         logger.info(
@@ -147,11 +146,6 @@ class EventEmulator(object):
         if seed > 0:
             np.random.seed(seed)
 
-        #  if leak_rate_hz>0:
-        #      logger.warning(
-        #          'leak events not yet implemented; '
-        #          'leak_rate_hz={} will be ignored'.format(leak_rate_hz))
-
         if refractory_period_s > 0:
             logger.warning(
                 'refractory period not yet implemented; '
@@ -173,7 +167,7 @@ class EventEmulator(object):
                 logger.info('opening event output dataset file ' + path)
                 self.dvs_h5 = h5py.File(path, "w")
                 self.dvs_h5_dataset = self.dvs_h5.create_dataset(
-                    name="event",
+                    name="events",
                     shape=(0, 4),
                     maxshape=(None, 4),
                     dtype="uint32")
@@ -218,7 +212,7 @@ class EventEmulator(object):
         # so diff will be zero for first frame
         self.lpLogFrame1 = np.copy(self.baseLogFrame)
         # take the variance of threshold into account.
-        if self.sigma_thres>0:
+        if self.sigma_thres > 0:
             self.pos_thres = np.random.normal(
                 self.pos_thres, self.sigma_thres, firstFrameLinear.shape)
             # to avoid the situation where the threshold is too small.
@@ -246,12 +240,14 @@ class EventEmulator(object):
             # rate in hz of temporal noise events
             self.shot_noise_rate_hz = 0.1
             self.refractory_period_s = 0  # TODO not yet modeled
-
         else:
-            logger.error(
+            #  logger.error(
+            #      "dvs_params {} not known: "
+            #      "use 'clean' or 'noisy'".format(model))
+            logger.warning(
                 "dvs_params {} not known: "
-                "use 'clean' or 'noisy'".format(model))
-            sys.exit(1)
+                "Using commandline assigned options".format(model))
+            #  sys.exit(1)
         logger.info("set DVS model params with option '{}' "
                     "to following values:\n"
                     "pos_thres={}\n"
@@ -281,7 +277,6 @@ class EventEmulator(object):
         img = ((inp - min) / (np.max(inp) - min))
         cv2.imshow(__name__+':'+self.show_input, img)
         cv2.waitKey(30)
-
 
     def generate_events(
             self, new_frame: np.ndarray,
@@ -313,7 +308,9 @@ class EventEmulator(object):
             return None
 
         if t_frame <= self.t_previous:
-            raise ValueError("this frame time={} must be later than previous frame time={}".format(t_frame,self.t_previous))
+            raise ValueError(
+                "this frame time={} must be later than "
+                "previous frame time={}".format(t_frame, self.t_previous))
 
         # lin-log mapping
         logNewFrame = lin_log(new_frame)
@@ -330,15 +327,15 @@ class EventEmulator(object):
         inten01 = None  # define for later
         if self.cutoff_hz > 0 or self.shot_noise_rate_hz > 0:  # will use later
             # make sure we get no zero time constants
-            inten01 = (np.array(new_frame, float)+20)/275 # limit max time constant to ~1/10 of white intensity level
-        if self.cutoff_hz <= 0: # no lowpass, just copy log frame to lp stages, note this can cause events at upsampled rates until some conditions like synthetic input from numerical roundoff problems
+            inten01 = (np.array(new_frame, float)+20)/275  # limit max time constant to ~1/10 of white intensity level
+        if self.cutoff_hz <= 0:  # no lowpass, just copy log frame to lp stages, note this can cause events at upsampled rates until some conditions like synthetic input from numerical roundoff problems
             self.lpLogFrame0 = logNewFrame
             # then 2nd internal state (output) is updated from first
             self.lpLogFrame1 = logNewFrame
         else:
             tau = (1 / (np.pi * 2 * self.cutoff_hz))
             # make the update proportional to the local intensity
-            eps = inten01 * (deltaTime / tau) # the more intensity, the shorter the time constant
+            eps = inten01 * (deltaTime / tau)  # the more intensity, the shorter the time constant
             eps[eps[:] > 1] = 1  # keep filter stable
             # first internal state is updated
             self.lpLogFrame0 = (1-eps)*self.lpLogFrame0+eps*logNewFrame
@@ -400,12 +397,12 @@ class EventEmulator(object):
 
         # compute quantized numbers of ON events for each pixel
         pos_evts_frame = pos_frame // self.pos_thres
-        pos_evts_frame=pos_evts_frame.astype(int)
+        pos_evts_frame = pos_evts_frame.astype(int)
         # compute number of times to pass over array to compute
         # separated ON events
         pos_iters = int(pos_evts_frame.max())
         neg_evts_frame = neg_frame // self.neg_thres  # same for OFF events
-        neg_evts_frame=neg_evts_frame.astype(int)
+        neg_evts_frame = neg_evts_frame.astype(int)
         neg_iters = int(neg_evts_frame.max())
 
         # ERROR: why are you here?
@@ -423,13 +420,17 @@ class EventEmulator(object):
             # they end at t_end
             # e.g. t_start=0, t_end=1, num_iters=2, i=0,1
             # ts=1*1/2, 2*1/2
-            ts = self.t_previous + deltaTime * (i + 1) / (num_iters)
+            # num_iters+1 matches with the equation in the paper
+            ts = self.t_previous + deltaTime * (i + 1) / (num_iters+1)
 
             # for each iteration, compute the ON and OFF event locations
-            # for that threshold amount of change or more, these pixels need to output an event in this cycle
+            # for that threshold amount of change or more,
+            # these pixels need to output an event in this cycle
             # pos_cord = (pos_frame >= self.pos_thres * (i + 1))
             # neg_cord = (neg_frame >= self.neg_thres * (i + 1))
-            # already have the number of events for each pixel in pos_evts_frame, just find bool array of pixels with events in this iteration of max # events
+            # already have the number of events for each pixel in
+            # pos_evts_frame, just find bool array of pixels with events in
+            # this iteration of max # events
             pos_cord = (pos_evts_frame >= i+1)
             neg_cord = (neg_evts_frame >= i+1)
 # TODO bug right here
@@ -517,8 +518,10 @@ class EventEmulator(object):
                     self.num_events_on += shotOnCount
                     self.num_events_off += shotOffCount
                     self.num_events_total += shotOnCount+shotOffCount
-                    pos_thr=self.pos_thres if isinstance(self.pos_thres,float) else self.pos_thres[shotOnCord]
-                    neg_thr=self.neg_thres if isinstance(self.neg_thres,float) else self.neg_thres[shotOffCord]
+                    pos_thr = self.pos_thres if isinstance(
+                        self.pos_thres, float) else self.pos_thres[shotOnCord]
+                    neg_thr = self.neg_thres if isinstance(
+                        self.neg_thres, float) else self.neg_thres[shotOffCord]
                     if shotOnCount > 0:
                         shotEvents = np.hstack(
                             (np.ones((shotOnCount, 1), dtype=np.float32) * ts,
@@ -560,10 +563,14 @@ class EventEmulator(object):
                 # the current frame brightness
                 if num_pos_events > 0:
                     self.baseLogFrame[pos_cord] += \
-                        pos_evts_frame[pos_cord] * ( self.pos_thres[pos_cord] if self.sigma_thres>0 else self.pos_thres)
+                        pos_evts_frame[pos_cord] * (
+                            self.pos_thres[pos_cord]
+                            if self.sigma_thres > 0 else self.pos_thres)
                 if num_neg_events > 0:
                     self.baseLogFrame[neg_cord] -= \
-                        neg_evts_frame[neg_cord] * ( self.neg_thres[neg_cord] if self.sigma_thres>0 else self.neg_thres)
+                        neg_evts_frame[neg_cord] * (
+                            self.neg_thres[neg_cord]
+                            if self.sigma_thres > 0 else self.neg_thres)
                     # neg_thres is >0
 
         if len(events) > 0:

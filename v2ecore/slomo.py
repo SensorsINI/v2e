@@ -17,9 +17,9 @@ from tqdm import tqdm
 
 import torchvision.transforms as transforms
 
-from v2e.v2e_utils import video_writer
-import v2e.dataloader as dataloader
-import v2e.model as model
+from v2ecore.v2e_utils import video_writer
+import v2ecore.dataloader as dataloader
+import v2ecore.model as model
 
 from PIL import Image
 import logging
