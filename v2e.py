@@ -27,6 +27,7 @@ from v2ecore.v2e_utils import all_images, read_image, \
     check_lowpass, v2e_quit
 from v2ecore.v2e_utils import set_output_dimension
 from v2ecore.v2e_utils import set_output_folder
+from v2ecore.v2e_utils import ImageFolderReader
 from v2ecore.v2e_args import v2e_args, write_args_info
 from v2ecore.v2e_args import v2e_check_dvs_exposure_args
 from v2ecore.v2e_args import NO_SLOWDOWN
@@ -148,8 +149,10 @@ def main():
         logger)
 
     # input file checking
-    if (not input_file or not os.path.isfile(input_file)) \
-            and not synthetic_input:
+    #  if (not input_file or not os.path.isfile(input_file)
+    #      or not os.path.isdir(input_file)) \
+    #          and not synthetic_input:
+    if not input_file and not synthetic_input:
         logger.error('input file {} does not exist'.format(input_file))
         v2e_quit(1)
 
@@ -241,16 +244,27 @@ def main():
     if synthetic_input is None:
         logger.info("opening video input file " + input_file)
 
-        cap = cv2.VideoCapture(input_file)
-        srcFps = cap.get(cv2.CAP_PROP_FPS)
+        if os.path.isdir(input_file):
+            if args.input_frame_rate is None:
+                logger.error(
+                    "When the video is presented as a folder, "
+                    "The user has to set --input_frame_rate manually")
+
+            cap = ImageFolderReader(input_file, args.input_frame_rate)
+            srcFps = cap.frame_rate
+            srcNumFrames = cap.num_frames
+        else:
+            cap = cv2.VideoCapture(input_file)
+            srcFps = cap.get(cv2.CAP_PROP_FPS)
+            srcNumFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        # Check frame rate and number of frames
         if srcFps == 0:
             logger.error(
                 'source {} fps is 0; v2e needs to have a timescale '
                 'for input video'.format(input_file))
             v2e_quit()
 
-        # https://stackoverflow.com/questions/25359288/how-to-know-total-number-of-frame-in-a-file-with-cv2-in-python
-        srcNumFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         if srcNumFrames < 2:
             logger.warning(
                 'num frames is less than 2, probably cannot be determined '
@@ -457,9 +471,15 @@ def main():
                 start_frame, stop_frame))
 
         with TemporaryDirectory() as source_frames_dir:
-            inputWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            inputHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            inputChannels = 1 if int(cap.get(cv2.CAP_PROP_MONOCHROME)) else 3
+            if os.path.isdir(input_file):  # folder input
+                inputWidth = cap.frame_width
+                inputHeight = cap.frame_height
+                inputChannels = cap.frame_channels
+            else:
+                inputWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                inputHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                inputChannels = 1 if int(cap.get(cv2.CAP_PROP_MONOCHROME)) \
+                    else 3
             logger.info(
                 'Input video {} has W={} x H={} frames each with {} channels'
                 .format(input_file, inputWidth, inputHeight, inputChannels))

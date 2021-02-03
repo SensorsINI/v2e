@@ -211,7 +211,17 @@ def v2e_args(parser):
     inGroup = parser.add_argument_group('Input file handling')
     inGroup.add_argument(
         "-i", "--input", type=expandpath,
-        help="Input video file; leave empty for file chooser dialog.")
+        help="Input video file or a image folder; "
+             "leave empty for file chooser dialog."
+             "If the input is a folder, the folder should contain "
+             "a ordered list of image files."
+             "In addition, the user has to set the frame rate manually.")
+    inGroup.add_argument(
+        "--input_frame_rate", type=float,
+        help="Manually define the video frame rate when the video is "
+             "presented as a list of image files."
+             "When the input video is a video file, this "
+             "option will be ignored.")
     inGroup.add_argument(
         "--input_slowmotion_factor", type=float, default=1.0,
         help="Sets the known slow-motion factor of the input video, "

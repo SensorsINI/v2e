@@ -21,6 +21,48 @@ OUTPUT_VIDEO_CODEC_FOURCC = 'XVID'
 logger = logging.getLogger(__name__)
 
 
+class ImageFolderReader(object):
+    def __init__(self, image_folder_path, frame_rate):
+        """ImageFolderReader.
+
+        This class implements functions that are similar to
+        VideoCapture in OpenCV.
+
+        This class is used when the frames are available as
+        a sequence of image files in a folder.
+
+        NOTE: the folder should contain only image files and
+        the files have to be ordered!!!
+
+        All images are assumed to have the same dimension.
+        """
+        self.image_folder_path = image_folder_path
+
+        self.image_file_list = sorted(
+            glob.glob("{}".format(self.image_folder_path) + "/*.*"))
+
+        self.frame_rate = frame_rate
+
+        self.current_frame_idx = 0
+
+        self.num_frames = len(self.image_file_list)
+
+        frame = cv2.imread(self.image_file_list[0])
+        self.frame_height, self.frame_width = frame.shape[0], frame.shape[1]
+        self.frame_channels = 1 if frame.ndim < 3 else frame.shape[2]
+
+    def read(self):
+        frame = cv2.imread(self.image_file_list[self.current_frame_idx])
+        self.current_frame_idx += 1
+
+        # To match with OpenCV API
+        return True, frame
+
+    def release(self):
+        """Just to match with OpenCV API."""
+        pass
+
+
 def v2e_quit(code=None):
     try:
         quit(code)  # not defined in pydev console, e.g. running in pycharm
