@@ -9,7 +9,7 @@ v.1.4.0
         - Fixed option to specify both --auto_timestamp_resolution and --timestamp_resolution at same time, to limit maximum timestep for DVS events
         - Fixed warning messages to warn users about bad combination of upsampling frame rate and lowpass filtering
         - Fixed subtle timing problems with events that cause some skew for some videos that generate many events per frame
-        - Fixed the problem when initializing the first frame that causes a burst of leak events. Introduce a `eps_leak` to address this problem.
+        - Fixed the problem when initializing the first frame that causes a burst of leak events.
 
 
 v1.3.1

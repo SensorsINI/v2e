@@ -159,7 +159,7 @@ class EventEmulator(object):
         self.num_events_total = 0
         self.num_events_on = 0
         self.num_events_off = 0
-        self.frame_counter=0
+        self.frame_counter = 0
 
         if self.output_folder:
             if dvs_h5:
@@ -221,24 +221,13 @@ class EventEmulator(object):
         # some fraction of ON threshold below first frame value, to create leak
         # events from the start; otherwise leak would only gradually
         # grow over time as pixels spike.
-        # do this *AFTER* we determine randomly distributed thresholds (and use the actual pixel thresholds)
+        # do this *AFTER* we determine randomly distributed thresholds
+        # (and use the actual pixel thresholds)
         # otherwise low threshold pixels will generate
         # a burst of events at the first frame
         if self.leak_rate_hz > 0:
-            # subtract a small amount from the pos_thres
-            # so that there is less leak events occurred
-            # at the beginning of the video
-            # # TODO: not sure if the eps_leak is reasonable
-            # # Should be at least 20% of pos_thres
-            # eps_leak = min(
-            #     2*self.leak_rate_hz*self.pos_thres, 0.3*self.pos_thres)
-            # eps_leak = max(
-            #     2*self.leak_rate_hz*self.pos_thres, 0.2*self.pos_thres)
-            # eps_leak=0 # tobi 0 should be ok
-
             self.baseLogFrame -= np.random.uniform(
                 0, self.pos_thres, firstFrameLinear.shape)
-
 
     def set_dvs_params(self, model: str):
         if model == 'clean':
@@ -290,14 +279,14 @@ class EventEmulator(object):
         self.baseLogFrame = None
         self.lpLogFrame0 = None  # lowpass stage 0
         self.lpLogFrame1 = None  # stage 1
-        self.frame_counter=0
+        self.frame_counter = 0
 
     def _show(self, inp: np.ndarray):
         min = np.min(inp)
-        norm=(np.max(inp) - min)
-        if norm==0:
+        norm = (np.max(inp) - min)
+        if norm == 0:
             logger.warning('image is blank, max-min=0')
-            norm=1
+            norm = 1
         img = ((inp - min) / norm)
         cv2.imshow(__name__+':'+self.show_input, img)
         cv2.waitKey(30)
@@ -330,7 +319,7 @@ class EventEmulator(object):
             self._init(new_frame)
             self.t_previous = t_frame
             return None
-        self.frame_counter+=1
+        self.frame_counter += 1
 
         if t_frame <= self.t_previous:
             raise ValueError(
@@ -470,10 +459,11 @@ class EventEmulator(object):
             self.num_events_off += num_neg_events
             self.num_events_total += num_events
 
-            # logger.info(f'frame/iteration: {self.frame_counter}/{i} #on: {num_pos_events} #off: {num_neg_events}')
+            #  logger.info(
+            #      f'frame/iteration: {self.frame_counter}/{i}'
+            #      f'#on: {num_pos_events} #off: {num_neg_events}')
 
-
-        # sort out the positive event and negative event
+            # sort out the positive event and negative event
             if num_pos_events > 0:
                 pos_events = np.hstack(
                     (np.ones((num_pos_events, 1), dtype=np.float32) * ts,
