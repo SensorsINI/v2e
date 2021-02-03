@@ -171,7 +171,8 @@ class EventEmulator(object):
                     name="events",
                     shape=(0, 4),
                     maxshape=(None, 4),
-                    dtype="uint32")
+                    dtype="uint32",
+                    compression="gzip")
             if dvs_aedat2:
                 path = os.path.join(self.output_folder, dvs_aedat2)
                 path = checkAddSuffix(path, '.aedat')
