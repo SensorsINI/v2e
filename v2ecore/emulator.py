@@ -246,7 +246,7 @@ class EventEmulator(object):
             self.cutoff_hz = 30
             self.leak_rate_hz = 0.1
             # rate in hz of temporal noise events
-            self.shot_noise_rate_hz = 0.1
+            self.shot_noise_rate_hz = 5.0
             self.refractory_period_s = 0  # TODO not yet modeled
         else:
             #  logger.error(
