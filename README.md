@@ -140,6 +140,7 @@ usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
               [--disable_slomo] [--slomo_model SLOMO_MODEL]
               [--batch_size BATCH_SIZE] [--vid_orig VID_ORIG]
               [--vid_slomo VID_SLOMO] [--slomo_stats_plot] [-i INPUT]
+              [--input_frame_rate INPUT_FRAME_RATE]
               [--input_slowmotion_factor INPUT_SLOWMOTION_FACTOR]
               [--start_time START_TIME] [--stop_time STOP_TIME]
               [--synthetic_input SYNTHETIC_INPUT]
@@ -147,9 +148,12 @@ usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
               [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
               [--skip_video_output] [--dvs_h5 DVS_H5]
               [--dvs_aedat2 DVS_AEDAT2] [--dvs_text DVS_TEXT]
+
 v2e: generate simulated DVS events from video.
+
 optional arguments:
   -h, --help            show this help message and exit
+
 Output: General:
   -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
                         folder to store outputs. (default: v2e-output)
@@ -167,6 +171,7 @@ Output: General:
                         empty output_folder already exists) (default: True)
   --no_preview          disable preview in cv2 windows for faster processing.
                         (default: False)
+
 DVS timestamp resolution:
   --auto_timestamp_resolution [AUTO_TIMESTAMP_RESOLUTION]
                         (Ignored by --disable_slomo.) If True (default),
@@ -187,6 +192,7 @@ DVS timestamp resolution:
                         will force high upsampling ratio. Can be combind with
                         --auto_timestamp_resolution to limit upsampling to a
                         maximum limit value. (default: None)
+
 DVS model:
   --output_height OUTPUT_HEIGHT
                         Height of output DVS data in pixels. If None, same as
@@ -198,12 +204,12 @@ DVS model:
                         (default: None)
   --dvs_params DVS_PARAMS
                         Easy optional setting of parameters for DVS
-                        model:'clean', 'noisy'; 'clean' turns off noise and
-                        makes threshold variation zero. 'noisy' sets limited
-                        bandwidth and adds leak events and shot noise.This
-                        option by default will disable user set DVS
-                        parameters. To use custom DVS paramters, pass 'custom'
-                        instead. (default: noisy)
+                        model:None, 'clean', 'noisy'; 'clean' turns off noise
+                        and makes threshold variation zero. 'noisy' sets
+                        limited bandwidth and adds leak events and shot
+                        noise.This option by default will disable user set DVS
+                        parameters. To use custom DVS paramters, use None
+                        here. (default: None)
   --pos_thres POS_THRES
                         threshold in log_e intensity change to trigger a
                         positive event. (default: 0.2)
@@ -228,6 +234,7 @@ DVS model:
   --show_dvs_model_state SHOW_DVS_MODEL_STATE
                         one of new_frame baseLogFrame lpLogFrame0 lpLogFrame1
                         diff_frame (without quotes) (default: None)
+
 SloMo upsampling (see also "DVS timestamp resolution" group):
   --disable_slomo       Disables slomo interpolation; the output DVS events
                         will have exactly the timestamp resolution of the
@@ -246,9 +253,18 @@ SloMo upsampling (see also "DVS timestamp resolution" group):
                         Output slomo of src video slowed down by
                         slowdown_factor. (default: video_slomo.avi)
   --slomo_stats_plot    show a plot of slomo statistics (default: False)
+
 Input file handling:
   -i INPUT, --input INPUT
-                        Input video file; leave empty for file chooser dialog.
+                        Input video file or a image folder; leave empty for
+                        file chooser dialog.If the input is a folder, the
+                        folder should contain a ordered list of image files.In
+                        addition, the user has to set the frame rate manually.
+                        (default: None)
+  --input_frame_rate INPUT_FRAME_RATE
+                        Manually define the video frame rate when the video is
+                        presented as a list of image files.When the input
+                        video is a video file, this option will be ignored.
                         (default: None)
   --input_slowmotion_factor INPUT_SLOWMOTION_FACTOR
                         Sets the known slow-motion factor of the input video,
@@ -270,6 +286,7 @@ Input file handling:
   --stop_time STOP_TIME
                         Stop at this time in seconds in video. Use None to end
                         at end of source video. (default: None)
+
 Synthetic input:
   --synthetic_input SYNTHETIC_INPUT
                         Input from class SYNTHETIC_INPUT that has methods
@@ -282,6 +299,7 @@ Synthetic input:
                         resolvable from the classpath. SYNTHETIC_INPUT is the
                         module name without .py suffix.See example
                         moving_dot.py. (default: None)
+
 Output: DVS video:
   --dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]
                         Mode to finish DVS frame event integration: duration
@@ -299,6 +317,7 @@ Output: DVS video:
                         or black. (default: 2)
   --skip_video_output   Skip producing video outputs, including the original
                         video, SloMo video, and DVS video (default: False)
+
 Output: DVS events:
   --dvs_h5 DVS_H5       Output DVS events as hdf5 event database. (default:
                         None)
@@ -309,6 +328,7 @@ Output: DVS events:
   --dvs_text DVS_TEXT   Output DVS events as text file with one event per line
                         [timestamp (float s), x, y, polarity (0,1)]. (default:
                         v2e-dvs-events.txt)
+
 Run with no --input to open file dialog
 ```
 You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.  Or leave out all options and just use the file chooser to select the movie.
