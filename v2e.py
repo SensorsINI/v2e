@@ -38,7 +38,7 @@ import logging
 
 logging.basicConfig()
 root = logging.getLogger()
-root.setLevel(logging.INFO)
+root.setLevel(logging.INFO) # todo move to info for production
 # https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output/7995762#7995762
 logging.addLevelName(
     logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(

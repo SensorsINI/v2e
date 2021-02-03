@@ -13,7 +13,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/v2e.py" />
-    <option name="PARAMETERS" value="--leak_rate=0 --shot=0 --cutoff_hz=300 --sigma_thr=.05 --pos_thr=.2 --neg_thr=.2 --dvs_exposure duration .01 --dvs_aedat2=v2e.aedat --output_width=346 --output_height=260 --batch=64 --disable_slomo --synthetic_input=moving_dot" />
+    <option name="PARAMETERS" value="--leak_rate=10 --shot=0 --cutoff_hz=300 --sigma_thr=.05 --pos_thr=.2 --neg_thr=.2 --dvs_exposure duration .01 --dvs_aedat2=v2e.aedat --output_width=346 --output_height=260 --batch=64 --disable_slomo --synthetic_input=moving_dot" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="true" />
     <option name="MODULE_MODE" value="false" />
