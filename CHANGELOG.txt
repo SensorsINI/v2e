@@ -9,8 +9,9 @@ v.1.4.0
         - Fixed option to specify both --auto_timestamp_resolution and --timestamp_resolution at same time, to limit maximum timestep for DVS events
         - Fixed warning messages to warn users about bad combination of upsampling frame rate and lowpass filtering
         - Fixed subtle timing problems with events that cause some skew for some videos that generate many events per frame
-        - Fixed the problem when initializing the first frame that causes a burst of leak events. Introduce a `eps_leak` to address this problem.
-
+        - Fixed the problem when initializing the first frame that causes a burst of leak events. Set the leak initial state accounting for random pixel ON thresholds.
+        - Changed so that DVS parameter selection is by default None, so that user selections are not overridden. Added warning that such options will be overridden by using the --dvs_params option
+        --Set default 'noisy' shot noise rate to more realistic 5Hz/pixel value
 
 v1.3.1
  - initial release to accompany the v2e arxiv paper

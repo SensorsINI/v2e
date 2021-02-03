@@ -400,7 +400,8 @@ def main():
         output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2,
         dvs_text=dvs_text, show_dvs_model_state=args.show_dvs_model_state)
 
-    if args.dvs_params:
+    if args.dvs_params is not None:
+        logger.warning(f'--dvs_param={args.dvs_params} option overrides your selected options for threshold, threshold-mismatch, leak and shot noise rates')
         emulator.set_dvs_params(args.dvs_params)
 
     eventRenderer = EventRenderer(
