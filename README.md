@@ -135,6 +135,7 @@ usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
               [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
               [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
               [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ]
+              [--dvs_emulator_seed DVS_EMULATOR_SEED]
               [--show_dvs_model_state SHOW_DVS_MODEL_STATE]
               [--dvs128 | --dvs240 | --dvs346 | --dvs640 | --dvs1024]
               [--disable_slomo] [--slomo_model SLOMO_MODEL]
@@ -231,6 +232,10 @@ DVS model:
   --shot_noise_rate_hz SHOT_NOISE_RATE_HZ
                         Temporal noise rate of ON+OFF events in darkest parts
                         of scene; reduced in brightest parts. (default: 0.001)
+  --dvs_emulator_seed DVS_EMULATOR_SEED
+                        Set to a integer >0 to use a fixed random seed.default
+                        is 0 which means the random seed is not fixed.
+                        (default: 0)
   --show_dvs_model_state SHOW_DVS_MODEL_STATE
                         one of new_frame baseLogFrame lpLogFrame0 lpLogFrame1
                         diff_frame (without quotes) (default: None)

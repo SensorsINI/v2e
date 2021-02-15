@@ -1,3 +1,6 @@
+v1.4.1
+    New Features
+        - a new option --dvs_emulator_seed is introduced. This option allows the user to use a fixed random seed. The default is 0 which means the emulator uses a system defined random seed.
 
 v1.4.0
     New features

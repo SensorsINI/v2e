@@ -17,7 +17,7 @@ License :: OSI Approved :: MIT License
 
 setup(
     name='v2e',
-    version="0.1.0",
+    version="1.4.1",
 
     author="Tobi Delbruck, Yuhuang Hu, Zhe He",
     author_email="tobi@ini.uzh.ch",

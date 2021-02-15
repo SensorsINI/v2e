@@ -86,7 +86,8 @@ class EventEmulator(object):
             leak_rate_hz=0.1,
             refractory_period_s=0,  # todo not yet modeled
             shot_noise_rate_hz=0,  # rate in hz of temporal noise events
-            seed=42,
+            #  seed=42,
+            seed=0,
             output_folder: str = None,
             dvs_h5: str = None,
             dvs_aedat2: str = None,

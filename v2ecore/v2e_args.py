@@ -143,6 +143,10 @@ def v2e_args(parser):
         # default for good lighting, very low rate
         help="Temporal noise rate of ON+OFF events in "
              "darkest parts of scene; reduced in brightest parts. ")
+    modelGroup.add_argument(
+        "--dvs_emulator_seed", type=int, default=0,
+        help="Set to a integer >0 to use a fixed random seed."
+             "default is 0 which means the random seed is not fixed.")
 
     modelGroup.add_argument(
         "--show_dvs_model_state", type=str, default=None,
