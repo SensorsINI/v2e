@@ -360,6 +360,7 @@ def select_events_in_roi(events, x, y):
            y[0] > y[1]:
             raise ValueError("y is not in the valid range.")
         y_region = np.logical_and(events[:, 2] >= y[0], events[:, 2] <= y[1])
+    else:
         raise TypeError("y must be int or tuple.")
 
     region = np.logical_and(x_region, y_region)
