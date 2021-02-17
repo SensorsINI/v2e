@@ -73,7 +73,7 @@ class SuperSloMo(object):
             needs video_path to be set too
         vid_slomo: str or None,
             name of slomo video file, needs video_path to be set too
-            
+
             Returns
             ---------------
             None in case of slowdown_factor=int value.
