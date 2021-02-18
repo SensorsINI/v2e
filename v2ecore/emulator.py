@@ -543,10 +543,10 @@ class EventEmulator(object):
                         self.neg_thres, float) else self.neg_thres[shotOffCord]
                     if shotOnCount > 0:
                         shotEvents = np.hstack(
-                            (np.ones((shotOnCount, 1), dtype=np.float32) * ts,
+                            (np.ones((shotOnCount, 1), dtype=np.float32)*ts,
                              shotOnXy[1][..., np.newaxis],
                              shotOnXy[0][..., np.newaxis],
-                             np.ones((shotOnCount, 1), dtype=np.float32) * 1))
+                             np.ones((shotOnCount, 1), dtype=np.float32)*1))
                         events_curr_iters = np.append(
                             events_curr_iters, shotEvents, axis=0)
                         #  events.append(shotEvents)
@@ -554,10 +554,10 @@ class EventEmulator(object):
                             shotOnCord[shotOnCord] * pos_thr
                     if shotOffCount > 0:
                         shotEvents = np.hstack(
-                            (np.ones((shotOffCount, 1), dtype=np.float32) * ts,
+                            (np.ones((shotOffCount, 1), dtype=np.float32)*ts,
                              shotOffXy[1][..., np.newaxis],
                              shotOffXy[0][..., np.newaxis],
-                             np.ones((shotOffCount, 1), dtype=np.float32) * 1))
+                             np.ones((shotOffCount, 1), dtype=np.float32)*-1))
                         events_curr_iters = np.append(
                             events_curr_iters, shotEvents, axis=0)
                         #  events.append(shotEvents)
