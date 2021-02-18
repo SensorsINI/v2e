@@ -58,7 +58,7 @@ class moving_dot():
         """
         self.avi_path = avi_path  # to write AVI
         self.num_dots = 5  # number of dots, spaced around center
-        self.contrast: float = 1.21  # compare this with pos_thres and neg_thres and sigma_thr
+        self.contrast: float = 1.50  # compare this with pos_thres and neg_thres and sigma_thr, e.g. use 1.2 for dot to be 20% brighter than backgreound
         self.bg: int = 100  # background gray level in range 0-255
         self.dt = 30e-6  # frame interval sec
         self.radius = 100  # of circular motion of dot
