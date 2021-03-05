@@ -64,9 +64,6 @@ def v2e_args(parser):
         help="If specifying --output_folder, makes unique output "
              "folder based on output_folder, e.g. output1 "
              "(if non-empty output_folder already exists)")
-    outGroupGeneral.add_argument(
-        "--no_preview", action="store_true",
-        help="disable preview in cv2 windows for faster processing.")
 
     # timestamp resolution
     timestampResolutionGroup = parser.add_argument_group(
@@ -130,9 +127,12 @@ def v2e_args(parser):
 
     modelGroup.add_argument(
         "--cutoff_hz", type=float, default=300,
-        help="photoreceptor second-order IIR lowpass filter "
+        help="photoreceptor IIR lowpass filter "
              "cutoff-off 3dB frequency in Hz - "
-             "see https://ieeexplore.ieee.org/document/4444573")
+             "see https://ieeexplore.ieee.org/document/4444573."
+             "CAUTION: See interaction with timestamp_resolution and auto_timestamp_resolution; "
+             "check output logger warnings."
+    )
     modelGroup.add_argument(
         "--leak_rate_hz", type=float, default=0.01,
         # typical for normal illumination levels with Davis cameras
@@ -288,8 +288,12 @@ def v2e_args(parser):
     outGroupDvsVideo.add_argument(
         "--skip_video_output", action="store_true",
         help="Skip producing video outputs, including the original video, "
-             "SloMo video, and DVS video")
-    # outGroupDvsVideo.add_argument(
+             "SloMo video, and DVS video. "
+             "This mode also prevents showing preview of output (cf --no_preview).")
+    outGroupDvsVideo.add_argument(
+        "--no_preview", action="store_true",
+        help="disable preview in cv2 windows for faster processing.")
+# outGroupDvsVideo.add_argument(
     #     "--frame_rate", type=float,
     #     help="implies --dvs_exposure duration 1/framerate.  "
     #          "Equivalent frame rate of --dvs_vid output video; "

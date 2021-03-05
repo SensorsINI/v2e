@@ -165,7 +165,7 @@ def check_lowpass(cutoffhz, fs, logger):
             'sample rate fs={}Hz (sample interval dt={}s) '
             ',\n  but this results in large IIR mixing factor '
             'eps = dt/tau = {:5.3f} > {:4.1f} (maxeps),'
-            '\n which means the lowpass will filter few or even just '
+            '\n which means the lowpass will filter  few or even just '
             'last sample, i.e. you will not be lowpassing as expected.'
             '\nWe recommend either'
             '\n -decreasing --timestamp_resolution of DVS events below {}s'

@@ -94,7 +94,9 @@ class EventEmulator(object):
             dvs_text: str = None,
             # change as you like to see 'baseLogFrame',
             # 'lpLogFrame', 'diff_frame'
-            show_dvs_model_state: str = None
+            show_dvs_model_state: str = None,
+            output_width=None,
+            output_height=None
             # dvs_rosbag=None
     ):
         """
@@ -123,6 +125,10 @@ class EventEmulator(object):
         show_dvs_model_state: str,
             None or 'new_frame' 'baseLogFrame','lpLogFrame0','lpLogFrame1',
             'diff_frame'
+        output_width: int,
+            width of output in pixels
+        output_height: int,
+            height of output in pixels
         """
 
         logger.info(
@@ -178,7 +184,7 @@ class EventEmulator(object):
                 path = os.path.join(self.output_folder, dvs_aedat2)
                 path = checkAddSuffix(path, '.aedat')
                 logger.info('opening AEDAT-2.0 output file ' + path)
-                self.dvs_aedat2 = AEDat2Output(path)
+                self.dvs_aedat2 = AEDat2Output(path, output_width=output_width, output_height=output_height)
             if dvs_text:
                 path = os.path.join(self.output_folder, dvs_text)
                 path = checkAddSuffix(path, '.txt')
@@ -356,7 +362,7 @@ class EventEmulator(object):
             # first internal state is updated
             self.lpLogFrame0 = (1-eps)*self.lpLogFrame0+eps*logNewFrame
             # then 2nd internal state (output) is updated from first
-            self.lpLogFrame1 = (1-eps)*self.lpLogFrame1+eps*self.lpLogFrame0
+            self.lpLogFrame1 = self.lpLogFrame0 # (1-eps)*self.lpLogFrame1+eps*self.lpLogFrame0
 
         # # Noise: add infinite bandwidth white noise to samples
         # # after lowpass filtering,

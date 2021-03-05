@@ -249,6 +249,7 @@ def main():
                 logger.error(
                     "When the video is presented as a folder, "
                     "The user has to set --input_frame_rate manually")
+                v2e_quit(1)
 
             cap = ImageFolderReader(input_file, args.input_frame_rate)
             srcFps = cap.frame_rate
@@ -413,7 +414,7 @@ def main():
         leak_rate_hz=leak_rate_hz, shot_noise_rate_hz=shot_noise_rate_hz,
         seed=args.dvs_emulator_seed,
         output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2,
-        dvs_text=dvs_text, show_dvs_model_state=args.show_dvs_model_state)
+        dvs_text=dvs_text, show_dvs_model_state=args.show_dvs_model_state, output_width=output_width, output_height=output_height)
 
     if args.dvs_params is not None:
         logger.warning(f'--dvs_param={args.dvs_params} option overrides your selected options for threshold, threshold-mismatch, leak and shot noise rates')

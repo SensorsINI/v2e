@@ -4,6 +4,8 @@ from engineering_notation import EngNumber  # only from pip
 import atexit
 import struct
 
+from v2ecore.v2e_utils import v2e_quit
+
 logger = logging.getLogger(__name__)
 
 
@@ -12,12 +14,12 @@ class AEDat2Output:
     outputs AEDAT-2.0 jAER format DVS data from v2e
     '''
 
-    def __init__(self, filepath: str):
+    def __init__(self, filepath: str, output_width=346, output_height=240):
         self.filepath = filepath
         self.file=None
-        # edit below to match your device from https://inivation.com/support/software/fileformat/#aedat-20
-        CAMERA = 'Davis346BMono'  # edit for your desired output
-        if CAMERA == 'Davis346BMono':
+        # edit below to match https://inivation.github.io/inivation-docs/Software%20user%20guides/AEDAT_file_formats.html#introduction
+        # see AEDAT-2.0 format section
+        if output_width==346 and output_height==260:
             # DAVIS
             # In the 32-bit address:
             # bit 32 (1-based) being 1 indicates an APS sample
@@ -26,8 +28,21 @@ class AEDat2Output:
             self.yShiftBits = 22
             self.xShiftBits = 12
             self.polShiftBits = 11  # see https://inivation.com/support/software/fileformat/#aedat-20
-            self.sizex = 346
-            self.sizey = 260
+            self.sizex = output_width
+            self.sizey = output_height
+            self.flipy = True  # v2e uses computer vision matrix printing convention of UL pixel being 0,0, but jAER uses original graphics and graphing convention that 0,0 is LL
+            self.flipx = True # not 100% sure why this is needed. Observed for tennis example
+        elif output_width==240 and output_height==180:
+            # DAVIS
+            # In the 32-bit address:
+            # bit 32 (1-based) being 1 indicates an APS sample
+            # bit 11 (1-based) being 1 indicates a special event
+            # bits 11 and 32 (1-based) both being zero signals a polarity event
+            self.yShiftBits = 22
+            self.xShiftBits = 12
+            self.polShiftBits = 11  # see
+            self.sizex = output_width
+            self.sizey = output_height
             self.flipy = True  # v2e uses computer vision matrix printing convention of UL pixel being 0,0, but jAER uses original graphics and graphing convention that 0,0 is LL
             self.flipx = True # not 100% sure why this is needed. Observed for tennis example
         else:
@@ -44,7 +59,7 @@ class AEDat2Output:
             logger.info('opened {} for DVS output data for jAER'.format(filepath))
         except OSError as err:
             logger.error('caught {}:\n  could not open {} for writing; maybe jAER has it open?'.format(err,filepath))
-            quit()
+            v2e_quit(1)
 
     def cleanup(self):
         self.close()
