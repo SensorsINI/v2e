@@ -353,6 +353,7 @@ class EventEmulator(object):
         if self.cutoff_hz <= 0:  # no lowpass, just copy log frame to lp stages, note this can cause events at upsampled rates until some conditions like synthetic input from numerical roundoff problems
             self.lpLogFrame0 = logNewFrame
             # then 2nd internal state (output) is updated from first
+            # Note that it is just a copy of first stage to start with
             self.lpLogFrame1 = logNewFrame
         else:
             tau = (1 / (np.pi * 2 * self.cutoff_hz))
@@ -362,7 +363,8 @@ class EventEmulator(object):
             # first internal state is updated
             self.lpLogFrame0 = (1-eps)*self.lpLogFrame0+eps*logNewFrame
             # then 2nd internal state (output) is updated from first
-            self.lpLogFrame1 = self.lpLogFrame0 # (1-eps)*self.lpLogFrame1+eps*self.lpLogFrame0
+            # Note that observations show that one pole is nearly always dominant, so the 2nd stage is just copy of first stage
+            self.lpLogFrame1 = self.lpLogFrame0 # (1-eps)*self.lpLogFrame1+eps*self.lpLogFrame0 # was 2nd-order, now 1st order.
 
         # # Noise: add infinite bandwidth white noise to samples
         # # after lowpass filtering,
