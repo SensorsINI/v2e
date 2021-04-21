@@ -4,6 +4,7 @@ v1.4.1
 
     Bug fixes
         - Shot noise events polarity was wrongly set to 1 always. This makes the shot noise events are always positive events. Fixed this in emulator.
+        - If not using fixed chipset, v2e was wrongly quitting. This is partially fixed by removing a quitting behavior and resetting both output_width an output_height to None. However, since the AEDAT2 saving requires standard chipset, we recommend user to use HDF5 saving method. For synthetic inputs, please set both output_width and output_width (or using a standard chipset), otherwise there will be errors.
 
 v1.4.0
     New features
@@ -14,7 +15,6 @@ v1.4.0
         - Change package name from v2e to v2ecore so that it can be run systemwide.
         - Several new warnings and checks added for bad combination of --timestamp_resolution and --cutoff_hz in relation to IIR filtering.
         - Added --disable_slomo switch to completely disable frame interpolation when user generates the src frames at sufficient sample rate.
-        -
 
     Bug fixes
         - Fixed option to specify both --auto_timestamp_resolution and --timestamp_resolution at same time, to limit maximum timestep for DVS events.

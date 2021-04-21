@@ -139,9 +139,11 @@ def set_output_dimension(output_width, output_height,
     elif dvs1024:
         output_width, output_height = 1024, 768
 
-    if (output_width is None) ^ (output_height is None):
-        logger.error('set neither or both of output_width and output_height')
-        v2e_quit()
+    if (output_width is None) or (output_height is None):
+        logger.warning(
+            "Either output_width is None or output_height is None,"
+            "or both. Setting both of them to None")
+        output_width, output_height = None, None
 
     return output_width, output_height
 

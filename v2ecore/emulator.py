@@ -184,7 +184,9 @@ class EventEmulator(object):
                 path = os.path.join(self.output_folder, dvs_aedat2)
                 path = checkAddSuffix(path, '.aedat')
                 logger.info('opening AEDAT-2.0 output file ' + path)
-                self.dvs_aedat2 = AEDat2Output(path, output_width=output_width, output_height=output_height)
+                self.dvs_aedat2 = AEDat2Output(
+                    path, output_width=self.output_width,
+                    output_height=self.output_height)
             if dvs_text:
                 path = os.path.join(self.output_folder, dvs_text)
                 path = checkAddSuffix(path, '.txt')
