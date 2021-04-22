@@ -147,7 +147,7 @@ class EventEmulator(object):
         self.leak_rate_hz = leak_rate_hz
         self.refractory_period_s = refractory_period_s
         self.shot_noise_rate_hz = shot_noise_rate_hz
-        self.output_width = output_width 
+        self.output_width = output_width
         self.output_height = output_height  # set on first frame
         self.show_input = show_dvs_model_state
         if seed > 0:
