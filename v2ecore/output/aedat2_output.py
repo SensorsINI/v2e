@@ -14,7 +14,7 @@ class AEDat2Output:
     outputs AEDAT-2.0 jAER format DVS data from v2e
     '''
 
-    def __init__(self, filepath: str, output_width=346, output_height=240):
+    def __init__(self, filepath: str, output_width=346, output_height=260):
         self.filepath = filepath
         self.file=None
         # edit below to match https://inivation.github.io/inivation-docs/Software%20user%20guides/AEDAT_file_formats.html#introduction
