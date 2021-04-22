@@ -147,8 +147,6 @@ class EventEmulator(object):
         self.leak_rate_hz = leak_rate_hz
         self.refractory_period_s = refractory_period_s
         self.shot_noise_rate_hz = shot_noise_rate_hz
-        self.output_width = None
-        self.output_height = None  # set on first frame
         self.show_input = show_dvs_model_state
         if seed > 0:
             np.random.seed(seed)
@@ -687,7 +685,7 @@ class EventFrameRenderer(object):
         width = base_frame.shape[1]
         emulator = EventEmulator(
             pos_thres=self.pos_thres,
-            neg_thres=self.neg_thres
+            neg_thres=self.neg_thres,
         )
 
         event_list = list()
