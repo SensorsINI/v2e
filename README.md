@@ -14,10 +14,9 @@ Vote for [new v2e features](https://docs.google.com/forms/d/e/1FAIpQLSdJoIH3wBkP
 
 ## Contact
 Yuhuang Hu (yuhuang.hu@ini.uzh.ch)
-Zhe He (hezhehz@live.cn)
 Tobi Delbruck (tobi@ini.uzh.ch)
 
-###
+### Citation
 If you use v2e, we appreciate a citation to the paper below. See the [v2e home page](https://sites.google.com/view/video2events/home) for futher background papers.
 
 + Y. Hu, S-C. Liu, and T. Delbruck. v2e: From Video Frames to Realistic DVS Events. In _2021 IEEE/CVF  Conference  on  Computer  Vision  and  Pattern Recognition Workshops (CVPRW)_, URL: https://arxiv.org/abs/2006.07722, 2021
