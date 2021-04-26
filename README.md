@@ -375,7 +375,7 @@ See our technical paper for futher information about these parameters.
  The output DVS timestamps will be quantized to some value depending on options chosen.
  
   *  _--disable_slomo_ will disable slomo interpolation and the DVS events will have exactly the times of the input video, perhaps modified by --input_slowmotion_factor
-  *  _--timestamp_resolution=X_ will upsample as needed to obtain this desired timestamp resolution _X_ in seconds
+  *  _--timestamp_resolution=X_ will upsample as needed to obtain this desired timestamp resolution _X_ in seconds. If auto_timestamp_resolution is set, then timestamp_resolution will still set the minimum timestamp resolution, i.e. if automatic timestamping would result in 5ms timestamps but timestamp_resolution is 1ms, then 1ms will still be the timestamp resolution.
   *  _--auto_timestamp_resolution_ will upsample in each _--batch_size_ frames using the computed optical flow to limit motion per frame to at most 1 pixel. In this case, turning on _--slomo_stats_plot_ will generate a plot like the following, which came from a driving video where the car sped up during part of the video:
  
  ![auto_slomo_stats](media/slomo_stats.png)
@@ -383,7 +383,7 @@ See our technical paper for futher information about these parameters.
  This plot shows the actual timestamps of the interpolated frames (in orange) and the frame intervals for each batch of frames (in blue).
  
 ### Photoreceptor lowpass filtering
-_v2e_ includes an intensity-dependent 2nd-order lowpass filtering of light intensity; see the paper for details. 
+_v2e_ includes an intensity-dependent 1st-order lowpass filtering of light intensity; see the paper for details. 
 If you set a nonzero --cutofffreq_hz, then it is important that the sample rate be high enough to allow the IIR lowpass filters to update properly, i.e.
 the time constant tau of the lowpass filters must be at least 3 times larger than the frame interval.
 Check the console output for warnings about undersampling for lowpass filtering.
