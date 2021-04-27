@@ -197,11 +197,11 @@ DVS timestamp resolution:
 DVS model:
   --output_height OUTPUT_HEIGHT
                         Height of output DVS data in pixels. If None, same as
-                        input video. Use --output_height=346 for Davis346.
+                        input video. Use --output_height=260 for Davis346.
                         (default: None)
   --output_width OUTPUT_WIDTH
                         Width of output DVS data in pixels. If None, same as
-                        input video. Use --output_width=260 for Davis346.
+                        input video. Use --output_width=346 for Davis346.
                         (default: None)
   --dvs_params DVS_PARAMS
                         Easy optional setting of parameters for DVS
