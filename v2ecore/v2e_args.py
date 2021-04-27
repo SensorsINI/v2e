@@ -97,12 +97,12 @@ def v2e_args(parser):
         "--output_height", type=int, default=None,
         help="Height of output DVS data in pixels. "
              "If None, same as input video. "
-             "Use --output_height=346 for Davis346.")
+             "Use --output_height=260 for Davis346.")
     modelGroup.add_argument(
         "--output_width", type=int, default=None,
         help="Width of output DVS data in pixels. "
              "If None, same as input video. "
-             "Use --output_width=260 for Davis346.")
+             "Use --output_width=346 for Davis346.")
 
     modelGroup.add_argument(
         "--dvs_params", type=str, default=None,
