@@ -5,6 +5,7 @@ v1.4.1
     Bug fixes
         - Shot noise events polarity was wrongly set to 1 always. This makes the shot noise events are always positive events. Fixed this in emulator.
         - If not using fixed chipset, v2e was wrongly quitting. This is partially fixed by removing a quitting behavior and resetting both output_width an output_height to None. However, since the AEDAT2 saving requires standard chipset, we recommend user to use HDF5 saving method. For synthetic inputs, please set both output_width and output_width (or using a standard chipset), otherwise there will be errors.
+        - Event Renderer always at 30 fps. Fixed this so that user can preset the frame rate.
 
 v1.4.0
     New features
