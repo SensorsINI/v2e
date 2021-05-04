@@ -426,7 +426,8 @@ def main():
         dvs_vid=dvs_vid, preview=preview, full_scale_count=dvs_vid_full_scale,
         exposure_mode=exposure_mode,
         exposure_value=exposure_val,
-        area_dimension=area_dimension)
+        area_dimension=area_dimension,
+        avi_frame_rate=args.avi_frame_rate)
 
     if synthetic_input_next_frame_method is not None:
         # array to batch events for rendering to DVS frames
