@@ -276,7 +276,7 @@ def v2e_args(parser):
              "duration time: Use fixed accumulation time in seconds, "
              "e.g. --dvs_exposure duration .005; "
              "count n: Count n events per frame, -dvs_exposure count 5000; "
-             "area_event N M: frame ends when any area of M x M pixels "
+             "area_count N M: frame ends when any area of M x M pixels "
              "fills with N events, -dvs_exposure area_count 500 64")
     outGroupDvsVideo.add_argument(
         "--dvs_vid", type=str, default="dvs-video.avi",
@@ -372,11 +372,12 @@ def v2e_check_dvs_exposure_args(args):
     except Exception:
         raise ValueError(
             "dvs_exposure first parameter '{}' must be 'duration','count', "
-            "or 'area_event'".format(dvs_exposure[0]))
+            "or 'area_count'".format(dvs_exposure[0]))
 
     if exposure_mode == ExposureMode.AREA_COUNT and not len(dvs_exposure) == 3:
-        raise ValueError("area_event argument needs three parameters, "
-                         "e.g. 'area_count 500 16'")
+        raise ValueError("area_event argument needs three parameters:  "
+                         "'area_count M N'; frame ends when any area of M x M pixels "
+                         "fills with N events")
     elif not exposure_mode == ExposureMode.AREA_COUNT and \
             not len(dvs_exposure) == 2:
         raise ValueError("duration or count argument needs two parameters, "
