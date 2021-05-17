@@ -31,6 +31,15 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError(f'Boolean value expected, got {v}')
 
+# https://stackoverflow.com/questions/3853722/how-to-insert-newlines-on-argparse-help-text
+class SmartFormatter(argparse.HelpFormatter):
+
+    def _split_lines(self, text, width):
+        if text.startswith('R|'):
+            return text[2:].splitlines()
+            # this is the RawTextHelpFormatter._split_lines
+        return argparse.HelpFormatter._split_lines(self, text, width)
+
 
 def v2e_args(parser):
     # check and add prefix if running script in subfolder
@@ -228,21 +237,21 @@ def v2e_args(parser):
              "option will be ignored.")
     inGroup.add_argument(
         "--input_slowmotion_factor", type=float, default=1.0,
-        help="Sets the known slow-motion factor of the input video, "
-             "i.e. how much the video is slowed down, i.e., "
-             "the ratio of shooting frame rate to playback frame rate. "
-             "input_slowmotion_factor<1 for sped-up video and "
-             "input_slowmotion_factor>1 for slowmotion video."
-             "If an input video is shot at 120fps yet is presented as a "
+        help="R|Sets the known slow-motion factor of the input video, " # note R| for SmartFormatter
+             "\ni.e. how much the video is slowed down, i.e., "
+             "\nthe ratio of shooting frame rate to playback frame rate. "
+             "\ninput_slowmotion_factor<1 for sped-up video and "
+             "\ninput_slowmotion_factor>1 for slowmotion video."
+             "\nIf an input video is shot at 120fps yet is presented as a "
              "30fps video "
-             "(has specified playback frame rate of 30Hz, "
-             "according to file's FPS setting), "
-             "then set --input_slowdown_factor=4."
-             "It means that each input frame represents (1/30)/4 s=(1/120)s."
-             "If input is video with intended frame intervals of "
-             "1ms that is in AVI file "
-             "with default 30 FPS playback spec, "
-             "then use ((1/30)s)*(1000Hz)=33.33333.")
+             "\n(has specified playback frame rate of 30Hz, "
+             "\naccording to file's FPS setting), "
+             "\nthen set --input_slowdown_factor=4."
+             "\nIt means that each input frame represents (1/30)/4 s=(1/120)s."
+             "\nIf input is video with intended frame intervals of "
+             "\n1ms that is in AVI file "
+             "\nwith default 30 FPS playback spec, "
+             "\nthen use ((1/30)s)*(1000Hz)=33.33333.")
     inGroup.add_argument(
         "--start_time", type=float, default=None,
         help="Start at this time in seconds in video. "
@@ -257,27 +266,28 @@ def v2e_args(parser):
     syntheticInputGroup.add_argument(
         "--synthetic_input", type=str,
         help="Input from class SYNTHETIC_INPUT that "
-             "has methods next_frame() and total_frames()."
-             "Disables file input and SuperSloMo frame interpolation. "
-             "SYNTHETIC_INPUT.next_frame() should return a frame of "
-             "the correct resolution (see DVS model arguments) "
-             "which is array[y][x] with "
-             "pixel [0][0] at upper left corner and pixel values 0-255. "
-             "SYNTHETIC_INPUT must be resolvable from the classpath. "
-             "SYNTHETIC_INPUT is the module name without .py suffix."
-             "See example moving_dot.py."
+             "\nhas methods next_frame() and total_frames()."
+             "\nDisables file input and SuperSloMo frame interpolation. "
+             "\nSYNTHETIC_INPUT.next_frame() should return a frame of "
+             "\nthe correct resolution (see DVS model arguments) "
+             "\nwhich is array[y][x] with "
+             "\npixel [0][0] at upper left corner and pixel values 0-255. "
+             "\nSYNTHETIC_INPUT must be resolvable from the classpath. "
+             "\nSYNTHETIC_INPUT is the module name without .py suffix."
+             "\nSee example moving_dot.py."
     )
 
     # DVS output video
     outGroupDvsVideo = parser.add_argument_group('Output: DVS video')
     outGroupDvsVideo.add_argument(
         "--dvs_exposure", nargs='+', type=str, default='duration 0.01',
-        help="Mode to finish DVS frame event integration: "
-             "duration time: Use fixed accumulation time in seconds, "
-             "e.g. --dvs_exposure duration .005; "
-             "count n: Count n events per frame, -dvs_exposure count 5000; "
-             "area_count N M: frame ends when any area of M x M pixels "
-             "fills with N events, -dvs_exposure area_count 500 64")
+        help="R|Mode to finish DVS frame event integration:"
+             "\n\tduration time: Use fixed accumulation time in seconds, e.g. "
+             "\n\t\t--dvs_exposure duration .005; "
+             "\n\tcount n: Count n events per frame,e.g."
+             "\n\t\t-dvs_exposure count 5000;"
+             "\n\tarea_count M N: frame ends when any area of N x N pixels fills with M events, e.g."
+             "\n\t\t-dvs_exposure area_count 500 64")
     outGroupDvsVideo.add_argument(
         "--dvs_vid", type=str, default="dvs-video.avi",
         help="Output DVS events as AVI video at frame_rate.")

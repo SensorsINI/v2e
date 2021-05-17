@@ -242,8 +242,9 @@ class EventRenderer(object):
             return (curr_frame+full_scale_count)/float(
                 full_scale_count*2)
 
-        @jit("Tuple((int64[:, :], int64))(float64[:, :], int64[:, :], "
-             "int64, int64, int64)", nopython=True)
+        # @jit("Tuple((int64[:, :], int64))(float64[:, :], int64[:, :], "
+        #      "int64, int64, int64)", nopython=True)
+        @jit(nopython=True)
         def compute_area_counts(events, area_counts,
                                 area_count, area_dimension, start):
             #  new_area_counts = np.copy(area_counts)

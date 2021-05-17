@@ -28,7 +28,7 @@ from v2ecore.v2e_utils import all_images, read_image, \
 from v2ecore.v2e_utils import set_output_dimension
 from v2ecore.v2e_utils import set_output_folder
 from v2ecore.v2e_utils import ImageFolderReader
-from v2ecore.v2e_args import v2e_args, write_args_info
+from v2ecore.v2e_args import v2e_args, write_args_info, SmartFormatter
 from v2ecore.v2e_args import v2e_check_dvs_exposure_args
 from v2ecore.v2e_args import NO_SLOWDOWN
 from v2ecore.renderer import EventRenderer, ExposureMode
@@ -63,7 +63,7 @@ def get_args():
     parser = argparse.ArgumentParser(
         description='v2e: generate simulated DVS events from video.',
         epilog='Run with no --input to open file dialog', allow_abbrev=True,
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        formatter_class=SmartFormatter)
 
     parser = v2e_args(parser)
 
