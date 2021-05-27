@@ -69,6 +69,7 @@ If you get error about installing the Gooey library, you can comment it out from
 [Gooey](https://github.com/chriskiehl/Gooey) is a libary that enables a GUI inteface for running v2e. It is optional. If you do not install Gooey then you run v2e from the command line or IDE launchers.
 On some platforms (linux) Gooey can be very hard to install because the required python wheels are not available. (A python _wheel_ is an archive named in a particular way to indentify the target platform.)
 
+
 ## Install the Package
 
 Install v2e will make it available on your python path.
@@ -94,6 +95,8 @@ _v2e_ serves multiple purposes. Please read to code if you would like to adapt i
 
 ### GUI interface
 A GUI based on Gooey is automatically started if Gooey is installed. (Gooey uses wxPython which can be hard to install on linux systems; see above.)  To disable the GUI, you can use the --ignore-gooey option.  Gooey preloads its GUI with the command line options you provide. You can then run v2e multiple times from the same GUI.
+
+For a sample of conversion using the gooey GUI, see https://youtu.be/THJqRC_q2kY
 
 ![v2e_gooey](media/v2e_Gooey.png)
 
