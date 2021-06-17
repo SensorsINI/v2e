@@ -280,7 +280,7 @@ def v2e_args(parser):
     # DVS output video
     outGroupDvsVideo = parser.add_argument_group('Output: DVS video')
     outGroupDvsVideo.add_argument(
-        "--dvs_exposure", nargs='+', type=str, default='duration 0.01',
+        "--dvs_exposure", nargs='+', type=str, default=['duration', '0.01'],
         help="R|Mode to finish DVS frame event integration:"
              "\n\tduration time: Use fixed accumulation time in seconds, e.g. "
              "\n\t\t--dvs_exposure duration .005; "
