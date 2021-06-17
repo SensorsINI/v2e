@@ -125,12 +125,12 @@ class SuperSloMo(object):
         self.model_loaded = False
 
     def cleanup(self):
-        if self.ori_writer:
+        if self.ori_writer is not None:
             logger.info(
                 'closing original video AVI after '
                 'writing {} frames'.format(self.numOrigVideoFramesWritten))
             self.ori_writer.release()
-        if self.slomo_writer:
+        if self.slomo_writer is not None:
             logger.info(
                 'closing slomo video AVI after '
                 'writing {} frames'.format(self.numSlomoVideoFramesWritten))
@@ -287,7 +287,7 @@ class SuperSloMo(object):
 
         # construct AVI video output writer now that we know the frame size
         if self.video_path is not None and self.vid_orig is not None and \
-                not self.ori_writer:
+                self.ori_writer is None:
             self.ori_writer = video_writer(
                 os.path.join(self.video_path, self.vid_orig),
                 ori_dim[1],
@@ -295,7 +295,7 @@ class SuperSloMo(object):
             )
 
         if self.video_path is not None and self.vid_slomo is not None and \
-                not self.slomo_writer:
+                self.slomo_writer is None:
             self.slomo_writer = video_writer(
                 os.path.join(self.video_path, self.vid_slomo),
                 ori_dim[1],
@@ -466,7 +466,7 @@ class SuperSloMo(object):
             # write input frames into video
             # don't duplicate each frame if called using rotating buffer
             # of two frames in a row
-            if self.ori_writer:
+            if self.ori_writer is None:
                 src_files = sorted(
                     glob.glob("{}".format(source_frame_path) + "/*.npy"))
 
@@ -480,7 +480,7 @@ class SuperSloMo(object):
                     self.numOrigVideoFramesWritten += 1
 
             frame_paths = self.__all_images(output_folder)
-            if self.slomo_writer:
+            if self.slomo_writer is None:
                 for path in tqdm(frame_paths,desc='write-slomo-vid',unit='fr'):
                     frame = self.__read_image(path)
                     self.slomo_writer.write(

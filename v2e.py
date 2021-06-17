@@ -358,8 +358,9 @@ def main():
                 model=args.slomo_model,
                 auto_upsample=auto_timestamp_resolution,
                 upsampling_factor=slowdown_factor,
-                video_path=output_folder,
-                vid_orig=vid_orig, vid_slomo=vid_slomo,
+                video_path=None if args.skip_video_output else output_folder,
+                vid_orig=None if args.skip_video_output else vid_orig,
+                vid_slomo=None if args.skip_video_output else vid_slomo,
                 preview=preview, batch_size=batch_size)
 
     if not synthetic_input and not auto_timestamp_resolution:
