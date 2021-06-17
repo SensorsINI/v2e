@@ -466,7 +466,7 @@ class SuperSloMo(object):
             # write input frames into video
             # don't duplicate each frame if called using rotating buffer
             # of two frames in a row
-            if self.ori_writer is None:
+            if self.ori_writer:
                 src_files = sorted(
                     glob.glob("{}".format(source_frame_path) + "/*.npy"))
 
@@ -480,7 +480,7 @@ class SuperSloMo(object):
                     self.numOrigVideoFramesWritten += 1
 
             frame_paths = self.__all_images(output_folder)
-            if self.slomo_writer is None:
+            if self.slomo_writer:
                 for path in tqdm(frame_paths,desc='write-slomo-vid',unit='fr'):
                     frame = self.__read_image(path)
                     self.slomo_writer.write(
