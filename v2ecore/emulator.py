@@ -10,6 +10,7 @@ Compute events from input frames.
 import atexit
 import os
 import time
+from functools import partial
 
 import cv2
 import numpy as np
@@ -137,10 +138,6 @@ class EventEmulator(object):
 
         self.jax_key = random.PRNGKey(seed)
 
-        # JAX acceleration
-        self._init = jit(self.__init)
-        self.generate_events = jit(self._generate_events)
-
         if refractory_period_s > 0:
             logger.warning(
                 'refractory period not yet implemented; '
@@ -192,7 +189,7 @@ class EventEmulator(object):
         if self.dvs_text is not None:
             self.dvs_text.close()
 
-    def __init(self, first_frame_linear):
+    def _init(self, first_frame_linear):
         logger.debug(
             'initializing random temporal contrast thresholds '
             'from from base frame')
@@ -200,10 +197,10 @@ class EventEmulator(object):
         self.base_log_frame = lin_log(first_frame_linear)
 
         # initialize first stage of 2nd order IIR to first input
-        self.lp_log_frame0 = self.base_log_frame.copy()
+        self.lp_log_frame0 = jnp.array(self.base_log_frame, copy=True)
         # 2nd stage is initialized to same,
         # so diff will be zero for first frame
-        self.lp_log_frame1 = self.base_log_frame.copy()
+        self.lp_log_frame1 = jnp.array(self.base_log_frame, copy=True)
 
         # take the variance of threshold into account.
         if self.sigma_thres > 0:
@@ -302,9 +299,7 @@ class EventEmulator(object):
         cv2.imshow(__name__+':'+self.show_input, img)
         cv2.waitKey(30)
 
-    def _generate_events(
-            self, new_frame: np.ndarray,
-            t_frame: float) -> np.ndarray:
+    def generate_events(self, new_frame, t_frame):
         """Compute events in new frame.
 
         With JAX Acceleration.
@@ -323,7 +318,6 @@ class EventEmulator(object):
             x cordinate, sign of event].
             # TODO validate that this order of x and y is correctly documented
         """
-
         #  base_frame: the change detector input,
         #              stores memorized brightness values
         # new_frame: the new intensity frame input
@@ -359,8 +353,8 @@ class EventEmulator(object):
         # low pass filter
         self.lp_log_frame0, self.lp_log_frame1 = low_pass_filter(
             log_new_frame=log_new_frame,
-            lp_log_frame0=self.lpLogFrame0,
-            lp_log_frame1=self.lpLogFrame1,
+            lp_log_frame0=self.lp_log_frame0,
+            lp_log_frame1=self.lp_log_frame1,
             inten01=inten01,
             delta_time=delta_time,
             cutoff_hz=self.cutoff_hz)
@@ -416,12 +410,14 @@ class EventEmulator(object):
                     self.show_input))
 
         # generate event map
-        pos_evts_frame, neg_evts_frame, num_iters = compute_event_map(
+        pos_evts_frame, neg_evts_frame = compute_event_map(
             diff_frame, self.pos_thres, self.neg_thres)
+        num_iters = max(pos_evts_frame.max(), neg_evts_frame.max())
 
         events = []
 
         for i in range(num_iters):
+            print("I'm here {}/{}".format(i, num_iters))
             events_curr_iters = jnp.zeros((0, 4), dtype=jnp.float32)
             # intermediate timestamps are linearly spaced
             # they start after the t_start to make sure
@@ -493,7 +489,7 @@ class EventEmulator(object):
 
                     shot_on_events, shot_off_events = generate_shot_noise(
                         inten01=inten01,
-                        base_log_frame=self.baseLogFrame,
+                        base_log_frame=self.base_log_frame,
                         shot_noise_rate_hz=self.shot_noise_rate_hz,
                         delta_time=delta_time,
                         num_iters=num_iters,
@@ -508,7 +504,7 @@ class EventEmulator(object):
                         (events_curr_iters, shot_on_events, shot_off_events))
 
             # shuffle and append to the events collectors
-            random.shuffle(self.jax_key, events_curr_iters)
+            random.permutation(self.jax_key, events_curr_iters)
             events.append(events_curr_iters)
 
             if i == 0:
@@ -533,7 +529,7 @@ class EventEmulator(object):
             events = jnp.vstack(events)
             if self.dvs_h5 is not None:
                 # convert data to uint32 (microsecs) format
-                temp_events = np.copy(events)
+                temp_events = np.array(events)
                 temp_events[:, 0] = temp_events[:, 0] * 1e6
                 temp_events[temp_events[:, 3] == -1, 3] = 0
                 temp_events = temp_events.astype(np.uint32)

@@ -5,14 +5,15 @@ Email : yuhuang.hu@ini.uzh.ch
 """
 
 import numpy as np
+import jax
 import jax.numpy as jnp
 from jax import random
 from jax import jit
-from jax.config import config
+#  from jax.config import config
 
 # configure jax
-config.update("jax_enable_x64", True)
-config.update('jax_platform_name', 'cpu')
+#  config.update("jax_enable_x64", True)
+#  config.update('jax_platform_name', 'cpu')
 
 
 def jax_lin_log(x, threshold=20):
@@ -124,10 +125,7 @@ def jax_compute_event_map(diff_frame, pos_thres, neg_thres):
     pos_evts_frame = (pos_frame // pos_thres).astype(jnp.int32)
     neg_evts_frame = (neg_frame // neg_thres).astype(jnp.int32)
 
-    # max number of iterations
-    num_iters = max(pos_evts_frame.max(), neg_evts_frame.max())
-
-    return pos_evts_frame, neg_evts_frame, num_iters
+    return pos_evts_frame, neg_evts_frame
 
 
 def jax_generate_shot_noise(
@@ -221,7 +219,7 @@ lin_log = jit(jax_lin_log)
 rescale_intensity_frame = jit(jax_rescale_intensity_frame)
 
 # intensity dependent low pas filter
-low_pass_filter = jit(jax_low_pass_filter)
+low_pass_filter = jit(jax_low_pass_filter, static_argnums=(5,))
 
 # subtract leak current
 subtract_leak_current = jit(jax_subtract_leak_current)
