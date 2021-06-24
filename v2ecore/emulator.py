@@ -205,9 +205,10 @@ class EventEmulator(object):
                 dtype=torch.float32).to(self.device)
 
             # to avoid the situation where the threshold is too small.
+            min_thres = torch.tensor(
+                0.01, dtype=torch.float32).to(self.device)
             self.pos_thres = torch.where(
-                self.pos_thres < 0.01,
-                torch.tensor(0.01, dtype=torch.float32).to(self.device),
+                self.pos_thres < 0.01, min_thres,
                 self.pos_thres)
 
             self.neg_thres = torch.normal(
@@ -215,8 +216,7 @@ class EventEmulator(object):
                 size=first_frame_linear.shape,
                 dtype=torch.float32).to(self.device)
             self.neg_thres = torch.where(
-                self.neg_thres < 0.01,
-                torch.tensor(0.01, dtype=torch.float32).to(self.device),
+                self.neg_thres < 0.01, min_thres,
                 self.neg_thres)
 
         # compute variable for shot-noise
