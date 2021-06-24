@@ -229,15 +229,17 @@ class EventRenderer(object):
         # until we are done with all these events,
         # output frames along the way
 
-        @jit("UniTuple(int32, 2)(float64[:], float64, float64)",
-             nopython=True)
+        #  @jit("UniTuple(int32, 2)(float64[:], float64, float64)",
+        #       nopython=True)
+        @jit(nopython=True)
         def search_duration_idx(ts, curr_start, next_start):
             start = np.searchsorted(ts, curr_start, side="left")
             end = np.searchsorted(ts, next_start, side="right")
             return start, end
 
-        @jit("float64[:, :](float64[:, :], int32)",
-             fastmath=True, nopython=True)
+        #  @jit("float64[:, :](float64[:, :], int32)",
+        #       fastmath=True, nopython=True)
+        @jit(nopython=True)
         def normalize_frame(curr_frame, full_scale_count):
             return (curr_frame+full_scale_count)/float(
                 full_scale_count*2)

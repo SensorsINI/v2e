@@ -10,7 +10,7 @@ Compute events from input frames.
 import atexit
 import os
 import time
-from functools import partial
+import random
 
 import cv2
 import numpy as np
@@ -18,11 +18,7 @@ import logging
 import h5py
 from engineering_notation import EngNumber  # only from pip
 
-# JAX
-import jax.numpy as jnp
-from jax import random
-from jax import jit
-from jax.config import config
+import torch
 
 from v2ecore.v2e_utils import all_images, read_image, \
     video_writer, checkAddSuffix
@@ -35,10 +31,6 @@ from v2ecore.emulator_utils import low_pass_filter
 from v2ecore.emulator_utils import subtract_leak_current
 from v2ecore.emulator_utils import compute_event_map
 from v2ecore.emulator_utils import generate_shot_noise
-
-# configure jax
-config.update("jax_enable_x64", True)
-config.update('jax_platform_name', 'cpu')
 
 # import rosbag # not yet for python 3
 
@@ -71,7 +63,8 @@ class EventEmulator(object):
             # 'lpLogFrame', 'diff_frame'
             show_dvs_model_state: str = None,
             output_width=None,
-            output_height=None):
+            output_height=None,
+            device="cuda"):
         """
         Parameters
         ----------
@@ -111,6 +104,9 @@ class EventEmulator(object):
         self.base_log_frame = None
         self.t_previous = None  # time of previous frame
 
+        # torch device
+        self.device = device
+
         # thresholds
         self.sigma_thres = sigma_thres
         # initialized to scalar, later overwritten by random value array
@@ -132,11 +128,10 @@ class EventEmulator(object):
         self.show_input = show_dvs_model_state
 
         # generate jax key for random process
-        if seed == 0:
-            # use fractional seconds
-            seed = int(time.time()*256)
-
-        self.jax_key = random.PRNGKey(seed)
+        if seed != 0:
+            torch.manual_seed(seed)
+            np.random.seed(seed)
+            random.seed(seed)
 
         if refractory_period_s > 0:
             logger.warning(
@@ -197,30 +192,39 @@ class EventEmulator(object):
         self.base_log_frame = lin_log(first_frame_linear)
 
         # initialize first stage of 2nd order IIR to first input
-        self.lp_log_frame0 = jnp.array(self.base_log_frame, copy=True)
+        self.lp_log_frame0 = self.base_log_frame.clone()
         # 2nd stage is initialized to same,
         # so diff will be zero for first frame
-        self.lp_log_frame1 = jnp.array(self.base_log_frame, copy=True)
+        self.lp_log_frame1 = self.base_log_frame.clone()
 
         # take the variance of threshold into account.
         if self.sigma_thres > 0:
-            self.pos_thres = random.normal(
-                self.jax_key,
-                first_frame_linear.shape)*self.sigma_thres+self.pos_thres
-            # to avoid the situation where the threshold is too small.
-            self.pos_thres = jnp.where(
-                self.pos_thres < 0.01, 0.01, self.pos_thres)
+            self.pos_thres = torch.normal(
+                self.pos_thres, self.sigma_thres,
+                size=first_frame_linear.shape,
+                dtype=torch.float32).to(self.device)
 
-            self.neg_thres = random.normal(
-                self.jax_key,
-                first_frame_linear.shape)*self.sigma_thres+self.neg_thres
-            self.neg_thres = jnp.where(
-                self.neg_thres < 0.01, 0.01, self.neg_thres)
+            print(self.pos_thres.dtype)
+
+            # to avoid the situation where the threshold is too small.
+            self.pos_thres = torch.where(
+                self.pos_thres < 0.01,
+                torch.tensor(0.01, dtype=torch.float32).to(self.device),
+                self.pos_thres)
+
+            self.neg_thres = torch.normal(
+                self.neg_thres, self.sigma_thres,
+                size=first_frame_linear.shape,
+                dtype=torch.float32).to(self.device)
+            self.neg_thres = torch.where(
+                self.neg_thres < 0.01,
+                torch.tensor(0.01, dtype=torch.float32).to(self.device),
+                self.neg_thres)
 
         # compute variable for shot-noise
-        self.pos_thres_pre_prob = jnp.divide(
+        self.pos_thres_pre_prob = torch.div(
             self.pos_thres_nominal, self.pos_thres)
-        self.neg_thres_pre_prob = jnp.divide(
+        self.neg_thres_pre_prob = torch.div(
             self.neg_thres_nominal, self.neg_thres)
 
         # If leak is non-zero, then initialize each pixel memorized value
@@ -232,10 +236,9 @@ class EventEmulator(object):
         # otherwise low threshold pixels will generate
         # a burst of events at the first frame
         if self.leak_rate_hz > 0:
-            self.base_log_frame -= random.uniform(
-                self.jax_key, first_frame_linear.shape,
-                dtype=jnp.float32,
-                minval=0, maxval=self.pos_thres)
+            self.base_log_frame -= torch.rand(
+                first_frame_linear.shape,
+                dtype=torch.float32).to(self.device)*self.pos_thres
 
     def set_dvs_params(self, model: str):
         if model == 'clean':
@@ -318,6 +321,8 @@ class EventEmulator(object):
             x cordinate, sign of event].
             # TODO validate that this order of x and y is correctly documented
         """
+        new_frame = torch.tensor(new_frame, dtype=torch.float32,
+                                 device=self.device)
         #  base_frame: the change detector input,
         #              stores memorized brightness values
         # new_frame: the new intensity frame input
@@ -417,8 +422,7 @@ class EventEmulator(object):
         events = []
 
         for i in range(num_iters):
-            print("I'm here {}/{}".format(i, num_iters))
-            events_curr_iters = jnp.zeros((0, 4), dtype=jnp.float32)
+            events_curr_iters = torch.zeros((0, 4), dtype=torch.float32)
             # intermediate timestamps are linearly spaced
             # they start after the t_start to make sure
             # that there is space from previous frame
@@ -442,10 +446,10 @@ class EventEmulator(object):
             #  make a list of coordinates x,y addresses of events
             #  pos_event_xy = np.where(pos_cord)
             pos_event_xy = pos_cord.nonzero()
-            num_pos_events = pos_event_xy[0].shape[0]
+            num_pos_events = pos_event_xy.shape[0]
             #  neg_event_xy = np.where(neg_cord)
             neg_event_xy = neg_cord.nonzero()
-            num_neg_events = neg_event_xy[0].shape[0]
+            num_neg_events = neg_event_xy.shape[0]
             num_events = num_pos_events + num_neg_events
 
             self.num_events_on += num_pos_events
@@ -458,24 +462,28 @@ class EventEmulator(object):
 
             # sort out the positive event and negative event
             if num_pos_events > 0:
-                pos_events = np.hstack(
-                    (jnp.ones((num_pos_events, 1), dtype=jnp.float32) * ts,
-                     pos_event_xy[1][..., np.newaxis],
-                     pos_event_xy[0][..., np.newaxis],
-                     jnp.ones((num_pos_events, 1), dtype=jnp.float32) * 1))
+                pos_events = torch.hstack(
+                    (torch.ones((num_pos_events, 1),
+                                dtype=torch.float32).to(self.device) * ts,
+                     pos_event_xy[:, [1, 0]],
+                     torch.ones((num_pos_events, 1),
+                                dtype=torch.float32).to(self.device) * 1))
             else:
-                pos_events = jnp.zeros((0, 4), dtype=np.float32)
+                pos_events = torch.zeros(
+                    (0, 4), dtype=torch.float32).to(self.device)
 
             if num_neg_events > 0:
-                neg_events = np.hstack(
-                    (jnp.ones((num_neg_events, 1), dtype=jnp.float32) * ts,
-                     neg_event_xy[1][..., np.newaxis],
-                     neg_event_xy[0][..., np.newaxis],
-                     jnp.ones((num_neg_events, 1), dtype=jnp.float32) * -1))
+                neg_events = torch.hstack(
+                    (torch.ones((num_neg_events, 1),
+                                dtype=torch.float32).to(self.device) * ts,
+                     neg_event_xy[:, [1, 0]],
+                     torch.ones((num_neg_events, 1),
+                                dtype=torch.float32).to(self.device) * -1))
             else:
-                neg_events = jnp.zeros((0, 4), dtype=np.float32)
+                neg_events = torch.zeros(
+                    (0, 4), dtype=torch.float32).to(self.device)
 
-            events_tmp = jnp.vstack((pos_events, neg_events))
+            events_tmp = torch.vstack((pos_events, neg_events))
 
             # randomly order events to prevent bias to one corner
             #  if events_tmp.shape[0] != 0:
@@ -497,14 +505,15 @@ class EventEmulator(object):
                         pos_thres=self.pos_thres,
                         neg_thres_pre_prob=self.neg_thres_pre_prob,
                         neg_thres=self.neg_thres,
-                        ts=ts,
-                        jax_key=self.jax_key)
+                        ts=ts)
 
-                    events_curr_iters = jnp.vstack(
+                    events_curr_iters = torch.vstack(
                         (events_curr_iters, shot_on_events, shot_off_events))
 
             # shuffle and append to the events collectors
-            random.permutation(self.jax_key, events_curr_iters)
+            idx = torch.randperm(events_curr_iters.shape[0])
+            events_curr_iters = events_curr_iters[idx].view(
+                events_curr_iters.size())
             events.append(events_curr_iters)
 
             if i == 0:
@@ -526,10 +535,10 @@ class EventEmulator(object):
                         neg_evts_frame*neg_cord*self.neg_thres
 
         if len(events) > 0:
-            events = jnp.vstack(events)
+            events = torch.vstack(events).cpu().data.numpy()
             if self.dvs_h5 is not None:
                 # convert data to uint32 (microsecs) format
-                temp_events = np.array(events)
+                temp_events = np.array(events, dtype=np.float32)
                 temp_events[:, 0] = temp_events[:, 0] * 1e6
                 temp_events[temp_events[:, 3] == -1, 3] = 0
                 temp_events = temp_events.astype(np.uint32)
