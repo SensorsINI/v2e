@@ -351,7 +351,7 @@ class EventEmulator(object):
         inten01 = None  # define for later
         if self.cutoff_hz > 0 or self.shot_noise_rate_hz > 0:  # will use later
             # limit max time constant to ~1/10 of white intensity level
-            inten01 = rescale_intensity_frame(new_frame)
+            inten01 = rescale_intensity_frame(new_frame.clone().detach())
 
         # low pass filter
         self.lp_log_frame0, self.lp_log_frame1 = low_pass_filter(
