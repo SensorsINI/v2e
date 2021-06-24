@@ -192,10 +192,10 @@ class EventEmulator(object):
         self.base_log_frame = lin_log(first_frame_linear)
 
         # initialize first stage of 2nd order IIR to first input
-        self.lp_log_frame0 = self.base_log_frame.clone()
+        self.lp_log_frame0 = self.base_log_frame.clone().detach()
         # 2nd stage is initialized to same,
         # so diff will be zero for first frame
-        self.lp_log_frame1 = self.base_log_frame.clone()
+        self.lp_log_frame1 = self.base_log_frame.clone().detach()
 
         # take the variance of threshold into account.
         if self.sigma_thres > 0:
