@@ -204,8 +204,6 @@ class EventEmulator(object):
                 size=first_frame_linear.shape,
                 dtype=torch.float32).to(self.device)
 
-            print(self.pos_thres.dtype)
-
             # to avoid the situation where the threshold is too small.
             self.pos_thres = torch.where(
                 self.pos_thres < 0.01,
