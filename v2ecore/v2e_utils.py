@@ -142,7 +142,8 @@ def set_output_dimension(output_width, output_height,
     if (output_width is None) or (output_height is None):
         logger.warning(
             "Either output_width is None or output_height is None,"
-            "or both. Setting both of them to None")
+            "or both. Setting both of them to None."
+            "Actualy dimension will be set automatically.")
         output_width, output_height = None, None
 
     return output_width, output_height

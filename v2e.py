@@ -509,6 +509,10 @@ def main():
                     'to match Davis346.'
                     .format(output_width, output_height))
 
+                # set emulator output width and height for the last time
+                emulator.output_width = output_width
+                emulator.output_height = output_height
+
             logger.info(
                 f'*** Stage 1/3: '
                 f'Resizing {srcNumFramesToBeProccessed} input frames '
@@ -629,6 +633,7 @@ def main():
                 logger.info(
                     f'*** Stage 3/3: emulating DVS events from '
                     f'{nFrames} frames')
+                emulator.prepare_storage(nFrames, interpTimes)
                 with tqdm(total=nFrames, desc='dvs', unit='fr') as pbar:
                     for i in range(nFrames):
                         fr = read_image(interpFramesFilenames[i])

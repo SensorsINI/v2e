@@ -151,12 +151,15 @@ class EventEmulator(object):
                 path = checkAddSuffix(path, '.h5')
                 logger.info('opening event output dataset file ' + path)
                 self.dvs_h5 = h5py.File(path, "w")
+
+                # for events
                 self.dvs_h5_dataset = self.dvs_h5.create_dataset(
                     name="events",
                     shape=(0, 4),
                     maxshape=(None, 4),
                     dtype="uint32",
                     compression="gzip")
+
             if dvs_aedat2:
                 path = os.path.join(self.output_folder, dvs_aedat2)
                 path = checkAddSuffix(path, '.aedat')
@@ -170,6 +173,30 @@ class EventEmulator(object):
                 logger.info('opening text DVS output file ' + path)
                 self.dvs_text = DVSTextOutput(path)
         atexit.register(self.cleanup)
+
+    def prepare_storage(self, n_frames, frame_ts):
+        # extra prepare for frame storage
+        if self.dvs_h5:
+            # for frame
+            self.frame_h5_dataset = self.dvs_h5.create_dataset(
+                name="frame",
+                shape=(n_frames, self.output_height, self.output_width),
+                dtype="uint8",
+                compression="gzip")
+
+            frame_ts_arr = np.array(frame_ts, dtype=np.float32)*1e6
+            self.frame_ts_dataset = self.dvs_h5.create_dataset(
+                name="frame_ts",
+                shape=(n_frames,),
+                data=frame_ts_arr.astype(np.uint32),
+                dtype="uint32",
+                compression="gzip")
+            # corresponding event idx
+            self.frame_ev_idx_dataset = self.dvs_h5.create_dataset(
+                name="frame_idx",
+                shape=(n_frames,),
+                dtype="uint64",
+                compression="gzip")
 
     def cleanup(self):
         if self.dvs_h5 is not None:
@@ -317,6 +344,16 @@ class EventEmulator(object):
             x cordinate, sign of event].
             # TODO validate that this order of x and y is correctly documented
         """
+        # like a DAVIS, write frame into the file if it's HDF5
+        if self.dvs_h5 is not None:
+            # save frame data
+            self.frame_h5_dataset[self.frame_counter] = \
+                new_frame.astype(np.uint8)
+
+        # update frame counter
+        self.frame_counter += 1
+
+        # convert into torch tensor
         new_frame = torch.tensor(new_frame, dtype=torch.float32,
                                  device=self.device)
         #  base_frame: the change detector input,
@@ -327,7 +364,6 @@ class EventEmulator(object):
             self._init(new_frame)
             self.t_previous = t_frame
             return None
-        self.frame_counter += 1
 
         if t_frame <= self.t_previous:
             raise ValueError(
@@ -548,11 +584,17 @@ class EventEmulator(object):
                    axis=0)
 
                 self.dvs_h5_dataset[-temp_events.shape[0]:] = temp_events
-                self.dvs_h5.flush()
+
             if self.dvs_aedat2 is not None:
                 self.dvs_aedat2.appendEvents(events)
             if self.dvs_text is not None:
                 self.dvs_text.appendEvents(events)
+
+        if self.dvs_h5 is not None:
+            # save frame event idx
+            # determine after the events are added
+            self.frame_ev_idx_dataset[self.frame_counter-1] = \
+                self.dvs_h5_dataset.shape[0]
 
         self.t_previous = t_frame
         if len(events) > 0:
