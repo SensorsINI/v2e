@@ -1,6 +1,6 @@
 v1.4.2
     New Features
-        - The `EventEmulator` is now accelerated by PyTorch. Using GPU to emulate event is strongly recommended. If GPU is not available, the emulation will use CPU.
+        - The `EventEmulator` is now accelerated by PyTorch. If GPU is not available, the emulation will use CPU. Early results show that the emulation on GPU and CPU has similar performance.
         - When saving with HDF5, the emulator will also optionally save three additional dataset: 1. `frames` luma frames, 2. `frame_ts` frame timestamps and 3. "frame_idxs" corresponding event index for dual modality saving and faster indexing. At default, this is disabled for faster and cheaper emulation. Can be enabled by adding `--davis_output` flag. This feature is currently only available for video, not synthetic input.
 
 v1.4.1

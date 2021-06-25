@@ -154,10 +154,11 @@ class EventEmulator(object):
                     maxshape=(None, 4),
                     dtype="uint32",
                     compression="gzip")
-
-                self.frame_h5_dataset = None
-                self.frame_ts_dataset = None
-                self.frame_ev_idx_dataset = None
+            else:
+                self.dvs_h5_dataset = None
+            self.frame_h5_dataset = None
+            self.frame_ts_dataset = None
+            self.frame_ev_idx_dataset = None
 
             if dvs_aedat2:
                 path = os.path.join(self.output_folder, dvs_aedat2)
@@ -196,6 +197,10 @@ class EventEmulator(object):
                 shape=(n_frames,),
                 dtype="uint64",
                 compression="gzip")
+        else:
+            self.frame_h5_dataset = None
+            self.frame_ts_dataset = None
+            self.frame_ev_idx_dataset = None
 
     def cleanup(self):
         if self.dvs_h5 is not None:
@@ -448,18 +453,67 @@ class EventEmulator(object):
             diff_frame, self.pos_thres, self.neg_thres)
         num_iters = max(pos_evts_frame.max(), neg_evts_frame.max())
 
+        # update the base frame, after we know how many events per pixel
+        # add to memorized brightness values just the events we emitted.
+        # don't add the remainder.
+        # the next aps frame might have sufficient value to trigger
+        # another event or it might not, but we are correct in not storing
+        # the current frame brightness
+        self.base_log_frame += pos_evts_frame*self.pos_thres
+        self.base_log_frame -= neg_evts_frame*self.neg_thres
+
+        # all events
         events = []
 
+        # event timestamps at each iteration
+        # intermediate timestamps are linearly spaced
+        # they start after the t_start to make sure
+        # that there is space from previous frame
+        # they end at t_end
+        # e.g. t_start=0, t_end=1, num_iters=2, i=0,1
+        # ts=1*1/2, 2*1/2
+        #  ts = self.t_previous + delta_time * (i + 1) / num_iters
+        ts = torch.linspace(
+            start=self.t_previous+delta_time/num_iters,
+            end=self.t_previous+delta_time,
+            steps=num_iters, dtype=torch.float32, device=self.device)
+
+        # NOISE: add temporal noise here by
+        # simple Poisson process that has a base noise rate
+        # self.shot_noise_rate_hz.
+        # If there is such noise event,
+        # then we output event from each such pixel
+
+        # the shot noise rate varies with intensity:
+        # for lowest intensity the rate rises to parameter.
+        # the noise is reduced by factor
+        # SHOT_NOISE_INTEN_FACTOR for brightest intensities
+        # This was in the loop, here we calculate loop-independent quantities
+        if self.shot_noise_rate_hz > 0:
+            SHOT_NOISE_INTEN_FACTOR = 0.25
+            shot_noise_factor = (
+                (self.shot_noise_rate_hz/2)*delta_time/num_iters) * \
+                ((SHOT_NOISE_INTEN_FACTOR-1)*inten01+1)
+            # =1 for inten=0 and SHOT_NOISE_INTEN_FACTOR for inten=1
+
+            # probability for each pixel is
+            # dt*rate*nom_thres/actual_thres.
+            # That way, the smaller the threshold,
+            # the larger the rate
+            shot_ON_prob_this_sample = \
+                shot_noise_factor*self.pos_thres_pre_prob
+            shot_OFF_prob_this_sample = \
+                shot_noise_factor*self.neg_thres_pre_prob
+
+            # for shot noise
+            rand01 = torch.rand(
+                size=[num_iters]+list(inten01.shape),
+                dtype=torch.float32,
+                device=self.device)  # draw samples
+
         for i in range(num_iters):
+            # events for this iteration
             events_curr_iter = []
-            # intermediate timestamps are linearly spaced
-            # they start after the t_start to make sure
-            # that there is space from previous frame
-            # they end at t_end
-            # e.g. t_start=0, t_end=1, num_iters=2, i=0,1
-            # ts=1*1/2, 2*1/2
-            # num_iters+1 matches with the equation in the paper
-            ts = self.t_previous + delta_time * (i + 1) / (num_iters+1)
 
             # for each iteration, compute the ON and OFF event locations
             # for that threshold amount of change or more,
@@ -491,43 +545,38 @@ class EventEmulator(object):
 
             # sort out the positive event and negative event
             if num_pos_events > 0:
-                pos_events = torch.hstack(
-                    (torch.ones((num_pos_events, 1),
-                                dtype=torch.float32).to(self.device) * ts,
-                     pos_event_xy[1].unsqueeze(dim=1),
-                     pos_event_xy[0].unsqueeze(dim=1),
-                     torch.ones((num_pos_events, 1),
-                                dtype=torch.float32).to(self.device) * 1))
+                pos_events = torch.ones(
+                    (num_pos_events, 4), dtype=torch.float32,
+                    device=self.device)
+                pos_events[:, 0] *= ts[i]
+                pos_events[:, 1] = pos_event_xy[1]
+                pos_events[:, 2] = pos_event_xy[0]
 
                 events_curr_iter.append(pos_events)
 
             if num_neg_events > 0:
-                neg_events = torch.hstack(
-                    (torch.ones((num_neg_events, 1),
-                                dtype=torch.float32).to(self.device) * ts,
-                     neg_event_xy[1].unsqueeze(dim=1),
-                     neg_event_xy[0].unsqueeze(dim=1),
-                     torch.ones((num_neg_events, 1),
-                                dtype=torch.float32).to(self.device) * -1))
+                neg_events = torch.ones(
+                    (num_neg_events, 4), dtype=torch.float32,
+                    device=self.device)
+                neg_events[:, 0] *= ts[i]
+                neg_events[:, 1] = neg_event_xy[1]
+                neg_events[:, 2] = neg_event_xy[0]
+                neg_events[:, 3] *= -1
 
                 events_curr_iter.append(neg_events)
-
-            #  events_tmp = torch.vstack((pos_events, neg_events))
 
             # generate shot noise
             if self.shot_noise_rate_hz > 0:
                 shot_on_events, shot_off_events, self.base_log_frame = \
                     generate_shot_noise(
-                        inten01=inten01,
+                        shot_noise_factor=shot_noise_factor,
+                        rand01=rand01[i],
                         base_log_frame=self.base_log_frame,
-                        shot_noise_rate_hz=self.shot_noise_rate_hz,
-                        delta_time=delta_time,
-                        num_iters=num_iters,
-                        pos_thres_pre_prob=self.pos_thres_pre_prob,
+                        shot_ON_prob_this_sample=shot_ON_prob_this_sample,
+                        shot_OFF_prob_this_sample=shot_OFF_prob_this_sample,
                         pos_thres=self.pos_thres,
-                        neg_thres_pre_prob=self.neg_thres_pre_prob,
                         neg_thres=self.neg_thres,
-                        ts=ts)
+                        ts=ts[i])
 
                 # add to event stats
                 self.num_events_on += shot_on_events.shape[0]
@@ -549,23 +598,15 @@ class EventEmulator(object):
                     events_curr_iter.size())
                 events.append(events_curr_iter)
 
-            if i == 0:
-                # update the base frame only once,
-                # after we know how many events per pixel
-                # add to memorized brightness values
-                # just the events we emitted.
-                # don't add the remainder.
-                # the next aps frame might have sufficient value
-                # to trigger another event or it might not,
-                # but we are correct in not storing
-                # the current frame brightness
-                if num_pos_events > 0:
-                    self.base_log_frame += \
-                        pos_evts_frame*pos_cord*self.pos_thres
-
-                if num_neg_events > 0:
-                    self.base_log_frame -= \
-                        neg_evts_frame*neg_cord*self.neg_thres
+            # the update is moved out from the loop
+            #  if i == 0:
+            #      if num_pos_events > 0:
+            #          self.base_log_frame += \
+            #              pos_evts_frame*pos_cord*self.pos_thres
+            #
+            #      if num_neg_events > 0:
+            #          self.base_log_frame -= \
+            #              neg_evts_frame*neg_cord*self.neg_thres
 
         if len(events) > 0:
             events = torch.vstack(events).cpu().data.numpy()

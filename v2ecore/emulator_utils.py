@@ -137,52 +137,23 @@ def compute_event_map(diff_frame, pos_thres, neg_thres):
 
 
 def generate_shot_noise(
-        inten01,
+        shot_noise_factor,
+        rand01,
         base_log_frame,
-        shot_noise_rate_hz,
-        delta_time,
-        num_iters,
-        pos_thres_pre_prob,
+        shot_ON_prob_this_sample,
+        shot_OFF_prob_this_sample,
         pos_thres,
-        neg_thres_pre_prob,
         neg_thres,
         ts):
     """Generate shot noise.
 
     """
     # the right device
-    device = inten01.device
+    device = base_log_frame.device
 
-    # NOISE: add temporal noise here by
-    # simple Poisson process that has a base noise rate
-    # self.shot_noise_rate_hz.
-    # If there is such noise event,
-    # then we output event from each such pixel
-
-    # the shot noise rate varies with intensity:
-    # for lowest intensity the rate rises to parameter.
-    # the noise is reduced by factor
-    # SHOT_NOISE_INTEN_FACTOR for brightest intensities
-    SHOT_NOISE_INTEN_FACTOR = 0.25
-    shot_noise_factor = (
-        (shot_noise_rate_hz/2)*delta_time/num_iters) * \
-        ((SHOT_NOISE_INTEN_FACTOR-1)*inten01+1)
-    # =1 for inten=0 and SHOT_NOISE_INTEN_FACTOR for inten=1
-
-    rand01 = torch.rand(
-        size=inten01.shape,
-        dtype=torch.float32).to(device)  # draw samples
-
-    # probability for each pixel is
-    # dt*rate*nom_thres/actual_thres.
-    # That way, the smaller the threshold,
-    # the larger the rate
-    shot_ON_prob_this_sample = shot_noise_factor*pos_thres_pre_prob
     # array with True where ON noise event
     shot_ON_cord = rand01 > (1-shot_ON_prob_this_sample)
 
-    shot_OFF_prob_this_sample = shot_noise_factor*neg_thres_pre_prob
-    # array with True where OFF noise event
     shot_OFF_cord = rand01 < shot_OFF_prob_this_sample
 
     # get shot noise event ON and OFF cordinates
@@ -197,28 +168,29 @@ def generate_shot_noise(
     #  self.num_events_total += shotOnCount+shotOffCount
 
     if shot_ON_count > 0:
-        shot_ON_events = torch.hstack(
-            (torch.ones((shot_ON_count, 1),
-                        dtype=torch.float32).to(device)*ts,
-             shot_ON_xy[1].unsqueeze(dim=1),
-             shot_ON_xy[0].unsqueeze(dim=1),
-             torch.ones((shot_ON_count, 1),
-                        dtype=torch.float32).to(device)*1))
+        shot_ON_events = torch.ones(
+            (shot_ON_count, 4), dtype=torch.float32, device=device)
+        shot_ON_events[:, 0] *= ts
+        shot_ON_events[:, 1] = shot_ON_xy[1]
+        shot_ON_events[:, 2] = shot_ON_xy[0]
+
         base_log_frame += shot_ON_cord*pos_thres
     else:
-        shot_ON_events = torch.zeros((0, 4), dtype=torch.float32).to(device)
+        shot_ON_events = torch.zeros(
+            (0, 4), dtype=torch.float32, device=device)
 
     if shot_OFF_count > 0:
-        shot_OFF_events = torch.hstack(
-            (torch.ones((shot_OFF_count, 1),
-                        dtype=torch.float32).to(device)*ts,
-             shot_OFF_xy[1].unsqueeze(dim=1),
-             shot_OFF_xy[0].unsqueeze(dim=1),
-             torch.ones((shot_OFF_count, 1),
-                        dtype=torch.float32).to(device)*-1))
+        shot_OFF_events = torch.ones(
+            (shot_OFF_count, 4), dtype=torch.float32, device=device)
+        shot_OFF_events[:, 0] *= ts
+        shot_OFF_events[:, 1] = shot_OFF_xy[1]
+        shot_OFF_events[:, 2] = shot_OFF_xy[0]
+        shot_OFF_events[:, 3] *= -1
+
         base_log_frame -= shot_OFF_cord*neg_thres
     else:
-        shot_OFF_events = torch.zeros((0, 4), dtype=torch.float32).to(device)
+        shot_OFF_events = torch.zeros(
+            (0, 4), dtype=torch.float32, device=device)
     # end temporal noise
 
     return shot_ON_events, shot_OFF_events, base_log_frame
