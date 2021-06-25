@@ -126,8 +126,12 @@ def compute_event_map(diff_frame, pos_thres, neg_thres):
     #      torch.tensor(0, dtype=diff_frame.dtype, device=diff_frame.device))
 
     # compute quantized number of ON and OFF events for each pixel
-    pos_evts_frame = (pos_frame // pos_thres).type(torch.int32)
-    neg_evts_frame = (neg_frame // neg_thres).type(torch.int32)
+    #  pos_evts_frame = (pos_frame // pos_thres).type(torch.int32)
+    #  neg_evts_frame = (neg_frame // neg_thres).type(torch.int32)
+    pos_evts_frame = torch.div(
+        pos_frame, pos_thres, rounding_mode="floor").type(torch.int32)
+    neg_evts_frame = torch.div(
+        neg_frame, neg_thres, rounding_mode="floor").type(torch.int32)
 
     return pos_evts_frame, neg_evts_frame
 
