@@ -332,8 +332,6 @@ class EventEmulator(object):
     def generate_events(self, new_frame, t_frame):
         """Compute events in new frame.
 
-        With JAX Acceleration.
-
         Parameters
         ----------
         new_frame: np.ndarray
