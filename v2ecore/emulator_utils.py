@@ -221,7 +221,7 @@ def generate_shot_noise(
         shot_OFF_events = torch.zeros((0, 4), dtype=torch.float32).to(device)
     # end temporal noise
 
-    return shot_ON_events, shot_OFF_events
+    return shot_ON_events, shot_OFF_events, base_log_frame
 
 
 if __name__ == "__main__":

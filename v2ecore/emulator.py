@@ -516,17 +516,18 @@ class EventEmulator(object):
 
             # generate shot noise
             if self.shot_noise_rate_hz > 0:
-                shot_on_events, shot_off_events = generate_shot_noise(
-                    inten01=inten01,
-                    base_log_frame=self.base_log_frame,
-                    shot_noise_rate_hz=self.shot_noise_rate_hz,
-                    delta_time=delta_time,
-                    num_iters=num_iters,
-                    pos_thres_pre_prob=self.pos_thres_pre_prob,
-                    pos_thres=self.pos_thres,
-                    neg_thres_pre_prob=self.neg_thres_pre_prob,
-                    neg_thres=self.neg_thres,
-                    ts=ts)
+                shot_on_events, shot_off_events, self.base_log_frame = \
+                    generate_shot_noise(
+                        inten01=inten01,
+                        base_log_frame=self.base_log_frame,
+                        shot_noise_rate_hz=self.shot_noise_rate_hz,
+                        delta_time=delta_time,
+                        num_iters=num_iters,
+                        pos_thres_pre_prob=self.pos_thres_pre_prob,
+                        pos_thres=self.pos_thres,
+                        neg_thres_pre_prob=self.neg_thres_pre_prob,
+                        neg_thres=self.neg_thres,
+                        ts=ts)
 
                 # add to event stats
                 self.num_events_on += shot_on_events.shape[0]
