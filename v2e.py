@@ -445,19 +445,21 @@ def main():
         i = 0
         with tqdm(total=synthetic_input_instance.total_frames(),
                   desc='dvs', unit='fr') as pbar:
-            while fr is not None:
-                newEvents = emulator.generate_events(fr, time)
-                pbar.update(1)
-                i += 1
-                if newEvents is not None and newEvents.shape[0] > 0 \
-                        and not args.skip_video_output:
-                    events = np.append(events, newEvents, axis=0)
-                    events = np.array(events)
-                    if i % batch_size == 0:
-                        eventRenderer.render_events_to_frames(
-                            events, height=output_height, width=output_width)
-                        events = np.zeros((0, 4), dtype=np.float32)
-                (fr, time) = synthetic_input_instance.next_frame()
+            with torch.no_grad():
+                while fr is not None:
+                    newEvents = emulator.generate_events(fr, time)
+                    pbar.update(1)
+                    i += 1
+                    if newEvents is not None and newEvents.shape[0] > 0 \
+                            and not args.skip_video_output:
+                        events = np.append(events, newEvents, axis=0)
+                        events = np.array(events)
+                        if i % batch_size == 0:
+                            eventRenderer.render_events_to_frames(
+                                events, height=output_height,
+                                width=output_width)
+                            events = np.zeros((0, 4), dtype=np.float32)
+                    (fr, time) = synthetic_input_instance.next_frame()
             # process leftover events
             if len(events) > 0 and not args.skip_video_output:
                 eventRenderer.render_events_to_frames(
@@ -639,21 +641,23 @@ def main():
                 if args.davis_output:
                     emulator.prepare_storage(nFrames, interpTimes)
                 with tqdm(total=nFrames, desc='dvs', unit='fr') as pbar:
-                    for i in range(nFrames):
-                        fr = read_image(interpFramesFilenames[i])
-                        newEvents = emulator.generate_events(
-                            fr, interpTimes[i])
+                    with torch.no_grad():
+                        for i in range(nFrames):
+                            fr = read_image(interpFramesFilenames[i])
+                            newEvents = emulator.generate_events(
+                                fr, interpTimes[i])
 
-                        pbar.update(1)
-                        if newEvents is not None and newEvents.shape[0] > 0 \
-                                and not args.skip_video_output:
-                            events = np.append(events, newEvents, axis=0)
-                            events = np.array(events)
-                            if i % batch_size == 0:
-                                eventRenderer.render_events_to_frames(
-                                    events, height=output_height,
-                                    width=output_width)
-                                events = np.zeros((0, 4), dtype=np.float32)
+                            pbar.update(1)
+                            if newEvents is not None and \
+                                    newEvents.shape[0] > 0 \
+                                    and not args.skip_video_output:
+                                events = np.append(events, newEvents, axis=0)
+                                events = np.array(events)
+                                if i % batch_size == 0:
+                                    eventRenderer.render_events_to_frames(
+                                        events, height=output_height,
+                                        width=output_width)
+                                    events = np.zeros((0, 4), dtype=np.float32)
                     # process leftover events
                     if len(events) > 0 and not args.skip_video_output:
                         eventRenderer.render_events_to_frames(
