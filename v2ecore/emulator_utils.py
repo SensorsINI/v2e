@@ -31,7 +31,7 @@ def lin_log(x, threshold=20):
     # in different number because first addition shoots some bits off
     # to never-never land, thus preventing the OFF events
     # that ideally follow ON events when object moves by
-    rounding = float(10**8)
+    rounding = 1e8
     y = torch.round(y*rounding)/rounding
 
     return y.float()

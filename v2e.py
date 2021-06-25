@@ -21,6 +21,7 @@ from tempfile import TemporaryDirectory
 from engineering_notation import EngNumber as eng  # only from pip
 from tqdm import tqdm
 
+import torch
 
 import v2ecore.desktop as desktop
 from v2ecore.v2e_utils import all_images, read_image, \
@@ -48,6 +49,9 @@ logging.addLevelName(
     logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(
         logging.ERROR))
 logger = logging.getLogger(__name__)
+
+# torch device
+torch_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # may only apply to windows
 try:
@@ -416,10 +420,14 @@ def main():
         seed=args.dvs_emulator_seed,
         output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2,
         dvs_text=dvs_text, show_dvs_model_state=args.show_dvs_model_state,
-        output_width=output_width, output_height=output_height)
+        output_width=output_width, output_height=output_height,
+        device=torch_device)
 
     if args.dvs_params is not None:
-        logger.warning(f'--dvs_param={args.dvs_params} option overrides your selected options for threshold, threshold-mismatch, leak and shot noise rates')
+        logger.warning(
+            f'--dvs_param={args.dvs_params} option overrides your '
+            f'selected options for threshold, threshold-mismatch, '
+            f'leak and shot noise rates')
         emulator.set_dvs_params(args.dvs_params)
 
     eventRenderer = EventRenderer(

@@ -418,6 +418,7 @@ class EventEmulator(object):
         events = []
 
         for i in range(num_iters):
+            events_curr_iter = []
             # intermediate timestamps are linearly spaced
             # they start after the t_start to make sure
             # that there is space from previous frame
@@ -464,9 +465,8 @@ class EventEmulator(object):
                      pos_event_xy[0].unsqueeze(dim=1),
                      torch.ones((num_pos_events, 1),
                                 dtype=torch.float32).to(self.device) * 1))
-            else:
-                pos_events = torch.zeros(
-                    (0, 4), dtype=torch.float32).to(self.device)
+
+                events_curr_iter.append(pos_events)
 
             if num_neg_events > 0:
                 neg_events = torch.hstack(
@@ -476,11 +476,10 @@ class EventEmulator(object):
                      neg_event_xy[0].unsqueeze(dim=1),
                      torch.ones((num_neg_events, 1),
                                 dtype=torch.float32).to(self.device) * -1))
-            else:
-                neg_events = torch.zeros(
-                    (0, 4), dtype=torch.float32).to(self.device)
 
-            events_tmp = torch.vstack((pos_events, neg_events))
+                events_curr_iter.append(neg_events)
+
+            #  events_tmp = torch.vstack((pos_events, neg_events))
 
             # generate shot noise
             if self.shot_noise_rate_hz > 0:
@@ -502,9 +501,12 @@ class EventEmulator(object):
                 self.num_events_total += \
                     shot_on_events.shape[0]+shot_off_events.shape[0]
 
+                # append noisy events
+                events_curr_iter.append(shot_on_events)
+                events_curr_iter.append(shot_off_events)
+
             # stack all events at this iteration
-            events_curr_iter = torch.vstack(
-                (events_tmp, shot_on_events, shot_off_events))
+            events_curr_iter = torch.vstack(events_curr_iter)
 
             # shuffle and append to the events collectors
             if events_curr_iter.shape[0] > 0:

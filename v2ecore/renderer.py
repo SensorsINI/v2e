@@ -346,54 +346,6 @@ class EventRenderer(object):
 
         return returnedFrames
 
-    #  def generateEventsFromFramesAndExportEventsToHDF5(
-    #          self, outputFileName: str, imageFileNames: List[str],
-    #          frameTimesS: np.array) -> None:
-    #      """Export events to a HDF5 file.
-    #
-    #      TODO: not sure if we should still keep this function
-    #
-    #      Parameters
-    #      ----------
-    #      outputFileName : str
-    #          file name of the HDF5 file
-    #      """
-    #
-    #      event_dataset = self.event_file.create_dataset(
-    #          name="event",
-    #          shape=(0, 4),
-    #          maxshape=(None, 4),
-    #          dtype="uint32")
-    #
-    #      # generating events
-    #      num_events = 0
-    #      for i in tqdm(range(frameTimesS.shape[0] - 1),
-    #                    desc="export_events: ", unit='fr'):
-    #          new_frame = read_image(imageFileNames[i + 1])
-    #          if self.emulator is None:
-    #              self.emulator = EventEmulator(
-    #                  pos_thres=self.pos_thres, neg_thres=self.neg_thres,
-    #                  sigma_thres=self.sigma_thres)
-    #          tmp_events = self.emulator.generate_events(
-    #              new_frame, frameTimesS[i])
-    #          if tmp_events is not None:
-    #              # convert data to uint32 (microsecs) format
-    #              tmp_events[:, 0] = tmp_events[:, 0] * 1e6
-    #              tmp_events[tmp_events[:, 3] == -1, 3] = 0
-    #              tmp_events = tmp_events.astype(np.uint32)
-    #
-    #              # save events
-    #              event_dataset.resize(
-    #                  event_dataset.shape[0] + tmp_events.shape[0],
-    #                  axis=0)
-    #
-    #              event_dataset[-tmp_events.shape[0]:] = tmp_events
-    #              self.event_file.flush()
-    #
-    #              num_events += tmp_events.shape[0]
-    #
-    #      logger.info("Generated {} events".format(EngNumber(num_events)))
-
     def accumulate_event_frame(self, events, histrange):
         """Accumulate event frame from an array of events.
 
