@@ -633,7 +633,11 @@ def main():
                 logger.info(
                     f'*** Stage 3/3: emulating DVS events from '
                     f'{nFrames} frames')
-                emulator.prepare_storage(nFrames, interpTimes)
+
+                # parepare extra steps for data storage
+                # right before event emulation
+                if args.davis_output:
+                    emulator.prepare_storage(nFrames, interpTimes)
                 with tqdm(total=nFrames, desc='dvs', unit='fr') as pbar:
                     for i in range(nFrames):
                         fr = read_image(interpFramesFilenames[i])

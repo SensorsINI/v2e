@@ -160,6 +160,10 @@ class EventEmulator(object):
                     dtype="uint32",
                     compression="gzip")
 
+                self.frame_h5_dataset = None
+                self.frame_ts_dataset = None
+                self.frame_ev_idx_dataset = None
+
             if dvs_aedat2:
                 path = os.path.join(self.output_folder, dvs_aedat2)
                 path = checkAddSuffix(path, '.aedat')
@@ -345,7 +349,7 @@ class EventEmulator(object):
             # TODO validate that this order of x and y is correctly documented
         """
         # like a DAVIS, write frame into the file if it's HDF5
-        if self.dvs_h5 is not None:
+        if self.frame_h5_dataset is not None:
             # save frame data
             self.frame_h5_dataset[self.frame_counter] = \
                 new_frame.astype(np.uint8)
@@ -590,7 +594,7 @@ class EventEmulator(object):
             if self.dvs_text is not None:
                 self.dvs_text.appendEvents(events)
 
-        if self.dvs_h5 is not None:
+        if self.frame_ev_idx_dataset is not None:
             # save frame event idx
             # determine after the events are added
             self.frame_ev_idx_dataset[self.frame_counter-1] = \

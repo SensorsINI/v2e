@@ -313,6 +313,10 @@ def v2e_args(parser):
     # DVS output as events
     dvsEventOutputGroup = parser.add_argument_group('Output: DVS events')
     dvsEventOutputGroup.add_argument(
+        "--davis_output", action="store_true",
+        help="Save frames, frame timestamp and corresponding event index"
+             "in HDF5. Default is False.")
+    dvsEventOutputGroup.add_argument(
         "--dvs_h5", type=output_file_check, default="None",
         help="Output DVS events as hdf5 event database.")
     dvsEventOutputGroup.add_argument(
