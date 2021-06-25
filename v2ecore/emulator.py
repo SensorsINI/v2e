@@ -9,19 +9,16 @@ Compute events from input frames.
 """
 import atexit
 import os
-import time
 import random
 
 import cv2
 import numpy as np
 import logging
 import h5py
-from engineering_notation import EngNumber  # only from pip
 
 import torch
 
-from v2ecore.v2e_utils import all_images, read_image, \
-    video_writer, checkAddSuffix
+from v2ecore.v2e_utils import checkAddSuffix
 from v2ecore.output.aedat2_output import AEDat2Output
 from v2ecore.output.ae_text_output import DVSTextOutput
 
@@ -291,6 +288,7 @@ class EventEmulator(object):
         self.frame_counter = 0
 
     def _show(self, inp: np.ndarray):
+        inp = np.array(inp.cpu().data.numpy())
         min = np.min(inp)
         norm = (np.max(inp) - min)
         if norm == 0:
@@ -420,7 +418,6 @@ class EventEmulator(object):
         events = []
 
         for i in range(num_iters):
-            events_curr_iters = torch.zeros((0, 4), dtype=torch.float32)
             # intermediate timestamps are linearly spaced
             # they start after the t_start to make sure
             # that there is space from previous frame
@@ -438,32 +435,33 @@ class EventEmulator(object):
             # already have the number of events for each pixel in
             # pos_evts_frame, just find bool array of pixels with events in
             # this iteration of max # events
-            pos_cord = (pos_evts_frame >= i+1) # it must be >= because we need to make event for each iteration up to total # events for that pixel
+
+            # it must be >= because we need to make event for
+            # each iteration up to total # events for that pixel
+            pos_cord = (pos_evts_frame >= i+1)
             neg_cord = (neg_evts_frame >= i+1)
+
             # generate events
             #  make a list of coordinates x,y addresses of events
-            #  pos_event_xy = np.where(pos_cord)
-            pos_event_xy = pos_cord.nonzero()
-            num_pos_events = pos_event_xy.shape[0]
-            #  neg_event_xy = np.where(neg_cord)
-            neg_event_xy = neg_cord.nonzero()
-            num_neg_events = neg_event_xy.shape[0]
+            pos_event_xy = pos_cord.nonzero(as_tuple=True)
+            neg_event_xy = neg_cord.nonzero(as_tuple=True)
+
+            # update event stats
+            num_pos_events = pos_event_xy[0].shape[0]
+            num_neg_events = neg_event_xy[0].shape[0]
             num_events = num_pos_events + num_neg_events
 
             self.num_events_on += num_pos_events
             self.num_events_off += num_neg_events
             self.num_events_total += num_events
 
-            #  logger.info(
-            #      f'frame/iteration: {self.frame_counter}/{i}'
-            #      f'#on: {num_pos_events} #off: {num_neg_events}')
-
             # sort out the positive event and negative event
             if num_pos_events > 0:
                 pos_events = torch.hstack(
                     (torch.ones((num_pos_events, 1),
                                 dtype=torch.float32).to(self.device) * ts,
-                     pos_event_xy[:, [1, 0]],
+                     pos_event_xy[1].unsqueeze(dim=1),
+                     pos_event_xy[0].unsqueeze(dim=1),
                      torch.ones((num_pos_events, 1),
                                 dtype=torch.float32).to(self.device) * 1))
             else:
@@ -474,7 +472,8 @@ class EventEmulator(object):
                 neg_events = torch.hstack(
                     (torch.ones((num_neg_events, 1),
                                 dtype=torch.float32).to(self.device) * ts,
-                     neg_event_xy[:, [1, 0]],
+                     neg_event_xy[1].unsqueeze(dim=1),
+                     neg_event_xy[0].unsqueeze(dim=1),
                      torch.ones((num_neg_events, 1),
                                 dtype=torch.float32).to(self.device) * -1))
             else:
@@ -483,36 +482,36 @@ class EventEmulator(object):
 
             events_tmp = torch.vstack((pos_events, neg_events))
 
-            # randomly order events to prevent bias to one corner
-            #  if events_tmp.shape[0] != 0:
-            #      np.random.shuffle(events_tmp)
+            # generate shot noise
+            if self.shot_noise_rate_hz > 0:
+                shot_on_events, shot_off_events = generate_shot_noise(
+                    inten01=inten01,
+                    base_log_frame=self.base_log_frame,
+                    shot_noise_rate_hz=self.shot_noise_rate_hz,
+                    delta_time=delta_time,
+                    num_iters=num_iters,
+                    pos_thres_pre_prob=self.pos_thres_pre_prob,
+                    pos_thres=self.pos_thres,
+                    neg_thres_pre_prob=self.neg_thres_pre_prob,
+                    neg_thres=self.neg_thres,
+                    ts=ts)
 
-            if num_events > 0:
-                events_curr_iters = events_tmp
-                #  events.append(events_tmp)
+                # add to event stats
+                self.num_events_on += shot_on_events.shape[0]
+                self.num_events_off += shot_off_events.shape[0]
+                self.num_events_total += \
+                    shot_on_events.shape[0]+shot_off_events.shape[0]
 
-                if self.shot_noise_rate_hz > 0:
-
-                    shot_on_events, shot_off_events = generate_shot_noise(
-                        inten01=inten01,
-                        base_log_frame=self.base_log_frame,
-                        shot_noise_rate_hz=self.shot_noise_rate_hz,
-                        delta_time=delta_time,
-                        num_iters=num_iters,
-                        pos_thres_pre_prob=self.pos_thres_pre_prob,
-                        pos_thres=self.pos_thres,
-                        neg_thres_pre_prob=self.neg_thres_pre_prob,
-                        neg_thres=self.neg_thres,
-                        ts=ts)
-
-                    events_curr_iters = torch.vstack(
-                        (events_curr_iters, shot_on_events, shot_off_events))
+            # stack all events at this iteration
+            events_curr_iter = torch.vstack(
+                (events_tmp, shot_on_events, shot_off_events))
 
             # shuffle and append to the events collectors
-            idx = torch.randperm(events_curr_iters.shape[0])
-            events_curr_iters = events_curr_iters[idx].view(
-                events_curr_iters.size())
-            events.append(events_curr_iters)
+            if events_curr_iter.shape[0] > 0:
+                idx = torch.randperm(events_curr_iter.shape[0])
+                events_curr_iter = events_curr_iter[idx].view(
+                    events_curr_iter.size())
+                events.append(events_curr_iter)
 
             if i == 0:
                 # update the base frame only once,
