@@ -1,11 +1,6 @@
 """
 DVS simulator.
 Compute events from input frames.
-
-@author: Zhe He
-@contact: zhehe@student.ethz.ch
-@credits: Yuhuang Hu
-@latest updaste: 2019-Jun-13
 """
 import atexit
 import os
