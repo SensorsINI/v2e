@@ -5,6 +5,7 @@ Compute events from input frames.
 import atexit
 import os
 import random
+import math
 
 import cv2
 import numpy as np
@@ -267,6 +268,16 @@ class EventEmulator(object):
                 first_frame_linear.shape,
                 dtype=torch.float32, device=self.device)*self.pos_thres
 
+            # should be set in argument later on
+            self.noise_rate_cov_decades = 0.1
+            self.leak_jitter_fraction = 0.1
+
+            self.noise_rate_array = torch.randn(
+                first_frame_linear.shape, dtype=torch.float32,
+                device=self.device)
+            self.noise_rate_array = torch.exp(
+                math.log(10)*self.noise_rate_cov_decades*self.noise_rate_array)
+
     def set_dvs_params(self, model: str):
         if model == 'clean':
             self.pos_thres = 0.2
@@ -431,7 +442,7 @@ class EventEmulator(object):
                 base_log_frame=self.base_log_frame,
                 leak_rate_hz=self.leak_rate_hz,
                 delta_time=delta_time,
-                pos_thres_nominal=self.pos_thres_nominal)
+                pos_thres=self.pos_thres)
 
         # log intensity (brightness) change from memorized values is computed
         # from the difference between new input

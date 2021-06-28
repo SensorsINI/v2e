@@ -96,10 +96,19 @@ def low_pass_filter(
 def subtract_leak_current(base_log_frame,
                           leak_rate_hz,
                           delta_time,
-                          pos_thres_nominal):
+                          pos_thres,
+                          leak_jitter_fraction,
+                          noise_rate_array):
     """Subtract leak current from base log frame."""
 
-    delta_leak = delta_time*leak_rate_hz*pos_thres_nominal  # scalars
+    rand = torch.randn(
+        noise_rate_array.shape, dtype=torch.float32,
+        device=noise_rate_array.device)
+
+    curr_leak_rate = \
+        leak_rate_hz*noise_rate_array*(1-leak_jitter_fraction*rand)
+
+    delta_leak = delta_time*curr_leak_rate*pos_thres  # this is a matrix
 
     return base_log_frame-delta_leak
 
