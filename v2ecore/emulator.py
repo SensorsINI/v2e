@@ -318,6 +318,8 @@ class EventEmulator(object):
         self.lp_log_frame0 = None  # lowpass stage 0
         self.lp_log_frame1 = None  # stage 1
         self.frame_counter = 0
+        self.pos_thres = self.pos_thres_nominal
+        self.neg_thres = self.neg_thres_nominal
 
     def _show(self, inp: np.ndarray):
         inp = np.array(inp.cpu().data.numpy())
