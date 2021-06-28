@@ -471,7 +471,7 @@ class EventEmulator(object):
         #  ts = self.t_previous + delta_time * (i + 1) / num_iters
         ts = torch.linspace(
             start=self.t_previous+delta_time/num_iters,
-            end=self.t_previous+delta_time,
+            end=t_frame,
             steps=num_iters, dtype=torch.float32, device=self.device)
 
         # NOISE: add temporal noise here by
