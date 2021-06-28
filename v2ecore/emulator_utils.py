@@ -79,10 +79,6 @@ def low_pass_filter(
     # the more intensity, the shorter the time constant
     eps = inten01*(delta_time/tau)
     eps = torch.clamp(eps, max=1)  # keep filter stable
-    #  eps = torch.where(
-    #      eps > 1,
-    #      torch.tensor(1, dtype=eps.dtype, device=eps.device),
-    #      eps)
 
     # first internal state is updated
     new_lp_log_frame0 = (1-eps)*lp_log_frame0+eps*log_new_frame
@@ -105,7 +101,7 @@ def subtract_leak_current(base_log_frame,
 
     delta_leak = delta_time*leak_rate_hz*pos_thres_nominal  # scalars
 
-    return base_log_frame - delta_leak
+    return base_log_frame-delta_leak
 
 
 def compute_event_map(diff_frame, pos_thres, neg_thres):
@@ -114,20 +110,11 @@ def compute_event_map(diff_frame, pos_thres, neg_thres):
     Prepare positive and negative event frames that later will be used
     for generating events.
     """
-
     # extract positive and negative differences
     pos_frame = F.relu(diff_frame)
     neg_frame = F.relu(-diff_frame)
-    #  pos_frame = torch.where(
-    #      diff_frame > 0, diff_frame,
-    #      torch.tensor(0, dtype=diff_frame.dtype, device=diff_frame.device))
-    #  neg_frame = torch.where(
-    #      diff_frame < 0, -1*diff_frame,
-    #      torch.tensor(0, dtype=diff_frame.dtype, device=diff_frame.device))
 
     # compute quantized number of ON and OFF events for each pixel
-    #  pos_evts_frame = (pos_frame // pos_thres).type(torch.int32)
-    #  neg_evts_frame = (neg_frame // neg_thres).type(torch.int32)
     pos_evts_frame = torch.div(
         pos_frame, pos_thres, rounding_mode="floor").type(torch.int32)
     neg_evts_frame = torch.div(

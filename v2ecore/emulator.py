@@ -233,19 +233,13 @@ class EventEmulator(object):
                 dtype=torch.float32).to(self.device)
 
             # to avoid the situation where the threshold is too small.
-            min_thres = torch.tensor(
-                0.01, dtype=torch.float32).to(self.device)
-            self.pos_thres = torch.where(
-                self.pos_thres < 0.01, min_thres,
-                self.pos_thres)
+            self.pos_thres = torch.clamp(self.pos_thres, min=0.01)
 
             self.neg_thres = torch.normal(
                 self.neg_thres, self.sigma_thres,
                 size=first_frame_linear.shape,
                 dtype=torch.float32).to(self.device)
-            self.neg_thres = torch.where(
-                self.neg_thres < 0.01, min_thres,
-                self.neg_thres)
+            self.neg_thres = torch.clamp(self.neg_thres, min=0.01)
 
         # compute variable for shot-noise
         self.pos_thres_pre_prob = torch.div(
@@ -264,7 +258,7 @@ class EventEmulator(object):
         if self.leak_rate_hz > 0:
             self.base_log_frame -= torch.rand(
                 first_frame_linear.shape,
-                dtype=torch.float32).to(self.device)*self.pos_thres
+                dtype=torch.float32, device=self.device)*self.pos_thres
 
     def set_dvs_params(self, model: str):
         if model == 'clean':
@@ -358,7 +352,7 @@ class EventEmulator(object):
         # convert into torch tensor
         new_frame = torch.tensor(new_frame, dtype=torch.float32,
                                  device=self.device)
-        #  base_frame: the change detector input,
+        # base_frame: the change detector input,
         #              stores memorized brightness values
         # new_frame: the new intensity frame input
         # log_frame: the lowpass filtered brightness values
@@ -375,21 +369,23 @@ class EventEmulator(object):
         # lin-log mapping
         log_new_frame = lin_log(new_frame)
 
-        # Apply nonlinear lowpass filter here.
-        # Filter is 2nd order lowpass IIR
-        # that uses two internal state variables
-        # to store stages of cascaded first order RC filters.
-        # Time constant of the filter is proportional to
-        # the intensity value (with offset to deal with DN=0)
+        # compute time difference between this and the previous frame
         delta_time = t_frame - self.t_previous
         # logger.debug('delta_time={}'.format(delta_time))
 
         inten01 = None  # define for later
         if self.cutoff_hz > 0 or self.shot_noise_rate_hz > 0:  # will use later
+            # Time constant of the filter is proportional to
+            # the intensity value (with offset to deal with DN=0)
             # limit max time constant to ~1/10 of white intensity level
             inten01 = rescale_intensity_frame(new_frame.clone().detach())
 
-        # low pass filter
+        # Apply nonlinear lowpass filter here.
+        # Filter is a 1st order lowpass IIR (can be 2nd order)
+        # that uses two internal state variables
+        # to store stages of cascaded first order RC filters.
+        # Time constant of the filter is proportional to
+        # the intensity value (with offset to deal with DN=0)
         self.lp_log_frame0, self.lp_log_frame1 = low_pass_filter(
             log_new_frame=log_new_frame,
             lp_log_frame0=self.lp_log_frame0,
@@ -488,6 +484,7 @@ class EventEmulator(object):
         # for lowest intensity the rate rises to parameter.
         # the noise is reduced by factor
         # SHOT_NOISE_INTEN_FACTOR for brightest intensities
+
         # This was in the loop, here we calculate loop-independent quantities
         if self.shot_noise_rate_hz > 0:
             SHOT_NOISE_INTEN_FACTOR = 0.25
@@ -515,11 +512,6 @@ class EventEmulator(object):
             # events for this iteration
             events_curr_iter = []
 
-            # for each iteration, compute the ON and OFF event locations
-            # for that threshold amount of change or more,
-            # these pixels need to output an event in this cycle
-            # pos_cord = (pos_frame >= self.pos_thres * (i + 1))
-            # neg_cord = (neg_frame >= self.neg_thres * (i + 1))
             # already have the number of events for each pixel in
             # pos_evts_frame, just find bool array of pixels with events in
             # this iteration of max # events
