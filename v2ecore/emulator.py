@@ -131,16 +131,25 @@ class EventEmulator(object):
                 'refractory_period_s={} will be ignored'.format(
                     refractory_period_s))
 
+        # h5 output
         self.output_folder = output_folder
         self.dvs_h5 = dvs_h5
+        self.dvs_h5_dataset = None
+        self.frame_h5_dataset = None
+        self.frame_ts_dataset = None
+        self.frame_ev_idx_dataset = None
+
+        # aedat or text output
         self.dvs_aedat2 = dvs_aedat2
         self.dvs_text = dvs_text
+
+        # event stats
         self.num_events_total = 0
         self.num_events_on = 0
         self.num_events_off = 0
         self.frame_counter = 0
 
-        if self.output_folder:
+        try:
             if dvs_h5:
                 path = os.path.join(self.output_folder, dvs_h5)
                 path = checkAddSuffix(path, '.h5')
@@ -154,11 +163,6 @@ class EventEmulator(object):
                     maxshape=(None, 4),
                     dtype="uint32",
                     compression="gzip")
-            else:
-                self.dvs_h5_dataset = None
-            self.frame_h5_dataset = None
-            self.frame_ts_dataset = None
-            self.frame_ev_idx_dataset = None
 
             if dvs_aedat2:
                 path = os.path.join(self.output_folder, dvs_aedat2)
@@ -172,6 +176,9 @@ class EventEmulator(object):
                 path = checkAddSuffix(path, '.txt')
                 logger.info('opening text DVS output file ' + path)
                 self.dvs_text = DVSTextOutput(path)
+        except Exception:
+            logger.warning("No output file defined.")
+
         atexit.register(self.cleanup)
 
     def prepare_storage(self, n_frames, frame_ts):
@@ -627,8 +634,81 @@ class EventEmulator(object):
             self.frame_ev_idx_dataset[self.frame_counter-1] = \
                 self.dvs_h5_dataset.shape[0]
 
+        # assign new time
         self.t_previous = t_frame
         if len(events) > 0:
             return events
         else:
             return None
+
+
+if __name__ == "__main__":
+    # define a emulator
+    emulator = EventEmulator(
+        pos_thres=0.2,
+        neg_thres=0.2,
+        sigma_thres=0.03,
+        cutoff_hz=200,
+        leak_rate_hz=1,
+        shot_noise_rate_hz=10,
+        device="cuda",
+    )
+
+    cap = cv2.VideoCapture(
+        os.path.join(os.environ["HOME"], "v2e_tutorial_video.avi"))
+
+    # num of frames
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    print("FPS: {}".format(fps))
+    num_of_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    print("Num of frames: {}".format(num_of_frames))
+
+    duration = num_of_frames/fps
+    delta_t = 1/fps
+    current_time = 0.
+
+    print("Clip Duration: {}s".format(duration))
+    print("Delta Frame Tiem: {}s".format(delta_t))
+    print("="*50)
+
+    new_events = None
+
+    idx = 0
+    # Only Emulate the first 10 frame
+    while(cap.isOpened()):
+        # Capture frame-by-frame
+        ret, frame = cap.read()
+        if ret is True and idx < 10:
+            # convert it to Luma frame
+            luma_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            print("="*50)
+            print("Current Frame {} Time {}".format(idx, current_time))
+            print("-"*50)
+
+            # # emulate events
+            new_events = emulator.generate_events(luma_frame, current_time)
+
+            # update time
+            current_time += delta_t
+
+            # print event stats
+            if new_events is not None:
+                num_events = new_events.shape[0]
+                start_t = new_events[0, 0]
+                end_t = new_events[-1, 0]
+                event_time = (new_events[-1, 0]-new_events[0, 0])
+                event_rate_kevs = (num_events/delta_t)/1e3
+
+                print("Number of Events: {}\n"
+                      "Duration: {}\n"
+                      "Start T: {:.5f}\n"
+                      "End T: {:.5f}\n"
+                      "Event Rate: {:.2f}KEV/s".format(
+                          num_events, event_time, start_t, end_t,
+                          event_rate_kevs))
+            idx += 1
+            print("="*50)
+        else:
+            break
+
+    cap.release()
