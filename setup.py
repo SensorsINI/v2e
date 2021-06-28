@@ -1,5 +1,6 @@
 """Setup script for v2e."""
 
+import setuptools
 from setuptools import setup
 
 classifiers = """
@@ -22,7 +23,7 @@ setup(
     author="Tobi Delbruck, Yuhuang Hu, Zhe He",
     author_email="tobi@ini.uzh.ch",
 
-    packages=["v2ecore"],
+    packages=setuptools.find_packages(),
 
     scripts=["v2e.py"],
 
