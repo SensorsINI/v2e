@@ -269,9 +269,11 @@ class EventEmulator(object):
         # otherwise low threshold pixels will generate
         # a burst of events at the first frame
         if self.leak_rate_hz > 0:
-            self.base_log_frame -= torch.rand(
-                first_frame_linear.shape,
-                dtype=torch.float32, device=self.device)*self.pos_thres
+            # no justification for this subtraction after having the
+            # new leak rate model
+            #  self.base_log_frame -= torch.rand(
+            #      first_frame_linear.shape,
+            #      dtype=torch.float32, device=self.device)*self.pos_thres
 
             # set noise rate array, it's a log-normal distribution
             self.noise_rate_array = torch.randn(
