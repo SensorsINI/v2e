@@ -14,13 +14,15 @@ output_width, output_height = 346, 260
 emulator = EventEmulator(
     pos_thres=0.2,
     neg_thres=0.2,
-    sigma_thres=0,
+    sigma_thres=0.03,
     cutoff_hz=0,
-    leak_rate_hz=5,
+    leak_rate_hz=10,
     shot_noise_rate_hz=0,
+    leak_jitter_fraction=0,
+    noise_rate_cov_decades=0,
     device=torch_device,
     output_folder=os.path.join(os.environ["HOME"], "data"),
-    dvs_aedat2="leak_event_test.aedat",
+    dvs_aedat2="leak_event_test_without_jitter.aedat",
     output_width=output_width,
     output_height=output_height
 )
@@ -29,7 +31,7 @@ emulator = EventEmulator(
 fps = 500
 delta_t = 1/fps
 
-emulation_time_in_sec = 60
+emulation_time_in_sec = 120
 emulation_cycles = int(emulation_time_in_sec//delta_t)
 current_time = 0
 

@@ -417,6 +417,8 @@ def main():
         pos_thres=pos_thres, neg_thres=neg_thres,
         sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,
         leak_rate_hz=leak_rate_hz, shot_noise_rate_hz=shot_noise_rate_hz,
+        leak_jitter_fraction=args.leak_jitter_fraction,
+        noise_rate_cov_decades=args.noise_rate_cov_decades,
         seed=args.dvs_emulator_seed,
         output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2,
         dvs_text=dvs_text, show_dvs_model_state=args.show_dvs_model_state,

@@ -47,6 +47,8 @@ class EventEmulator(object):
             leak_rate_hz=0.1,
             refractory_period_s=0,  # todo not yet modeled
             shot_noise_rate_hz=0,  # rate in hz of temporal noise events
+            leak_jitter_fraction=0.1,
+            noise_rate_cov_decades=0.1,
             seed=0,
             output_folder: str = None,
             dvs_h5: str = None,
@@ -114,6 +116,9 @@ class EventEmulator(object):
         self.leak_rate_hz = leak_rate_hz
         self.refractory_period_s = refractory_period_s
         self.shot_noise_rate_hz = shot_noise_rate_hz
+
+        self.leak_jitter_fraction = leak_jitter_fraction
+        self.noise_rate_cov_decades = noise_rate_cov_decades
 
         # output properties
         self.output_width = output_width
@@ -268,10 +273,7 @@ class EventEmulator(object):
                 first_frame_linear.shape,
                 dtype=torch.float32, device=self.device)*self.pos_thres
 
-            # should be set in argument later on
-            self.noise_rate_cov_decades = 0.1
-            self.leak_jitter_fraction = 0.1
-
+            # set noise rate array, it's a log-normal distribution
             self.noise_rate_array = torch.randn(
                 first_frame_linear.shape, dtype=torch.float32,
                 device=self.device)
@@ -285,6 +287,8 @@ class EventEmulator(object):
             self.sigma_thres = 0.02
             self.cutoff_hz = 0
             self.leak_rate_hz = 0
+            self.leak_jitter_fraction = 0
+            self.noise_rate_cov_decades = 0
             self.shot_noise_rate_hz = 0  # rate in hz of temporal noise events
             self.refractory_period_s = 0  # TODO not yet modeled
 
@@ -297,6 +301,8 @@ class EventEmulator(object):
             # rate in hz of temporal noise events
             self.shot_noise_rate_hz = 5.0
             self.refractory_period_s = 0  # TODO not yet modeled
+            self.leak_jitter_fraction = 0.1
+            self.noise_rate_cov_decades = 0.1
         else:
             #  logger.error(
             #      "dvs_params {} not known: "
@@ -442,7 +448,9 @@ class EventEmulator(object):
                 base_log_frame=self.base_log_frame,
                 leak_rate_hz=self.leak_rate_hz,
                 delta_time=delta_time,
-                pos_thres=self.pos_thres)
+                pos_thres=self.pos_thres,
+                leak_jitter_fraction=self.leak_jitter_fraction,
+                noise_rate_array=self.noise_rate_array)
 
         # log intensity (brightness) change from memorized values is computed
         # from the difference between new input

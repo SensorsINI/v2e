@@ -110,6 +110,9 @@ def subtract_leak_current(base_log_frame,
 
     delta_leak = delta_time*curr_leak_rate*pos_thres  # this is a matrix
 
+    # ideal model
+    #  delta_leak = delta_time*leak_rate_hz*pos_thres  # this is a matrix
+
     return base_log_frame-delta_leak
 
 

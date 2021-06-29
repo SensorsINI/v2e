@@ -31,6 +31,7 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError(f'Boolean value expected, got {v}')
 
+
 # https://stackoverflow.com/questions/3853722/how-to-insert-newlines-on-argparse-help-text
 class SmartFormatter(argparse.HelpFormatter):
 
@@ -139,7 +140,8 @@ def v2e_args(parser):
         help="photoreceptor IIR lowpass filter "
              "cutoff-off 3dB frequency in Hz - "
              "see https://ieeexplore.ieee.org/document/4444573."
-             "CAUTION: See interaction with timestamp_resolution and auto_timestamp_resolution; "
+             "CAUTION: See interaction with timestamp_resolution "
+             "and auto_timestamp_resolution; "
              "check output logger warnings."
     )
     modelGroup.add_argument(
@@ -152,6 +154,15 @@ def v2e_args(parser):
         # default for good lighting, very low rate
         help="Temporal noise rate of ON+OFF events in "
              "darkest parts of scene; reduced in brightest parts. ")
+    modelGroup.add_argument(
+        "---leak_jitter_fraction", type=float, default=0.1,
+        help="Jitter of leak noise events relative to the (FPN) "
+             "interval, drawn from normal distribution")
+    modelGroup.add_argument(
+        "---noise_rate_cov_decades", type=float, default=0.1,
+        help="Coefficient of Variation of noise rates (shot and leak) "
+             "in log normal distribution decades across pixel array"
+             "WARNING: currently only in leak events")
     modelGroup.add_argument(
         "--dvs_emulator_seed", type=int, default=0,
         help="Set to a integer >0 to use a fixed random seed."
@@ -235,9 +246,10 @@ def v2e_args(parser):
              "presented as a list of image files."
              "When the input video is a video file, this "
              "option will be ignored.")
+    # note R| for SmartFormatter
     inGroup.add_argument(
         "--input_slowmotion_factor", type=float, default=1.0,
-        help="R|Sets the known slow-motion factor of the input video, " # note R| for SmartFormatter
+        help="R|Sets the known slow-motion factor of the input video, "
              "\ni.e. how much the video is slowed down, i.e., "
              "\nthe ratio of shooting frame rate to playback frame rate. "
              "\ninput_slowmotion_factor<1 for sped-up video and "
@@ -286,7 +298,8 @@ def v2e_args(parser):
              "\n\t\t--dvs_exposure duration .005; "
              "\n\tcount n: Count n events per frame,e.g."
              "\n\t\t-dvs_exposure count 5000;"
-             "\n\tarea_count M N: frame ends when any area of N x N pixels fills with M events, e.g."
+             "\n\tarea_count M N: frame ends when any area of N x N "
+             "pixels fills with M events, e.g."
              "\n\t\t-dvs_exposure area_count 500 64")
     outGroupDvsVideo.add_argument(
         "--dvs_vid", type=str, default="dvs-video.avi",
@@ -299,7 +312,8 @@ def v2e_args(parser):
         "--skip_video_output", action="store_true",
         help="Skip producing video outputs, including the original video, "
              "SloMo video, and DVS video. "
-             "This mode also prevents showing preview of output (cf --no_preview).")
+             "This mode also prevents showing preview of output "
+             "(cf --no_preview).")
     outGroupDvsVideo.add_argument(
         "--no_preview", action="store_true",
         help="disable preview in cv2 windows for faster processing.")
