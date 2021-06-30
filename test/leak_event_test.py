@@ -15,18 +15,18 @@ output_width, output_height = 346, 260
 
 # create a emulator
 emulator = EventEmulator(
-    pos_thres=0.05,
-    neg_thres=0.05,
-    sigma_thres=0.02,
+    pos_thres=0.2,
+    neg_thres=0.2,
+    sigma_thres=0.03,
     cutoff_hz=200,
     leak_rate_hz=0.2,
     shot_noise_rate_hz=10,
     leak_jitter_fraction=0.5,
     noise_rate_cov_decades=0.3,
-    refractory_period_s=0.01,
+    refractory_period_s=0,  # 10ms, 100fps
     device=torch_device,
     output_folder=os.path.join(os.environ["HOME"], "data"),
-    dvs_aedat2="leak_event_test_leak_rate=0.2_with_jitter=0.5_noise_cov=0.3.aedat",
+    dvs_aedat2="full_featured_emulation.aedat",
     output_width=output_width,
     output_height=output_height
 )
@@ -46,6 +46,9 @@ img = cv2.imread(os.path.join(
 # resize and convert
 img = cv2.resize(img, dsize=(output_width, output_height))
 img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # much faster
+
+# say if I move the image first, would it be faster?
+img = torch.tensor(img, dtype=torch.float32, device=torch_device)
 
 # simulation start
 for it in range(emulation_cycles):

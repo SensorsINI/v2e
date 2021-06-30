@@ -132,7 +132,22 @@ def compute_event_map(diff_frame, pos_thres, neg_thres):
     neg_evts_frame = torch.div(
         neg_frame, neg_thres, rounding_mode="floor").type(torch.int32)
 
+    #  max_events = max(pos_evts_frame.max(), neg_evts_frame.max())
+
+    #  # boolean array (max_events, height, width)
+    #  # positive events and negative
+    #  pos_evts_cord = torch.arange(
+    #      1, max_events+1, dtype=torch.int32,
+    #      device=diff_frame.device).unsqueeze(-1).unsqueeze(-1).repeat(
+    #          1, diff_frame.shape[0], diff_frame.shape[1])
+    #  neg_evts_cord = pos_evts_cord.clone().detach()
+    #
+    #  # generate event cords
+    #  pos_evts_cord_post = (pos_evts_cord >= pos_evts_frame.unsqueeze(0))
+    #  neg_evts_cord_post = (neg_evts_cord >= neg_evts_frame.unsqueeze(0))
+
     return pos_evts_frame, neg_evts_frame
+    #  return pos_evts_cord_post, neg_evts_cord_post, max_events
 
 
 def generate_shot_noise(

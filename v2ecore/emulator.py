@@ -23,7 +23,7 @@ from v2ecore.emulator_utils import rescale_intensity_frame
 from v2ecore.emulator_utils import low_pass_filter
 from v2ecore.emulator_utils import subtract_leak_current
 from v2ecore.emulator_utils import compute_event_map
-from v2ecore.emulator_utils import generate_shot_noise
+#  from v2ecore.emulator_utils import generate_shot_noise
 
 import line_profiler
 profile = line_profiler.LineProfiler()
@@ -39,8 +39,6 @@ class EventEmulator(object):
     - author: Zhe He
     - contact: zhehe@student.ethz.ch
     """
-
-    # todo add refractory period
 
     def __init__(
             self,
@@ -472,7 +470,7 @@ class EventEmulator(object):
         final_pos_evts_frame = torch.zeros(
             pos_evts_frame.shape, dtype=torch.int32, device=self.device)
         final_neg_evts_frame = torch.zeros(
-            pos_evts_frame.shape, dtype=torch.int32, device=self.device)
+            neg_evts_frame.shape, dtype=torch.int32, device=self.device)
 
         # update the base frame, after we know how many events per pixel
         # add to memorized brightness values just the events we emitted.
@@ -494,8 +492,9 @@ class EventEmulator(object):
         # e.g. t_start=0, t_end=1, num_iters=2, i=0,1
         # ts=1*1/2, 2*1/2
         #  ts = self.t_previous + delta_time * (i + 1) / num_iters
+        ts_step = delta_time/num_iters
         ts = torch.linspace(
-            start=self.t_previous+delta_time/num_iters,
+            start=self.t_previous+ts_step,
             end=t_frame,
             steps=num_iters, dtype=torch.float32, device=self.device)
 
@@ -533,6 +532,12 @@ class EventEmulator(object):
                 dtype=torch.float32,
                 device=self.device)  # draw samples
 
+            # pre compute all the shot noise cords
+            shot_on_cord = torch.gt(
+                rand01, one_minus_shot_ON_prob_this_sample.unsqueeze(0))
+            shot_off_cord = torch.lt(
+                rand01, shot_OFF_prob_this_sample.unsqueeze(0))
+
         for i in range(num_iters):
             # events for this iteration
             events_curr_iter = None
@@ -548,25 +553,31 @@ class EventEmulator(object):
 
             # generate shot noise
             if self.shot_noise_rate_hz > 0:
-                shot_on_cord = rand01[i] > one_minus_shot_ON_prob_this_sample
-                shot_off_cord = rand01[i] < shot_OFF_prob_this_sample
+                #  shot_on_cord = \
+                #      rand01[i] > one_minus_shot_ON_prob_this_sample
+                #  shot_off_cord = \
+                #      rand01[i] < shot_OFF_prob_this_sample
 
                 # update event list
-                pos_cord = torch.logical_or(pos_cord, shot_on_cord)
-                neg_cord = torch.logical_or(neg_cord, shot_off_cord)
+                pos_cord = torch.logical_or(pos_cord, shot_on_cord[i])
+                neg_cord = torch.logical_or(neg_cord, shot_off_cord[i])
 
             # filter events with refractory_period
-            if self.refractory_period_s > 0:
+            # only filter when refractory_period_s is large enough
+            # otherwise, pass everything
+            if self.refractory_period_s > ts_step:
                 pos_time_since_last_spike = (
                     pos_cord*ts[i]-self.timestamp_mem)
                 neg_time_since_last_spike = (
                     neg_cord*ts[i]-self.timestamp_mem)
 
+                # filter the events
                 pos_cord = (
                     pos_time_since_last_spike > self.refractory_period_s)
                 neg_cord = (
                     neg_time_since_last_spike > self.refractory_period_s)
 
+                # assign new history
                 self.timestamp_mem = torch.where(
                     pos_cord, ts[i], self.timestamp_mem)
                 self.timestamp_mem = torch.where(
