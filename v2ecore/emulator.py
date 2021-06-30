@@ -45,7 +45,7 @@ class EventEmulator(object):
             sigma_thres=0.03,
             cutoff_hz=0,
             leak_rate_hz=0.1,
-            refractory_period_s=0,  # todo not yet modeled
+            refractory_period_s=0,
             shot_noise_rate_hz=0,  # rate in hz of temporal noise events
             leak_jitter_fraction=0.1,
             noise_rate_cov_decades=0.1,
@@ -282,6 +282,12 @@ class EventEmulator(object):
             self.noise_rate_array = torch.exp(
                 math.log(10)*self.noise_rate_cov_decades*self.noise_rate_array)
 
+        # refractory period
+        if self.refractory_period_s > 0:
+            self.timestamp_mem = torch.zeros(
+                first_frame_linear.shape, dtype=torch.float32,
+                device=self.device)-self.refractory_period_s
+
     def set_dvs_params(self, model: str):
         if model == 'clean':
             self.pos_thres = 0.2
@@ -292,7 +298,7 @@ class EventEmulator(object):
             self.leak_jitter_fraction = 0
             self.noise_rate_cov_decades = 0
             self.shot_noise_rate_hz = 0  # rate in hz of temporal noise events
-            self.refractory_period_s = 0  # TODO not yet modeled
+            self.refractory_period_s = 0
 
         elif model == 'noisy':
             self.pos_thres = 0.2
@@ -302,7 +308,7 @@ class EventEmulator(object):
             self.leak_rate_hz = 0.1
             # rate in hz of temporal noise events
             self.shot_noise_rate_hz = 5.0
-            self.refractory_period_s = 0  # TODO not yet modeled
+            self.refractory_period_s = 0.01
             self.leak_jitter_fraction = 0.1
             self.noise_rate_cov_decades = 0.1
         else:
@@ -540,7 +546,10 @@ class EventEmulator(object):
 
         for i in range(num_iters):
             # events for this iteration
-            events_curr_iter = []
+            #  events_curr_iter = []
+            events_curr_iter = torch.ones(
+                (0, 4), dtype=torch.float32,
+                device=self.device)
 
             # already have the number of events for each pixel in
             # pos_evts_frame, just find bool array of pixels with events in
@@ -551,8 +560,49 @@ class EventEmulator(object):
             pos_cord = (pos_evts_frame >= i+1)
             neg_cord = (neg_evts_frame >= i+1)
 
+            # generate shot noise
+            if self.shot_noise_rate_hz > 0:
+                shot_on_cord, shot_off_cord, self.base_log_frame = \
+                    generate_shot_noise(
+                        shot_noise_factor=shot_noise_factor,
+                        rand01=rand01[i],
+                        base_log_frame=self.base_log_frame,
+                        shot_ON_prob_this_sample=shot_ON_prob_this_sample,
+                        shot_OFF_prob_this_sample=shot_OFF_prob_this_sample,
+                        pos_thres=self.pos_thres,
+                        neg_thres=self.neg_thres,
+                        ts=ts[i])
+
+                pos_cord = torch.logical_or(pos_cord, shot_on_cord)
+                neg_cord = torch.logical_or(neg_cord, shot_off_cord)
+
+                #  # add to event stats
+                #  self.num_events_on += shot_on_events.shape[0]
+                #  self.num_events_off += shot_off_events.shape[0]
+                #  self.num_events_total += \
+                #      shot_on_events.shape[0]+shot_off_events.shape[0]
+                #
+                #  # append noisy events
+                #  events_curr_iter.append(shot_on_events)
+                #  events_curr_iter.append(shot_off_events)
+
+            # filter events with refractory_period
+            if self.refractory_period_s > 0:
+                pos_time_since_last_spike = (
+                    pos_cord*ts[i]-self.timestamp_mem)
+                neg_time_since_last_spike = (
+                    neg_cord*ts[i]-self.timestamp_mem)
+
+                pos_cord = (
+                    pos_time_since_last_spike > self.refractory_period_s)
+                neg_cord = (
+                    neg_time_since_last_spike > self.refractory_period_s)
+
+                self.timestamp_mem[pos_cord] = ts[i]
+                self.timestamp_mem[neg_cord] = ts[i]
+
             # generate events
-            #  make a list of coordinates x,y addresses of events
+            # make a list of coordinates x,y addresses of events
             pos_event_xy = pos_cord.nonzero(as_tuple=True)
             neg_event_xy = neg_cord.nonzero(as_tuple=True)
 
@@ -565,53 +615,47 @@ class EventEmulator(object):
             self.num_events_off += num_neg_events
             self.num_events_total += num_events
 
-            # sort out the positive event and negative event
-            if num_pos_events > 0:
-                pos_events = torch.ones(
-                    (num_pos_events, 4), dtype=torch.float32,
+            if num_events > 0:
+                events_curr_iter = torch.ones(
+                    (num_events, 4), dtype=torch.float32,
                     device=self.device)
-                pos_events[:, 0] *= ts[i]
-                pos_events[:, 1] = pos_event_xy[1]
-                pos_events[:, 2] = pos_event_xy[0]
+                events_curr_iter[:, 0] *= ts[i]
 
-                events_curr_iter.append(pos_events)
+                # pos_event cords
+                events_curr_iter[:num_pos_events, 1] = pos_event_xy[1]
+                events_curr_iter[:num_pos_events, 2] = pos_event_xy[0]
 
-            if num_neg_events > 0:
-                neg_events = torch.ones(
-                    (num_neg_events, 4), dtype=torch.float32,
-                    device=self.device)
-                neg_events[:, 0] *= ts[i]
-                neg_events[:, 1] = neg_event_xy[1]
-                neg_events[:, 2] = neg_event_xy[0]
-                neg_events[:, 3] *= -1
+                # neg event cords
+                events_curr_iter[num_pos_events:, 1] = neg_event_xy[1]
+                events_curr_iter[num_pos_events:, 2] = neg_event_xy[0]
 
-                events_curr_iter.append(neg_events)
+                # neg events polarity
+                events_curr_iter[num_pos_events:, 3] *= -1
 
-            # generate shot noise
-            if self.shot_noise_rate_hz > 0:
-                shot_on_events, shot_off_events, self.base_log_frame = \
-                    generate_shot_noise(
-                        shot_noise_factor=shot_noise_factor,
-                        rand01=rand01[i],
-                        base_log_frame=self.base_log_frame,
-                        shot_ON_prob_this_sample=shot_ON_prob_this_sample,
-                        shot_OFF_prob_this_sample=shot_OFF_prob_this_sample,
-                        pos_thres=self.pos_thres,
-                        neg_thres=self.neg_thres,
-                        ts=ts[i])
-
-                # add to event stats
-                self.num_events_on += shot_on_events.shape[0]
-                self.num_events_off += shot_off_events.shape[0]
-                self.num_events_total += \
-                    shot_on_events.shape[0]+shot_off_events.shape[0]
-
-                # append noisy events
-                events_curr_iter.append(shot_on_events)
-                events_curr_iter.append(shot_off_events)
+            #  # sort out the positive event and negative event
+            #  if num_pos_events > 0:
+            #      pos_events = torch.ones(
+            #          (num_pos_events, 4), dtype=torch.float32,
+            #          device=self.device)
+            #      pos_events[:, 0] *= ts[i]
+            #      pos_events[:, 1] = pos_event_xy[1]
+            #      pos_events[:, 2] = pos_event_xy[0]
+            #
+            #      events_curr_iter.append(pos_events)
+            #
+            #  if num_neg_events > 0:
+            #      neg_events = torch.ones(
+            #          (num_neg_events, 4), dtype=torch.float32,
+            #          device=self.device)
+            #      neg_events[:, 0] *= ts[i]
+            #      neg_events[:, 1] = neg_event_xy[1]
+            #      neg_events[:, 2] = neg_event_xy[0]
+            #      neg_events[:, 3] *= -1
+            #
+            #      events_curr_iter.append(neg_events)
 
             # stack all events at this iteration
-            events_curr_iter = torch.vstack(events_curr_iter)
+            #  events_curr_iter = torch.vstack(events_curr_iter)
 
             # shuffle and append to the events collectors
             if events_curr_iter.shape[0] > 0:
