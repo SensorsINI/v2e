@@ -598,8 +598,12 @@ class EventEmulator(object):
                 neg_cord = (
                     neg_time_since_last_spike > self.refractory_period_s)
 
-                self.timestamp_mem[pos_cord] = ts[i]
-                self.timestamp_mem[neg_cord] = ts[i]
+                self.timestamp_mem = torch.where(
+                    pos_cord, ts[i], self.timestamp_mem)
+                self.timestamp_mem = torch.where(
+                    neg_cord, ts[i], self.timestamp_mem)
+                #  self.timestamp_mem[pos_cord] = ts[i]
+                #  self.timestamp_mem[neg_cord] = ts[i]
 
             # generate events
             # make a list of coordinates x,y addresses of events
