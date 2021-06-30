@@ -167,7 +167,7 @@ def v2e_args(parser):
         "--refractory_period", type=float, default=0.0005,
         help="Refractory period in seconds, default is 0.5ms."
              "The new event will be ignore if the previous event is "
-             "triggered less than refractory_period ago."
+             "triggered less than refractory_period ago.")
     modelGroup.add_argument(
         "--dvs_emulator_seed", type=int, default=0,
         help="Set to a integer >0 to use a fixed random seed."
