@@ -142,8 +142,8 @@ def generate_shot_noise(
         shot_ON_prob_this_sample,
         shot_OFF_prob_this_sample,
         pos_thres,
-        neg_thres,
-        ts):
+        neg_thres):
+        #  ts):
     """Generate shot noise.
 
     """
@@ -167,8 +167,8 @@ def generate_shot_noise(
     #  self.num_events_total += shotOnCount+shotOffCount
 
     # update log_frame
-    base_log_frame += shot_ON_cord*pos_thres
-    base_log_frame -= shot_OFF_cord*neg_thres
+    #  base_log_frame += shot_ON_cord*pos_thres
+    #  base_log_frame -= shot_OFF_cord*neg_thres
 
     #  if shot_ON_count > 0:
     #      shot_ON_events = torch.ones(
@@ -197,7 +197,8 @@ def generate_shot_noise(
     # end temporal noise
 
     #  return shot_ON_events, shot_OFF_events, base_log_frame
-    return shot_ON_cord, shot_OFF_cord, base_log_frame
+    #  return shot_ON_cord, shot_OFF_cord, base_log_frame
+    return shot_ON_cord, shot_OFF_cord
 
 
 if __name__ == "__main__":

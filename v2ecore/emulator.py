@@ -562,7 +562,7 @@ class EventEmulator(object):
 
             # generate shot noise
             if self.shot_noise_rate_hz > 0:
-                shot_on_cord, shot_off_cord, self.base_log_frame = \
+                shot_on_cord, shot_off_cord = \
                     generate_shot_noise(
                         shot_noise_factor=shot_noise_factor,
                         rand01=rand01[i],
@@ -570,9 +570,17 @@ class EventEmulator(object):
                         shot_ON_prob_this_sample=shot_ON_prob_this_sample,
                         shot_OFF_prob_this_sample=shot_OFF_prob_this_sample,
                         pos_thres=self.pos_thres,
-                        neg_thres=self.neg_thres,
-                        ts=ts[i])
+                        neg_thres=self.neg_thres)
+                        #  ts=ts[i])
 
+                # update log base frame
+                shot_on_diff_cord = torch.logical_xor(pos_cord, shot_on_cord)
+                shot_off_diff_cord = torch.logical_xor(pos_cord, shot_off_cord)
+
+                self.base_log_frame += shot_on_diff_cord*self.pos_thres
+                self.base_log_frame -= shot_off_diff_cord*self.neg_thres
+
+                # update event list
                 pos_cord = torch.logical_or(pos_cord, shot_on_cord)
                 neg_cord = torch.logical_or(neg_cord, shot_off_cord)
 
