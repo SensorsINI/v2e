@@ -25,10 +25,6 @@ from v2ecore.emulator_utils import subtract_leak_current
 from v2ecore.emulator_utils import compute_event_map
 #  from v2ecore.emulator_utils import generate_shot_noise
 
-import line_profiler
-profile = line_profiler.LineProfiler()
-atexit.register(profile.print_stats)
-
 # import rosbag # not yet for python 3
 
 logger = logging.getLogger(__name__)
@@ -353,7 +349,6 @@ class EventEmulator(object):
         cv2.imshow(__name__+':'+self.show_input, img)
         cv2.waitKey(30)
 
-    @profile
     def generate_events(self, new_frame, t_frame):
         """Compute events in new frame.
 
