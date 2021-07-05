@@ -10,7 +10,7 @@ See [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6U
 Vote for [new v2e features](https://docs.google.com/forms/d/e/1FAIpQLSdJoIH3wBkPANWTng56VeXiItkh_fl5Lz3QwZIpQ6ut1AMFCw/viewform?usp=sf_link).
 
 ## News
- - 19 Dec 2020: Added ability to generate input frames from python class. See [moving-dot.py](https://github.com/SensorsINI/v2e/blob/master/moving_dot.py) and command line argument --synthetic_input=<module_name>
+- 19 Dec 2020: Added ability to generate input frames from python class. See [moving-dot.py](https://github.com/SensorsINI/v2e/blob/master/moving_dot.py) and command line argument --synthetic_input=<module_name>
 
 ## Contact
 Yuhuang Hu (yuhuang.hu@ini.uzh.ch)
