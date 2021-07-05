@@ -23,7 +23,7 @@ from v2ecore.emulator_utils import rescale_intensity_frame
 from v2ecore.emulator_utils import low_pass_filter
 from v2ecore.emulator_utils import subtract_leak_current
 from v2ecore.emulator_utils import compute_event_map
-#  from v2ecore.emulator_utils import generate_shot_noise
+from v2ecore.emulator_utils import generate_shot_noise
 
 # import rosbag # not yet for python 3
 
@@ -117,6 +117,8 @@ class EventEmulator(object):
 
         self.leak_jitter_fraction = leak_jitter_fraction
         self.noise_rate_cov_decades = noise_rate_cov_decades
+
+        self.SHOT_NOISE_INTEN_FACTOR = 0.25
 
         # output properties
         self.output_width = output_width
@@ -506,32 +508,14 @@ class EventEmulator(object):
 
         # This was in the loop, here we calculate loop-independent quantities
         if self.shot_noise_rate_hz > 0:
-            SHOT_NOISE_INTEN_FACTOR = 0.25
-            shot_noise_factor = (
-                (self.shot_noise_rate_hz/2)*delta_time/num_iters) * \
-                ((SHOT_NOISE_INTEN_FACTOR-1)*inten01+1)
-            # =1 for inten=0 and SHOT_NOISE_INTEN_FACTOR for inten=1
-
-            # probability for each pixel is
-            # dt*rate*nom_thres/actual_thres.
-            # That way, the smaller the threshold,
-            # the larger the rate
-            one_minus_shot_ON_prob_this_sample = \
-                1 - shot_noise_factor*self.pos_thres_pre_prob
-            shot_OFF_prob_this_sample = \
-                shot_noise_factor*self.neg_thres_pre_prob
-
-            # for shot noise
-            rand01 = torch.rand(
-                size=[num_iters]+list(inten01.shape),
-                dtype=torch.float32,
-                device=self.device)  # draw samples
-
-            # pre compute all the shot noise cords
-            shot_on_cord = torch.gt(
-                rand01, one_minus_shot_ON_prob_this_sample.unsqueeze(0))
-            shot_off_cord = torch.lt(
-                rand01, shot_OFF_prob_this_sample.unsqueeze(0))
+            shot_on_cord, shot_off_cord = generate_shot_noise(
+                    shot_noise_rate_hz=self.shot_noise_rate_hz,
+                    delta_time=delta_time,
+                    num_iters=num_iters,
+                    shot_noise_inten_factor=self.SHOT_NOISE_INTEN_FACTOR,
+                    inten01=inten01,
+                    pos_thres_pre_prob=self.pos_thres_pre_prob,
+                    neg_thres_pre_prob=self.neg_thres_pre_prob)
 
         for i in range(num_iters):
             # events for this iteration
@@ -548,11 +532,6 @@ class EventEmulator(object):
 
             # generate shot noise
             if self.shot_noise_rate_hz > 0:
-                #  shot_on_cord = \
-                #      rand01[i] > one_minus_shot_ON_prob_this_sample
-                #  shot_off_cord = \
-                #      rand01[i] < shot_OFF_prob_this_sample
-
                 # update event list
                 pos_cord = torch.logical_or(pos_cord, shot_on_cord[i])
                 neg_cord = torch.logical_or(neg_cord, shot_off_cord[i])

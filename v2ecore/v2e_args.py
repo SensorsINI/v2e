@@ -155,11 +155,11 @@ def v2e_args(parser):
         help="Temporal noise rate of ON+OFF events in "
              "darkest parts of scene; reduced in brightest parts. ")
     modelGroup.add_argument(
-        "---leak_jitter_fraction", type=float, default=0.1,
+        "--leak_jitter_fraction", type=float, default=0.1,
         help="Jitter of leak noise events relative to the (FPN) "
              "interval, drawn from normal distribution")
     modelGroup.add_argument(
-        "---noise_rate_cov_decades", type=float, default=0.1,
+        "--noise_rate_cov_decades", type=float, default=0.1,
         help="Coefficient of Variation of noise rates (shot and leak) "
              "in log normal distribution decades across pixel array"
              "WARNING: currently only in leak events")

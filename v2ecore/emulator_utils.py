@@ -151,24 +151,53 @@ def compute_event_map(diff_frame, pos_thres, neg_thres):
 
 
 def generate_shot_noise(
-        shot_noise_factor,
-        rand01,
-        base_log_frame,
-        shot_ON_prob_this_sample,
-        shot_OFF_prob_this_sample,
-        pos_thres,
-        neg_thres):
-        #  ts):
+        shot_noise_rate_hz,
+        delta_time,
+        num_iters,
+        shot_noise_inten_factor,
+        inten01,
+        pos_thres_pre_prob,
+        neg_thres_pre_prob):
     """Generate shot noise.
 
     """
+    # new shot noise generator, generate for the entire batch
+    shot_noise_factor = (
+        (shot_noise_rate_hz/2)*delta_time/num_iters) * \
+        ((shot_noise_inten_factor-1)*inten01+1)
+    # =1 for inten=0 and SHOT_NOISE_INTEN_FACTOR for inten=1
+
+    # probability for each pixel is
+    # dt*rate*nom_thres/actual_thres.
+    # That way, the smaller the threshold,
+    # the larger the rate
+    one_minus_shot_ON_prob_this_sample = \
+        1 - shot_noise_factor*pos_thres_pre_prob
+    shot_OFF_prob_this_sample = \
+        shot_noise_factor*neg_thres_pre_prob
+
+    # for shot noise
+    rand01 = torch.rand(
+        size=[num_iters]+list(inten01.shape),
+        dtype=torch.float32,
+        device=inten01.device)  # draw samples
+
+    # pre compute all the shot noise cords
+    shot_on_cord = torch.gt(
+        rand01, one_minus_shot_ON_prob_this_sample.unsqueeze(0))
+    shot_off_cord = torch.lt(
+        rand01, shot_OFF_prob_this_sample.unsqueeze(0))
+
+    return shot_on_cord, shot_off_cord
+
+    # old shot noise, generate at every iteration.
     # the right device
     #  device = base_log_frame.device
 
     # array with True where ON noise event
-    shot_ON_cord = rand01 > (1-shot_ON_prob_this_sample)
-
-    shot_OFF_cord = rand01 < shot_OFF_prob_this_sample
+    #  shot_ON_cord = rand01 > (1-shot_ON_prob_this_sample)
+    #
+    #  shot_OFF_cord = rand01 < shot_OFF_prob_this_sample
 
     # get shot noise event ON and OFF cordinates
     #  shot_ON_xy = shot_ON_cord.nonzero(as_tuple=True)
@@ -213,7 +242,7 @@ def generate_shot_noise(
 
     #  return shot_ON_events, shot_OFF_events, base_log_frame
     #  return shot_ON_cord, shot_OFF_cord, base_log_frame
-    return shot_ON_cord, shot_OFF_cord
+    #  return shot_ON_cord, shot_OFF_cord
 
 
 if __name__ == "__main__":

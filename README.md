@@ -1,4 +1,5 @@
 # v2e [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1czx-GJnx-UkhFVBbfoACLVZs8cYlcr_M?usp=sharing)
 
 Python torch + opencv code to go from conventional stroboscopic video frames with low frame rate into realistic synthetic DVS event streams with much higher effective timing precision. v2e includes finite intensity-depenedent photoreceptor bandwidth, Gaussian pixel to pixel event threshold variation, and noise 'leak' events.
 
@@ -138,6 +139,9 @@ usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
               [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
               [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
               [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ]
+              [--leak_jitter_fraction LEAK_JITTER_FRACTION]
+              [--noise_rate_cov_decades NOISE_RATE_COV_DECADES]
+              [--refractory_period REFRACTORY_PERIOD]
               [--dvs_emulator_seed DVS_EMULATOR_SEED]
               [--show_dvs_model_state SHOW_DVS_MODEL_STATE]
               [--dvs128 | --dvs240 | --dvs346 | --dvs640 | --dvs1024]
@@ -232,6 +236,18 @@ DVS model:
   --shot_noise_rate_hz SHOT_NOISE_RATE_HZ
                         Temporal noise rate of ON+OFF events in darkest parts
                         of scene; reduced in brightest parts.
+  --leak_jitter_fraction LEAK_JITTER_FRACTION
+                        Jitter of leak noise events relative to the (FPN)
+                        interval, drawn from normal distribution
+  --noise_rate_cov_decades NOISE_RATE_COV_DECADES
+                        Coefficient of Variation of noise rates (shot and
+                        leak) in log normal distribution decades across pixel
+                        arrayWARNING: currently only in leak events
+  --refractory_period REFRACTORY_PERIOD
+                        Refractory period in seconds, default is 0.5ms.The new
+                        event will be ignore if the previous event is
+                        triggered less than refractory_period ago.Set to 0 to
+                        disable this feature.
   --dvs_emulator_seed DVS_EMULATOR_SEED
                         Set to a integer >0 to use a fixed random seed.default
                         is 0 which means the random seed is not fixed.
@@ -330,7 +346,9 @@ Output: DVS events:
                         events.
   --dvs_text DVS_TEXT   Output DVS events as text file with one event per line
                         [timestamp (float s), x, y, polarity (0,1)].
+
 Run with no --input to open file dialog
+ [--sigma_tq
 ```
 You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.  Or leave out all options and just use the file chooser to select the movie.
 
@@ -346,7 +364,6 @@ tennis.aedat
 v2e-args.txt
 video_orig.avi
 video_slomo.avi
-
 ```
 
 * _dvs-video.avi_: DVS video (with playback rate 30Hz) but with frame rate (DVS timestamp resolution) set by source video frame rate times slowdown_factor.
@@ -530,102 +547,6 @@ original.avi
 slomo.avi
 ```
 
-
-## Estimate DVS Event Thresholds
-
-_ddd_find_thresholds.py_ estimates the correct thresholds of triggering ON and OFF events, you can use a synhronized DAVIS recording from the DDD dataset:
-
-```
-$ python  -m dataset_scripts.ddd.ddd_find_thresholds.py -h
-usage: ddd_find_thresholds.py [-h] [--start START] [--stop STOP] [-i I] [-o O]
-                              [--slowdown_factor SLOWDOWN_FACTOR]
-                              [--slomo_model SLOMO_MODEL] [--no_preview]
-
-ddd_find_thresholds.py: generate simulated DVS events from video with sweep of
-thresholds to compare with real DVS to find optimal thresholds.
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --start START         start point of video stream (default: 0.0)
-  --stop STOP           stop point of video stream (default: 5.0)
-  -i I                  path of DDD .hdf5 file (default: None)
-  -o O                  path to where output is stored (default:
-                        output/find_thresholds)
-  --slowdown_factor SLOWDOWN_FACTOR
-                        slow motion factor (default: 10)
-  --slomo_model SLOMO_MODEL
-                        path of slomo_model checkpoint. (default:
-                        input/SuperSloMo39.ckpt)
-  --no_preview          disable preview in cv2 windows for faster processing.
-                        (default: False)
-
-Run with no --input to open file dialog
-
-```
-You can run it like this:
-
-```bash
-python  -m dataset_scripts.ddd.ddd_find_thresholds.py -i input\rec1501350986.hdf5 --start 25 --stop 35
-```
-Make sure you use part of the recording where the input is changing. If you use the ROI option you can focus the estimation on parts of the scene that are definitely changing, to avoid counting just noise events. If you happen to select such a region, then _ddd_find_thresholds.py_ will find an artificially low threshold to generate enough events compared with the real DVS (if you don't set the correct _leak_rate_hz_ and _shot_noise_rate_hz_ parameters). 
-
-The program will take the DVS recording data, which starts at time 'start' and ends at time 'end', to calculate the best threshold values for positive and negative self separately.
-
-A typical result from _ddd_find_thresholds.py_ is shown below. It plots the absolute difference in ON and OFF event counts between the real and v2e data. ON counts are green and OFF counts are red. The smallest difference between real and v2e DVS event counts is found at about 0.3. It means that this recording use a DVS threshold of about 0.3 log_e units, or about +35% and -25% intensity change.
-
-![find_threshold_plot](media/find_thresholds.png)
-
-We have observed that some DDD videos suggest extremely low DVS thresholds by using _ddd_find_thresholds.py_. We believe it is because the DAVIS recording APS frames nonlinearly represent intensity, i.g. the APS values tend to saturate with intensity. It means that _ddd_find_thresholds.py_  estimates unrealistically-low DVS thresholds (7%-9%), so that v2e generates sufficient DVS events to match the real event counts.
-
-### Obtaining acceptable results 
-For the best frame interpolation by SuperSloMo, the input video needs to satisfy the requirements below,
-
-- Daytime - for short exposure times to avoid motion-blurred frames.
-- Cloudy - for limited dynamic range, to ensure that the frames are not clipped.
-- High frame rate - objects must not be aliased too much, i.e. they must not move too much between frames.
-
-If the video is underexposed, overexposed, has motion blur or aliasing, then the emulated DVS events will have poor realism.
-
-### Default Thresholds ####
-_pos_thres_: 0.25
-_neg_thres_: 0.35
-Both of them are approximated based on the file rec1500403661.hdf5.
-
-**NOTE** 
-
-The thresholds vary slightly depending on the time interval of the input APS frames.
-
-|  Time Interval   |  _pos_thres_ | _neg_thres_ |
-|  ----  | ----  | ----|
-| 5s - 15s  | 0.25 | 0.36|
-| 15s - 25s  | 0.24 | 0.33|
-| 25s - 35s  | 0.21 | 0.31|
-| 35s - 45s  | 0.22 | 0.33|
-
-All the thresholds above are estimated based on the file rec1500403661.hdf5. The estimated thresholds also slightly vary depending on the input file. For example, based on the APS frames in the time interval 35s - 45s from the file rec1499025222.hdf5, the estimated positive threshold is 0.28, and the estimated negative threshold is 0.42.
-
-
-
-### Plot the DDD event counts from v2e versus real DVS
-
-After running _ddd-v2e.py_, _ddd_plot_event_counts.py_ reads the saved numpy files holding the real and v2e events from _ddd-v2e.py_ (**if you enabled --numpy_output**) and plots the event counts over an ROI. 
-
-Running it like below
-```bash
-python -m dataset_scripts.ddd.ddd_plot_event_counts.py --path output\ddd20-v2e-short --start 0 --stop 2 --x 0 345 --y 0 259
-```
-produces the output
-![real vs v2e DVS event counts](media/ddd-plot-event-counts.png)
-
-This run used the default bin duration of 50ms. The plot shows the count of ON and OFF events over the entire pixel array for real DVS and emulated v2e. We can see that the ON threshold is approximately correct, while the OFF threshold for v2e was too small; too many v2e events were generated.
-
-Another example is shown below: The left side is the ground-truth DVS frames, and the figure on the right side shows the histogram plot of the generated DVS events within the region denoted by the black box. Histograms of the ground-truth self and our generated self are plotted in the same figure. It can be seen that the distribution of generated v2e events is quite similar to the distribution of the real DVS events.
-
-<p float="left">
-  <img src="media/counting.gif" width="320" class="center" />
-  <img src="media/plot.png" width="350"  class="center"/> 
-</p>
-
 ## Working with jAER DAVIS recordings
 
 DAVIS cameras like the one that recorded DDD17 and DDD20 are often used with [jAER](https://jaerproject.net) (although DDD recordings were made with custom python wrapper around caer). _v2e_ will output a jAER-compatible .aedat file in [AEDAT-2.0 format](https://inivation.com/support/software/fileformat/#aedat-20), which jAER uses.
@@ -633,24 +554,6 @@ DAVIS cameras like the one that recorded DDD17 and DDD20 are often used with [jA
 To work with existing jAER DAVIS .aedat, you can export the DAVIS APS frames using the jAER EventFilter [DavisFrameAVIWriter](https://github.com/SensorsINI/jaer/blob/master/src/ch/unizh/ini/jaer/projects/davis/frames/DavisFrameAviWriter.java); see the [jAER user guide](https://docs.google.com/document/d/1fb7VA8tdoxuYqZfrPfT46_wiT1isQZwTHgX8O22dJ0Q/edit?usp=sharing), in particular, the [section about using DavisFrameAVIWriter](https://docs.google.com/document/d/1fb7VA8tdoxuYqZfrPfT46_wiT1isQZwTHgX8O22dJ0Q/edit#heading=h.g4cschniofmo). In DavisFrameAVIWriter, **don't forget to set the frameRate to the actual frame rate of the DAVIS frames** (which you can see at the top of the jAER display). This will make the conversion have approximately the correct DVS event timing. (jAER can drop APS frames if there are too many DVS events, so don't count on this.) Once you have the AVI from jAER, you can generate v2e events from it with _v2e.py_ and see how they compare with the original DVS events in jAER, by playing the exported v2e .aedat file in jAER.
 
 An example of this conversion and comparison is on the [v2e home page](https://sites.google.com/view/video2events/home).
-
-## Generating Synthetic DVS Dataset from UCF-101 action recognition dataset ##
-
-**NOT CURRENTLY WORKING**
-
-_ucf101_single.py_ generates synthetic data from a single input video from the action recognition dataset [UCF-101](https://www.crcv.ucf.edu/data/UCF101.php).
-
-```bash
-python ucf101_single.py \
---input [path to the input video] \
---pos_thres [positive threshold] \
---neg_thres [negative threshold] \
---sf [slow motion factor] \
---checkpoint [the .ckpt checkpoint of the slow motion network] \
---output_dir [path to store the output videos]
-```
-
-The code needs to be modified if the input video is from a different dataset.
 
 ## Technical Details ##
 
