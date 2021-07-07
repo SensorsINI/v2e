@@ -37,7 +37,7 @@ setup(
         'torch',
         'torchvision',
         'numba',
-        'Gooey',
+        #  'Gooey',
         'matplotlib'
     ],
 
