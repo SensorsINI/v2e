@@ -22,7 +22,7 @@ setup(
     description='Generates synthetic DVS events from conventional video',
 
     author="Tobi Delbruck, Yuhuang Hu, Zhe He",
-    author_email="yuhu@ini.uzh.ch",
+    author_email="yuhuang.hu@ini.uzh.ch",
 
     packages=find_packages(include=['v2ecore', 'v2e.*']),
     url='https://github.com/SensorsINI/v2e',

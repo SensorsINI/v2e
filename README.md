@@ -21,74 +21,35 @@ If you use v2e, we appreciate a citation to the paper below. See the [v2e home p
 
 + Y. Hu, S-C. Liu, and T. Delbruck. v2e: From Video Frames to Realistic DVS Events. In _2021 IEEE/CVF  Conference  on  Computer  Vision  and  Pattern Recognition Workshops (CVPRW)_, URL: https://arxiv.org/abs/2006.07722, 2021
 
-## Environment
+## Installation
 
-We encourage you to fork v2e and suggest pulls to improve the functionality.
++ You are encouraged to install v2e on a separate Python environment such as `conda` environment:
+    ```bash
+    conda create -n v2e-env python=3.8  # create a new environment
+    source activate v2e-env  # activate the environment
+    ```
+
++ v2e works with Python 3.6 and above. To install v2e, run the following command in terminal:
+    ```bash
+    pip install git+https://github.com/SensorsINI/v2e.git
+    ```
+
++ For developer, you can clone and install locally:
+    ```bash
+    git clone https://github.com/SensorsINI/v2e
+    cd v2e
+    python setup.py develop
+    ```
+
++ For additional GUI interface, you will need to install [Gooey](https://github.com/chriskiehl/Gooey) package. This package works the best on Windows:
+    ```bash
+    pip install Gooey
+    ```
+    On Linux, `Gooey` can be hard to install.
+
 
 **NOTE** We recommend running _v2e_ on a CUDA GPU or it will be very slow. With a low-end GTX-1050, _v2e_ runs about 50-200X slower than real time using 10X slowdown factor and 346x260 video.
 
-```
-python==3.7.7
-Ubuntu 18.04 or Windows 10x64
-CUDA GPU 
-```
-(if you have not used CUDA on your GPU, you might need to install it from https://developer.nvidia.com/cuda-downloads)
-
-Code includes pycharm project files for your convenience.
-
-We highly recommend running the code in a virtual environment. Conda is always your best friend. :).
-See https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#create-env-from-file
-
-
-For conda users, you can create your _v2e_ environment and install everything to it with
-```bash
-conda env create -f environment.yml
-```
-
-
-You can then update everything in your _v2e_ conda environment with the following:
-
-```bash
-conda create -n v2e python=3.7 pip
-conda activate v2e
-conda env update --prefix ./v2e --file environment.yml
-```
-
-To save your conda environment, use
-```bash
-conda env export --from-history >myenvironment.yml
-```
-
-Part of the v2e is `numba` accelerated, please install it via:
-
-```bash
-pip install numba
-```
-#### Note about Gooey during environment install
-If you get error about installing the Gooey library, you can comment it out from requirements.txt or environment.yml.
-[Gooey](https://github.com/chriskiehl/Gooey) is a libary that enables a GUI inteface for running v2e. It is optional. If you do not install Gooey then you run v2e from the command line or IDE launchers.
-On some platforms (linux) Gooey can be very hard to install because the required python wheels are not available. (A python _wheel_ is an archive named in a particular way to indentify the target platform.)
-
-
-## Install the Package
-
-Install v2e will make it available on your python path.
-
-1. For developers, you should install the package with `develop` (in your virtual environment):
-
-    ```bash
-    pip install -e .
-    ```
-  
-Using -e will let you modify the code and see the results in your runtime without installing again.
-See https://stackoverflow.com/questions/19048732/python-setup-py-develop-vs-install .
-
-2. For users of _v2e.py_, you can install the package with `install`:
-
-    ```bash
-    pip install .
-    ```
-   
 ## Usage
 
 _v2e_ serves multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for generating DVS events from conventional video and from specific datasets.
