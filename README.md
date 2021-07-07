@@ -127,7 +127,7 @@ Do not be intimidated by the huge number of options. Running _v2e.py_ with no ar
 
 ```
 (base)$ conda activate pt-v2e # activate your workspace
-(pt-v2e)$ python v2e.py -h --ignore-gooey
+(pt-v2e)$ python v2e.py -h --no_gui
 usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
               [--output_in_place [OUTPUT_IN_PLACE]] [--overwrite]
               [--unique_output_folder [UNIQUE_OUTPUT_FOLDER]]
@@ -161,6 +161,7 @@ v2e: generate simulated DVS events from video.
 
 optional arguments:
   -h, --help            show this help message and exit
+  
 
 Output: General:
   -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER

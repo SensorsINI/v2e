@@ -1,6 +1,7 @@
 import argparse
 import os
 import logging
+from pathlib import Path
 
 from v2ecore.renderer import ExposureMode
 
@@ -44,11 +45,18 @@ class SmartFormatter(argparse.HelpFormatter):
 
 def v2e_args(parser):
     # check and add prefix if running script in subfolder
-    dir_path = os.getcwd()
-    if dir_path.endswith('ddd'):
-        prepend = '../../'
-    else:
-        prepend = ''
+    # dir_path = os.getcwd()
+    v2ecore_path=os.path.dirname(__file__)
+    prepend=''
+    # if dir_path.endswith('ddd'):
+    #     prepend = '../../'
+    # else:
+    #     prepend = ''
+
+    uiGroup = parser.add_argument_group('UI')
+    uiGroup.add_argument(
+        "--ignore-gooey", action="store_true",
+        help="Do not show Gooey GUI interface, just use command line arguments.")
 
     # general arguments for output folder, overwriting, etc
     outGroupGeneral = parser.add_argument_group('Output: General')
@@ -211,7 +219,7 @@ def v2e_args(parser):
              "(which is perhaps modified by --input_slowmotion_factor).")
     sloMoGroup.add_argument(
         "--slomo_model", type=expandpath,
-        default=prepend+"input/SuperSloMo39.ckpt",
+        default=os.path.join(v2ecore_path,"../input/SuperSloMo39.ckpt"),
         help="path of slomo_model checkpoint.")
     sloMoGroup.add_argument(
         "--batch_size", type=int, default=8,
