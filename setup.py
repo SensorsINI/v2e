@@ -28,9 +28,20 @@ setup(
     url='https://github.com/SensorsINI/v2e',
     scripts=["v2e.py"],
     install_requires=[
-        'numpy','argparse', 'tqdm', 'opencv-python', 'h5py', 'torch', 'torchvision', 'numba', 'Gooey'
+        'numpy',
+        'argcomplete',
+        'engineering-notation',
+        'tqdm',
+        'opencv-python',
+        'h5py',
+        'torch',
+        'torchvision',
+        'numba',
+        'Gooey',
+        'matplotlib'
     ],
-    entry_points = {
+
+    entry_points={
         'console_scripts': ['v2e=v2e:main']
     },
 
