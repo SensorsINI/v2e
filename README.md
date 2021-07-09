@@ -31,7 +31,7 @@ If you use v2e, we appreciate a citation to the paper below. See the [v2e home p
 
 + v2e works with Python 3.6 and above. To install v2e, run the following command in terminal:
     ```bash
-    pip install git+https://github.com/SensorsINI/v2e.git
+    
     ```
 
 + For developer, you can clone and install locally:
@@ -61,22 +61,23 @@ For a sample of conversion using the gooey GUI, see https://youtu.be/THJqRC_q2kY
 
 ![v2e_gooey](media/v2e_Gooey.png)
 
-## Sample input data
-The _SuperSoMo_ model and sample input videos to try _v2e_ with are in [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6UylAdxg5O1ko_GaIXz7wo?usp=sharing) on google drive.
 
 ## Download SuperSloMo model
 
 We use the excellent [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects/superslomo/) framework to interpolate the APS frames. 
 However, since APS frames only record light intensity, we  retrained it on grayscale images. 
 You can download our pre-trained model checkpoint from Google Drive 
-[[link]](https://drive.google.com/file/d/17QSN207h05S_b2ndXjLrqPbBTnYIl0Vb/view?usp=sharing) (151 MB).
+[[link]](https://drive.google.com/u/0/uc?id=17QSN207h05S_b2ndXjLrqPbBTnYIl0Vb&export=download) (151 MB).
 
-
-```bash
-mkdir -p input
-mv SuperSloMo39.ckpt ./input
-```
 The default value of --slomo_model argument is set to this location.
+
+## Sample input data
+The _SuperSoMo_ model and sample input videos to try _v2e_ with are in [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6UylAdxg5O1ko_GaIXz7wo?usp=sharing) on google drive.
+
+Download the [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) 
+video and put in the _input_ folder
+to run the example below
+
 
 ## Render emulated DVS events from conventional video.
 
@@ -85,6 +86,8 @@ _v2e.py_ reads a standard video (e.g. in .avi, .mp4, .mov, or .wmv) and generate
 Do not be intimidated by the huge number of options. Running _v2e.py_ with no arguments sets reasonable values and opens a file browser to let you select an input video. Inspect the logging output for hints.
 
 **Hint:** Note the options _[--dvs128 | --dvs240 | --dvs346 | --dvs640 | --dvs1024]_; they set output size and width to popular cameras.
+
+**On headless platforms**, with no graphics output, use --no_preview option to suppress the OpenCV windows.
 
 ```
 (base)$ conda activate pt-v2e # activate your workspace
@@ -313,6 +316,7 @@ Run with no --input to open file dialog
 ```
 You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.  Or leave out all options and just use the file chooser to select the movie.
 
+From root of v2e, run the following
 ```
 python v2e.py -i input/tennis.mov --overwrite --timestamp_resolution=.003 --auto_timestamp_resolution=False --dvs_exposure duration 0.005 --output_folder=output/tennis --overwrite --pos_thres=.15 --neg_thres=.15 --sigma_thres=0.03 --dvs_aedat2 tennis.aedat --output_width=346 --output_height=260 --stop_time=3 --cutoff_hz=15 
 ```

@@ -12,6 +12,7 @@ frames from the original video frames.
 import glob
 import argparse
 import importlib
+import sys
 
 import argcomplete
 import cv2
@@ -81,6 +82,10 @@ def get_args():
     argcomplete.autocomplete(parser)
 
     args = parser.parse_args()
+    argline=''
+    for a in sys.argv:
+        argline=argline+' '+a
+    logger.info(f'Command line: \n{argline}')
     return args
 
 
@@ -92,8 +97,8 @@ def main():
             "run with command line arguments")
         ga()
     except Exception as e:
-        logger.warning(
-            f'{e}: Gooey GUI not available, using command line arguments. \n'
+        logger.info(
+            f'{e}: Gooey package GUI not available, using command line arguments. \n'
             f'You can try to install with "pip install Gooey"')
 
     args = get_args()
@@ -252,7 +257,7 @@ def main():
             if args.input_frame_rate is None:
                 logger.error(
                     "When the video is presented as a folder, "
-                    "The user has to set --input_frame_rate manually")
+                    "The user must set --input_frame_rate manually")
                 v2e_quit(1)
 
             cap = ImageFolderReader(input_file, args.input_frame_rate)
@@ -262,7 +267,9 @@ def main():
             cap = cv2.VideoCapture(input_file)
             srcFps = cap.get(cv2.CAP_PROP_FPS)
             srcNumFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
+            if args.input_frame_rate is not None:
+                logger.info(f'Input video frame rate {srcFps}Hz is overridden by command line argument --input_frame_rate={args.input_frame_rate}')
+                srcFps=args.input_frame_rate
         # Check frame rate and number of frames
         if srcFps == 0:
             logger.error(
