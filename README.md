@@ -21,6 +21,8 @@ If you use v2e, we appreciate a citation to the paper below. See the [v2e home p
 
 + Y. Hu, S-C. Liu, and T. Delbruck. v2e: From Video Frames to Realistic DVS Events. In _2021 IEEE/CVF  Conference  on  Computer  Vision  and  Pattern Recognition Workshops (CVPRW)_, URL: https://arxiv.org/abs/2006.07722, 2021
 
+To reproduce the experiments of the paper, please find [this repository](https://github.com/SensorsINI/v2e_exps_public).
+
 ## Installation
 
 + You are encouraged to install v2e on a separate Python environment such as `conda` environment:
