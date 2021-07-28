@@ -95,11 +95,11 @@ _v2e_ serves multiple purposes. Please read to code if you would like to adapt i
 
 ## Render emulated DVS events from conventional video.
 
-_v2e.py_ reads a standard video (e.g. in .avi, .mp4, .mov, or .wmv) and generates emulated DVS events at upsampled timestamp resolution.
+_v2e.py_ reads a standard video (e.g. in .avi, .mp4, .mov, or .wmv), or a folder of images, and generates emulated DVS events at upsampled timestamp resolution.
 
-Do not be intimidated by the huge number of options. Running _v2e.py_ with no arguments sets reasonable values and opens a file browser to let you select an input video. Inspect the logging output for hints.
+Don't be intimidated by the huge number of options. Running _v2e.py_ with no arguments sets reasonable values and opens a file browser to let you select an input video. Inspect the logging output for hints.
 
-**Hint:** Note the options _[--dvs128 | --dvs240 | --dvs346 | --dvs640 | --dvs1024]_; they set output size and width to popular cameras.
+**Hint:** Note the options _[--dvs128 | --dvs240 | --dvs346 | --dvs640 | --dvs1024]_; they set output size and width to popular DVS cameras.
 
 **On headless platforms**, with no graphics output, use --no_preview option to suppress the OpenCV windows.
 
@@ -373,7 +373,7 @@ There are several different 'frame rates' in v2e. On opening the input video, v2
 
  * _--avi_frame_rate_: Just sets the frame rate for playback of output AVI files
  * _--dvs-exposure_: See next section
- * --input_slowmotion_factor_: Specifies by what factor the input video is slowed down.
+ * _--input_slowmotion_factor_: Specifies by what factor the input video is slowed down.
  
 
 ## DVS frame exposure modes
