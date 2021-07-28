@@ -30,11 +30,11 @@ setup(
     install_requires=[
         'numpy',
         'argcomplete',
-        'engineering-notation',
+        'engineering-notation', # not available on conda
         'tqdm',
-        'opencv-python',
+        'opencv-python', # just opencv for conda
         'h5py',
-        'torch',
+        'torch', # pytorch for conda
         'torchvision',
         'numba',
         #  'Gooey',

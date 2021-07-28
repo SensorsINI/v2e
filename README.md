@@ -10,6 +10,14 @@ See [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6U
 Vote for [new v2e features](https://docs.google.com/forms/d/e/1FAIpQLSdJoIH3wBkPANWTng56VeXiItkh_fl5Lz3QwZIpQ6ut1AMFCw/viewform?usp=sf_link).
 
 ## News
+- 28 Aug 2021: Many improvements.
+  - Try [opening v2e in google colab](https://colab.research.google.com/drive/1czx-GJnx-UkhFVBbfoACLVZs8cYlcr_M?usp=sharing).  
+  - There are improved noise models of leak and shot noise. 
+    Both now model frozen log normal rate distributions; see the _--noise_rate_cov_decades_ option.
+    The leak noise events have timing jitter that matches observed jitter; see _--leak_jitter_fraction_ option.
+  - v2e models finite refractory period; see the _--refractory_period_ option
+  - _setup.py_ includes dependencies and now installs _v2e_ as a script to your conda environment to run from command line.
+  -  HDF output will also output the frames, to allow modeling of DAVIS cameras with APS+DVS output.
 - 19 Dec 2020: Added ability to generate input frames from python class. See [moving-dot.py](https://github.com/SensorsINI/v2e/blob/master/moving_dot.py) and command line argument --synthetic_input=<module_name>
 
 ## Contact
@@ -27,27 +35,24 @@ To reproduce the experiments of the paper, please find [this repository](https:/
 
 + You are encouraged to install v2e on a separate Python environment such as `conda` environment:
     ```bash
-    conda create -n v2e-env python=3.8  # create a new environment
-    source activate v2e-env  # activate the environment
+    conda create -n v2e python=3.9  # create a new environment
+    source activate v2e  # activate the environment
     ```
 
-+ v2e works with Python 3.6 and above. To install v2e, run the following command in terminal:
-    ```bash
-    
-    ```
-
-+ For developer, you can clone and install locally:
++ v2e works with Python 3.6 and above. To install v2e in developer mode (so your edits to source take effect immediately), run the following command in terminal:
     ```bash
     git clone https://github.com/SensorsINI/v2e
     cd v2e
     python setup.py develop
     ```
 
-+ For additional GUI interface, you will need to install [Gooey](https://github.com/chriskiehl/Gooey) package. This package works the best on Windows:
++ For additional Windows GUI interface, you will need to install [Gooey](https://github.com/chriskiehl/Gooey) package. This package works the best on Windows:
     ```bash
     pip install Gooey
     ```
     On Linux, `Gooey` can be hard to install.
+
+    For a sample of conversion using the gooey GUI, see https://youtu.be/THJqRC_q2kY
 
 
 **NOTE** We recommend running _v2e_ on a CUDA GPU or it will be very slow. With a low-end GTX-1050, _v2e_ runs about 50-200X slower than real time using 10X slowdown factor and 346x260 video.
@@ -56,10 +61,6 @@ To reproduce the experiments of the paper, please find [this repository](https:/
 
 _v2e_ serves multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for generating DVS events from conventional video and from specific datasets.
 
-### GUI interface
-A GUI based on Gooey is automatically started if Gooey is installed. (Gooey uses wxPython which can be hard to install on linux systems; see above.)  To disable the GUI, you can use the --ignore-gooey option.  Gooey preloads its GUI with the command line options you provide. You can then run v2e multiple times from the same GUI.
-
-For a sample of conversion using the gooey GUI, see https://youtu.be/THJqRC_q2kY
 
 ![v2e_gooey](media/v2e_Gooey.png)
 
@@ -92,8 +93,8 @@ Do not be intimidated by the huge number of options. Running _v2e.py_ with no ar
 **On headless platforms**, with no graphics output, use --no_preview option to suppress the OpenCV windows.
 
 ```
-(base)$ conda activate pt-v2e # activate your workspace
-(pt-v2e)$ python v2e.py -h --no_gui
+(base)$ conda activate v2e # activate your workspace
+(v2e)$ v2e -h
 usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
               [--output_in_place [OUTPUT_IN_PLACE]] [--overwrite]
               [--unique_output_folder [UNIQUE_OUTPUT_FOLDER]]
@@ -122,13 +123,9 @@ usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
               [--skip_video_output] [--no_preview] [--davis_output]
               [--dvs_h5 DVS_H5] [--dvs_aedat2 DVS_AEDAT2]
               [--dvs_text DVS_TEXT]
-
 v2e: generate simulated DVS events from video.
-
 optional arguments:
   -h, --help            show this help message and exit
-  
-
 Output: General:
   -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
                         folder to store outputs.
@@ -143,7 +140,6 @@ Output: General:
                         If specifying --output_folder, makes unique output
                         folder based on output_folder, e.g. output1 (if non-
                         empty output_folder already exists)
-
 DVS timestamp resolution:
   --auto_timestamp_resolution [AUTO_TIMESTAMP_RESOLUTION]
                         (Ignored by --disable_slomo.) If True (default),
@@ -164,7 +160,6 @@ DVS timestamp resolution:
                         will force high upsampling ratio. Can be combind with
                         --auto_timestamp_resolution to limit upsampling to a
                         maximum limit value.
-
 DVS model:
   --output_height OUTPUT_HEIGHT
                         Height of output DVS data in pixels. If None, same as
@@ -220,7 +215,6 @@ DVS model:
   --show_dvs_model_state SHOW_DVS_MODEL_STATE
                         one of new_frame baseLogFrame lpLogFrame0 lpLogFrame1
                         diff_frame (without quotes)
-
 SloMo upsampling (see also "DVS timestamp resolution" group):
   --disable_slomo       Disables slomo interpolation; the output DVS events
                         will have exactly the timestamp resolution of the
@@ -237,7 +231,6 @@ SloMo upsampling (see also "DVS timestamp resolution" group):
                         Output slomo of src video slowed down by
                         slowdown_factor.
   --slomo_stats_plot    show a plot of slomo statistics
-
 Input file handling:
   -i INPUT, --input INPUT
                         Input video file or a image folder; leave empty for
@@ -269,7 +262,6 @@ Input file handling:
   --stop_time STOP_TIME
                         Stop at this time in seconds in video. Use None to end
                         at end of source video.
-
 Synthetic input:
   --synthetic_input SYNTHETIC_INPUT
                         Input from class SYNTHETIC_INPUT that has methods
@@ -282,7 +274,6 @@ Synthetic input:
                         resolvable from the classpath. SYNTHETIC_INPUT is the
                         module name without .py suffix. See example
                         moving_dot.py.
-
 Output: DVS video:
   --dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]
                         Mode to finish DVS frame event integration:
@@ -301,7 +292,6 @@ Output: DVS video:
                         video, SloMo video, and DVS video. This mode also
                         prevents showing preview of output (cf --no_preview).
   --no_preview          disable preview in cv2 windows for faster processing.
-
 Output: DVS events:
   --davis_output        Save frames, frame timestamp and corresponding event
                         indexin HDF5. Default is False.
@@ -312,9 +302,7 @@ Output: DVS events:
                         events.
   --dvs_text DVS_TEXT   Output DVS events as text file with one event per line
                         [timestamp (float s), x, y, polarity (0,1)].
-
 Run with no --input to open file dialog
- [--sigma_tq
 ```
 You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.  Or leave out all options and just use the file chooser to select the movie.
 

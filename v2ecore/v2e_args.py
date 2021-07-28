@@ -53,11 +53,6 @@ def v2e_args(parser):
     # else:
     #     prepend = ''
 
-    uiGroup = parser.add_argument_group('UI')
-    uiGroup.add_argument(
-        "--ignore-gooey", action="store_true",
-        help="Do not show Gooey GUI interface, just use command line arguments.")
-
     # general arguments for output folder, overwriting, etc
     outGroupGeneral = parser.add_argument_group('Output: General')
     outGroupGeneral.add_argument(

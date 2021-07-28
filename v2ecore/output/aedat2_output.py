@@ -10,11 +10,19 @@ logger = logging.getLogger(__name__)
 
 
 class AEDat2Output:
-    '''
+    """
     outputs AEDAT-2.0 jAER format DVS data from v2e
-    '''
+    """
 
     def __init__(self, filepath: str, output_width=346, output_height=240):
+        """
+
+        Parameters
+        ----------
+        filepath - full path to output AEDAT file, including ".aedat" or ".aedat2" extension
+        output_width - the width of output address space
+        output_height - the height of output address space
+        """
         self.filepath = filepath
         self.file=None
         # edit below to match https://inivation.github.io/inivation-docs/Software%20user%20guides/AEDAT_file_formats.html#introduction
