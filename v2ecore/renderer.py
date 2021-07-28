@@ -117,8 +117,8 @@ class EventRenderer(object):
     def cleanup(self):
         if self.video_output_file is not None:
             logger.info(
-                "Closing DVS video output file "
-                "after writing {} frames".format(self.numFramesWritten))
+                "Closing DVS video output file {}"
+                "after writing {} frames".format(self.video_output_file_name,self.numFramesWritten))
             if type(self.video_output_file) is not str:
                 self.video_output_file.release()
             if self.frame_times_output_file is not None:

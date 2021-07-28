@@ -33,8 +33,19 @@ To reproduce the experiments of the paper, please find [this repository](https:/
 
 ## Installation
 
+### Advice about conversion time
+We recommend running _v2e_ on a CUDA GPU or it will be very slow. 
+With a low-end GTX-1050, _v2e_ runs about 50-200X slower than real time 
+using 10X slowdown factor and 346x260 video.
 
-**NOTE** We recommend running _v2e_ on a CUDA GPU or it will be very slow. With a low-end GTX-1050, _v2e_ runs about 50-200X slower than real time using 10X slowdown factor and 346x260 video.
+Conversion speed depends linearly on the reciprocal of the desired DVS timestamp resolution.
+If you demand fine resolution of e.g. 100us, 
+then expect many minutes of computing per second of source video. Running on Google colab
+with GPU, it took 500s per second of 12FPS source video, because of the very high upsampling ratio
+of over 800X and the 220k frames that needed to be produced for DVS modeling.
+
+We advise using the _--stop_ option for trial run before starting a long conversion.
+
 
 ### Make conda environment
 You are encouraged to install v2e on a separate Python environment

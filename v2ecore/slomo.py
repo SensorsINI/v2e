@@ -127,13 +127,13 @@ class SuperSloMo(object):
     def cleanup(self):
         if self.ori_writer is not None:
             logger.info(
-                'closing original video AVI after '
-                'writing {} frames'.format(self.numOrigVideoFramesWritten))
+                'closing original video AVI {} after '
+                'writing {} frames'.format(self.vid_orig, self.numOrigVideoFramesWritten))
             self.ori_writer.release()
         if self.slomo_writer is not None:
             logger.info(
-                'closing slomo video AVI after '
-                'writing {} frames'.format(self.numSlomoVideoFramesWritten))
+                'closing slomo video AVI {} after '
+                'writing {} frames'.format(self.vid_slomo, self.numSlomoVideoFramesWritten))
             self.slomo_writer.release()
         cv2.destroyAllWindows()
 
