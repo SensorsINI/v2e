@@ -33,18 +33,25 @@ To reproduce the experiments of the paper, please find [this repository](https:/
 
 ## Installation
 
-+ You are encouraged to install v2e on a separate Python environment such as `conda` environment:
-    ```bash
-    conda create -n v2e python=3.9  # create a new environment
-    source activate v2e  # activate the environment
-    ```
 
-+ v2e works with Python 3.6 and above. To install v2e in developer mode (so your edits to source take effect immediately), run the following command in terminal:
-    ```bash
-    git clone https://github.com/SensorsINI/v2e
-    cd v2e
-    python setup.py develop
-    ```
+**NOTE** We recommend running _v2e_ on a CUDA GPU or it will be very slow. With a low-end GTX-1050, _v2e_ runs about 50-200X slower than real time using 10X slowdown factor and 346x260 video.
+
+### Make conda environment
+You are encouraged to install v2e on a separate Python environment
+such as `conda` environment:
+
+```bash
+conda create -n v2e python=3.9  # create a new environment
+source activate v2e  # activate the environment
+```
+
+### Install v2e
+v2e works with Python 3.6 and above. To install v2e in developer mode (so your edits to source take effect immediately), run the following command in terminal:
+```bash
+git clone https://github.com/SensorsINI/v2e
+cd v2e
+python setup.py develop
+```
 
 + For additional Windows GUI interface, you will need to install [Gooey](https://github.com/chriskiehl/Gooey) package. This package works the best on Windows:
     ```bash
@@ -55,32 +62,27 @@ To reproduce the experiments of the paper, please find [this repository](https:/
     For a sample of conversion using the gooey GUI, see https://youtu.be/THJqRC_q2kY
 
 
-**NOTE** We recommend running _v2e_ on a CUDA GPU or it will be very slow. With a low-end GTX-1050, _v2e_ runs about 50-200X slower than real time using 10X slowdown factor and 346x260 video.
+### Download SuperSloMo model
+
+We use the excellent [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects/superslomo/) framework to interpolate the APS frames.
+However, since APS frames only record light intensity, we  retrained it on grayscale images.
+
+Download our pre-trained model checkpoint from Google Drive
+[[SuperSloMo39.ckpt]](https://drive.google.com/u/0/uc?id=17QSN207h05S_b2ndXjLrqPbBTnYIl0Vb&export=download) (151 MB).
+
+Download _SuperSloMo39.ckpt_ to the _input_ folder. 
+The default value of --slomo_model argument is set to this location.
+
+### Download sample input data
+The _SuperSoMo_ model and sample input videos to try _v2e_ with are in [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6UylAdxg5O1ko_GaIXz7wo?usp=sharing) on google drive.
+
+Download the [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing)
+video and put in the _input_ folder
+to run the example below
 
 ## Usage
 
 _v2e_ serves multiple purposes. Please read to code if you would like to adapt it for your own application. Here, we only introduce the usage for generating DVS events from conventional video and from specific datasets.
-
-
-![v2e_gooey](media/v2e_Gooey.png)
-
-
-## Download SuperSloMo model
-
-We use the excellent [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects/superslomo/) framework to interpolate the APS frames. 
-However, since APS frames only record light intensity, we  retrained it on grayscale images. 
-You can download our pre-trained model checkpoint from Google Drive 
-[[link]](https://drive.google.com/u/0/uc?id=17QSN207h05S_b2ndXjLrqPbBTnYIl0Vb&export=download) (151 MB).
-
-The default value of --slomo_model argument is set to this location.
-
-## Sample input data
-The _SuperSoMo_ model and sample input videos to try _v2e_ with are in [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6UylAdxg5O1ko_GaIXz7wo?usp=sharing) on google drive.
-
-Download the [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) 
-video and put in the _input_ folder
-to run the example below
-
 
 ## Render emulated DVS events from conventional video.
 
