@@ -53,7 +53,7 @@ such as `conda` environment:
 
 ```bash
 conda create -n v2e python=3.9  # create a new environment
-source activate v2e  # activate the environment
+conda activate v2e  # activate the environment
 ```
 
 ### Install v2e
