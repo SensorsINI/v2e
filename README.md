@@ -79,17 +79,15 @@ We use the excellent [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects
 However, since APS frames only record light intensity, we  retrained it on grayscale images.
 
 Download our pre-trained model checkpoint from Google Drive
-[[SuperSloMo39.ckpt]](https://drive.google.com/u/0/uc?id=17QSN207h05S_b2ndXjLrqPbBTnYIl0Vb&export=download) (151 MB).
-
-Download _SuperSloMo39.ckpt_ to the _input_ folder. 
+[[SuperSloMo39.ckpt]](https://drive.google.com/u/0/uc?id=17QSN207h05S_b2ndXjLrqPbBTnYIl0Vb&export=download) (151 MB) and save it to the _input_ folder. 
 The default value of --slomo_model argument is set to this location.
 
 ### Download sample input data
-The _SuperSoMo_ model and sample input videos to try _v2e_ with are in [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6UylAdxg5O1ko_GaIXz7wo?usp=sharing) on google drive.
+The sample input videos to try _v2e_ with are in [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6UylAdxg5O1ko_GaIXz7wo?usp=sharing) on google drive.
 
 Download the [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing)
 video and put in the _input_ folder
-to run the example below
+to run the example below.
 
 ## Usage
 
