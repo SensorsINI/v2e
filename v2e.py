@@ -544,7 +544,9 @@ def main():
                 if ret==False:
                     logger.warning(f'could not read frame {inputFrameIndex} from {cap}')
                     continue
-
+                if inputVideoFrame is None or np.shape(inputVideoFrame) == ():
+                    logger.warning(f'empty video frame number {inputFrameIndex} in {cap}')
+                    continue
                 if not ret or inputFrameIndex + start_frame > stop_frame:
                     break
 

@@ -72,6 +72,14 @@ class ImageFolderReader(object):
         """Just to match with OpenCV API."""
         pass
 
+    def __str__(self):
+        s=f'ImageFolderReader reading folder {self.image_folder_path} frame number {self.current_frame_idx}'
+        try:
+            s=s+f' named {self.image_file_list[self.current_frame_idx-1]}'
+        except:
+            pass
+        return s
+
 
 def v2e_quit(code=None):
     try:
