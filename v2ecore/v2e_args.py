@@ -312,7 +312,7 @@ def v2e_args(parser):
              "\n\t\t-dvs_exposure area_count 500 64")
     outGroupDvsVideo.add_argument(
         "--dvs_vid", type=str, default="dvs-video.avi",
-        help="Output DVS events as AVI video at frame_rate.")
+        help="Output DVS events as AVI video at frame_rate. To suppress, supply argument None.")
     outGroupDvsVideo.add_argument(
         "--dvs_vid_full_scale", type=int, default=2,
         help="Set full scale event count histogram count for DVS videos "
@@ -340,16 +340,16 @@ def v2e_args(parser):
         help="Save frames, frame timestamp and corresponding event index"
              "in HDF5. Default is False.")
     dvsEventOutputGroup.add_argument(
-        "--dvs_h5", type=output_file_check, default="None",
-        help="Output DVS events as hdf5 event database.")
+        "--dvs_h5", type=output_file_check, default=None,
+        help="Output DVS events as hdf5 event database. ")
     dvsEventOutputGroup.add_argument(
         "--dvs_aedat2", type=output_file_check, default='v2e-dvs-events.aedat',
         help="Output DVS events as DAVIS346 camera AEDAT-2.0 event file "
-             "for jAER; one file for real and one file for v2e events.")
+             "for jAER; one file for real and one file for v2e events. To suppress, supply argument None. ")
     dvsEventOutputGroup.add_argument(
-        "--dvs_text", type=output_file_check, default='v2e-dvs-events.txt',
+        "--dvs_text", type=output_file_check, default=None,
         help="Output DVS events as text file with one event per "
-             "line [timestamp (float s), x, y, polarity (0,1)].")
+             "line [timestamp (float s), x, y, polarity (0,1)]. ")
     #  dvsEventOutputGroup.add_argument(
     #      "--dvs_numpy", type=output_file_check, default="None",
     #      help="Accumulates DVS events to memory and writes final numpy data "
