@@ -9,6 +9,7 @@ import tkinter as tk
 from tkinter import filedialog
 from numba import njit
 from engineering_notation import EngNumber as eng
+from pathlib import Path
 
 # adjust for different sensor than DAVIS346
 DVS_WIDTH, DVS_HEIGHT = 346, 260
@@ -88,8 +89,15 @@ def v2e_quit(code=None):
         sys.exit()
 
 
-def make_output_folder(output_folder_base, suffix_counter,
-                       overwrite, unique_output_folder):
+def make_output_folder(output_folder_base, suffix_counter,overwrite, unique_output_folder) -> str:
+    """Makes the output folder if it does not exist yet, or makes unique new numbered folder
+    :param output_folder_base: the base name of folder. If it is absolute path, then make folder at absolute location, otherwise relative to startup folder
+    :param suffix_counter: a counter value to append
+    :param overwrite: to overwrite existing folder
+    :param unique_output_folder: set True to make a new uniquely named numbered folder
+
+    :returns: output folder path
+    """
     if overwrite and unique_output_folder:
         logger.error(
             "specify one or the other of "
@@ -125,18 +133,29 @@ def set_output_folder(output_folder,
                       unique_output_folder,
                       overwrite,
                       output_in_place,
-                      logger):
-    """Set output folder in a single function."""
+                      logger) -> str:
+    """Set output folder in a single function.
+
+    :param output_folder: path to folder
+    :param input_file: the input file to v2e, used for output_in_place
+    :param overwrite: set true to overwrite existing files in the folder
+    :param output_in_place: set True to output in input_file folder
+    :param logger: logger to report errors and warnings to
+
+    :returns: the output folder path
+    """
 
     if output_in_place:
         parts = os.path.split(input_file)
         output_folder = parts[0]
-        logger.info(f'output_in_place==True so output_folder={output_folder}')
+        p=Path(output_folder)
+        logger.info(f'output_in_place==True so output_folder={p.absolute()}')
     else:
         output_folder = make_output_folder(
             output_folder, 0, overwrite, unique_output_folder)
+        p=Path(output_folder)
         logger.info(
-            f'output_in_place==False so made output_folder={output_folder}')
+            f'output_in_place==False so made output_folder={p.absolute()}')
 
     return output_folder
 
