@@ -51,8 +51,18 @@ class ImageFolderReader(object):
         self.frame_height, self.frame_width = frame.shape[0], frame.shape[1]
         self.frame_channels = 1 if frame.ndim < 3 else frame.shape[2]
 
-    def read(self):
-        frame = cv2.imread(self.image_file_list[self.current_frame_idx])
+    def read(self, skip=False):
+        """
+        Reads the next frame
+
+        :param skip: skip the frame
+
+        :returns: always True
+        """
+        if not skip:
+            frame = cv2.imread(self.image_file_list[self.current_frame_idx])
+        else:
+            frame=None
         self.current_frame_idx += 1
 
         # To match with OpenCV API

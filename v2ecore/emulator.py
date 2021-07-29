@@ -217,7 +217,10 @@ class EventEmulator(object):
             self.dvs_aedat2.close()
 
         if self.dvs_text is not None:
-            self.dvs_text.close()
+            try:
+                self.dvs_text.close()
+            except:
+                pass
 
     def _init(self, first_frame_linear):
         logger.debug(

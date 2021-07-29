@@ -38,7 +38,8 @@ setup(
         'torchvision',
         'numba',
         #  'Gooey',
-        'matplotlib'
+        'matplotlib',
+        'plyer'
     ],
 
     entry_points={

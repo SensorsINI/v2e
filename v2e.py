@@ -486,7 +486,13 @@ def main():
         if start_frame > 0:
             logger.info('skipping to frame {}'.format(start_frame))
             for i in tqdm(range(start_frame), unit='fr', desc='src'):
-                ret, _ = cap.read()
+                if isinstance(cap,ImageFolderReader):
+                    if i<start_frame-1:
+                        ret,_=cap.read(skip=True)
+                    else:
+                        ret, _ = cap.read()
+                else:
+                    ret, _ = cap.read()
                 if not ret:
                     raise ValueError(
                         'something wrong, got to end of file before '
@@ -535,6 +541,9 @@ def main():
                     desc='rgb2luma', unit='fr'):
                 # read frame
                 ret, inputVideoFrame = cap.read()
+                if ret==False:
+                    logger.warning(f'could not read frame {inputFrameIndex} from {cap}')
+                    continue
 
                 if not ret or inputFrameIndex + start_frame > stop_frame:
                     break
@@ -688,12 +697,10 @@ def main():
     sPerFrame = 1 / framePerS
     throughputStr = (str(eng(framePerS)) + 'fr/s') \
         if framePerS > 1 else (str(eng(sPerFrame)) + 's/fr')
-    logger.info(
-        'done processing {} frames in {}s ({})\n see output folder {}'
-        .format(num_frames,
-                eng(totalTime),
-                throughputStr,
-                output_folder))
+    timestr ='done processing {} frames in {}s ({})\n see output folder {}'.format(num_frames,
+            eng(totalTime),
+            throughputStr,
+            output_folder)
     logger.info('generated total {} events ({} on, {} off)'
                 .format(eng(emulator.num_events_total),
                         eng(emulator.num_events_on),
@@ -704,6 +711,13 @@ def main():
             eng(emulator.num_events_total / srcDurationToBeProcessed),
             eng(emulator.num_events_on / srcDurationToBeProcessed),
             eng(emulator.num_events_off / srcDurationToBeProcessed)))
+    logger.info(timestr)
+    if totalTime>60:
+        try:
+            from plyer import notification
+            notification.notify(title='v2e done', message=timestr, timeout=60)
+        except Exception as e:
+            logger.info(f'could not show notification: {e}')
 
     # try to show desktop
     # suppress folder opening if it's not necessary
