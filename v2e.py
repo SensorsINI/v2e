@@ -141,11 +141,29 @@ def main():
 
     # set input file
     input_file = args.input
+
     if synthetic_input is None and not input_file:
-        input_file = inputVideoFileDialog()
-        if not input_file:
-            logger.info('no file selected, quitting')
-            v2e_quit()
+        try:
+            input_file = inputVideoFileDialog()
+            if input_file is None:
+                logger.info('no file selected, quitting')
+                v2e_quit()
+        except Exception as e:
+            logger.error(f'no input file specified and cannot show input file dialog; are you running without graphical display? ({e})')
+            v2e_quit(1)
+
+    # input file checking
+    #  if (not input_file or not os.path.isfile(input_file)
+    #      or not os.path.isdir(input_file)) \
+    #          and not synthetic_input:
+    if (not synthetic_input):
+        if not os.path.isfile(input_file) and not os.path.isdir(input_file):
+            logger.error('input file {} does not exist'.format(input_file))
+            v2e_quit(1)
+        if os.path.isdir(input_file):
+            if len(os.listdir(input_file))==0:
+                logger.error(f'input folder {input_file} is empty')
+                v2e_quit(1)
 
     # Set output folder
     output_folder = set_output_folder(
@@ -157,13 +175,6 @@ def main():
         if (not synthetic_input and args.output_folder is None) else False,
         logger)
 
-    # input file checking
-    #  if (not input_file or not os.path.isfile(input_file)
-    #      or not os.path.isdir(input_file)) \
-    #          and not synthetic_input:
-    if not input_file and not synthetic_input:
-        logger.error('input file {} does not exist'.format(input_file))
-        v2e_quit(1)
 
     num_frames = 0
     srcNumFramesToBeProccessed = 0
