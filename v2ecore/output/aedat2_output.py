@@ -14,6 +14,8 @@ class AEDat2Output:
     outputs AEDAT-2.0 jAER format DVS data from v2e
     """
 
+    SUPPORTED_SIZES=((346,260),(240,180))
+
     def __init__(self, filepath: str, output_width=346, output_height=240):
         """
 
@@ -54,7 +56,7 @@ class AEDat2Output:
             self.flipy = True  # v2e uses computer vision matrix printing convention of UL pixel being 0,0, but jAER uses original graphics and graphing convention that 0,0 is LL
             self.flipx = True # not 100% sure why this is needed. Observed for tennis example
         else:
-            raise ValueError('CAMERA type not found, add your camera to {}'.format(__name__))
+            raise ValueError(f'AEDAT-2.0 output width={output_width} height={output_height} not supported; add your camera to {__name__} or use one of the predefined DVS cameras, e.g. --dvs346 or --dvs240 that have sizes {self.SUPPORTED_SIZES}')
 
         self.numEventsWritten = 0
         self.numOnEvents=0

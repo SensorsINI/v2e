@@ -176,8 +176,9 @@ class EventEmulator(object):
                 path = checkAddSuffix(path, '.txt')
                 logger.info('opening text DVS output file ' + path)
                 self.dvs_text = DVSTextOutput(path)
-        except Exception:
-            logger.warning("No output file defined.")
+        except Exception as e:
+            logger.error(f'Output file exception "{e}" (maybe you need to specify a supported DVS camera type?)')
+            raise e
 
         atexit.register(self.cleanup)
 

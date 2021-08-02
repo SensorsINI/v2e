@@ -274,6 +274,9 @@ def main():
             cap = ImageFolderReader(input_file, args.input_frame_rate)
             srcFps = cap.frame_rate
             srcNumFrames = cap.num_frames
+            output_height=cap.frame_height
+            output_width=cap.frame_width
+
         else:
             cap = cv2.VideoCapture(input_file)
             srcFps = cap.get(cv2.CAP_PROP_FPS)
