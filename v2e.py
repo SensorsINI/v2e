@@ -565,6 +565,28 @@ def main():
                 if not ret or inputFrameIndex + start_frame > stop_frame:
                     break
 
+                if args.crop is not None:
+                    c=args.crop
+                    if len(c)!=4:
+                        logger.error(f'--crop must have 4 elements (you specified --crop={args.crop}')
+                        v2e_quit(1)
+                    if c[0]+c[1]>=inputWidth:
+                        logger.error(f'left {c[0]}+ right crop {c[0]} is larger than image width {inputWidth}')
+                        v2e_quit(1)
+                    if c[2]+c[3]>=inputHeight:
+                        logger.error(f'top {c[0]}+ bottom crop {c[0]} is larger than image height {inputHeight}')
+                        v2e_quit(1)
+
+                    c_l=c[0] if c[0] > 0 else 0
+                    c_r=-c[1] if c[1]>0 else None
+                    c_t=c[2] if c[2]>0 else 0
+                    c_b=-c[3] if c[3]>0 else None
+
+
+
+                    # crop the frame, indices are y,x, UL is 0,0
+                    inputVideoFrame= inputVideoFrame[c_t:c_b, c_l:c_r] # https://stackoverflow.com/questions/15589517/how-to-crop-an-image-in-opencv-using-python
+
                 if output_height and output_width and \
                         (inputHeight != output_height or
                          inputWidth != output_width):

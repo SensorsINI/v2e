@@ -291,8 +291,8 @@ def v2e_args(parser):
         help="Stop at this time in seconds in video. "
              "Use None to end at end of source video.")
     inGroup.add_argument(
-        "--crop", type=tuple_type, default=(0,0,0,0),
-        help="Crop input video by (left, right, top, bottom) pixels. E.g. CROP=(100,100,0,0) crops 100 pixels from left and right of input frames.")
+        "--crop", type=tuple_type, default=None,
+        help="Crop input video by (left, right, top, bottom) pixels. E.g. CROP=(100,100,0,0) crops 100 pixels from left and right of input frames. CROP can also be specified as L,R,T,B without ()")
 
 # synthetic input handling
     syntheticInputGroup = parser.add_argument_group('Synthetic input')
