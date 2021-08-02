@@ -49,6 +49,9 @@ class ImageFolderReader(object):
         self.num_frames = len(self.image_file_list)
 
         frame = cv2.imread(self.image_file_list[0])
+        if frame is None:
+            logger.error(f'could not read a frame from file "{self.image_file_list[0]}" in folder "{self.image_folder_path}"')
+            raise FileNotFoundError(f'could not read a frame named {self.image_file_list[0]} from folder {self.image_folder_path}')
         self.frame_height, self.frame_width = frame.shape[0], frame.shape[1]
         self.frame_channels = 1 if frame.ndim < 3 else frame.shape[2]
 

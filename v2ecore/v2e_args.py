@@ -43,6 +43,15 @@ class SmartFormatter(argparse.HelpFormatter):
         return argparse.HelpFormatter._split_lines(self, text, width)
 
 
+def tuple_type(strings):
+    """ From https://stackoverflow.com/questions/33564246/passing-a-tuple-as-command-line-argument
+    Allows passing tuple as argument and returning a tuple in the args.xxxx
+    """
+    strings = strings.replace("(", "").replace(")", "")
+    mapped_int = map(int, strings.split(","))
+    return tuple(mapped_int)
+
+
 def v2e_args(parser):
     # check and add prefix if running script in subfolder
     # dir_path = os.getcwd()
@@ -281,8 +290,11 @@ def v2e_args(parser):
         "--stop_time", type=float, default=None,
         help="Stop at this time in seconds in video. "
              "Use None to end at end of source video.")
+    inGroup.add_argument(
+        "--crop", type=tuple_type, default=(0,0,0,0),
+        help="Crop input video by (left, right, top, bottom) pixels. E.g. CROP=(100,100,0,0) crops 100 pixels from left and right of input frames.")
 
-    # synthetic input handling
+# synthetic input handling
     syntheticInputGroup = parser.add_argument_group('Synthetic input')
     syntheticInputGroup.add_argument(
         "--synthetic_input", type=str,
