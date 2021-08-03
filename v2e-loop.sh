@@ -14,5 +14,5 @@ for ((from=$start;from<=$end;from+=$step));
 do
  to=$(($from + $step))
  echo "**************** Converting $from to $to *******************************"
- v2e --input_frame_rate $fps -i $in_folder -o $out_folder-$from-$to --unique  --start $from --stop  $to --dvs_aedat2 $from-$to.aedat --timestamp_res 0.001 --dvs346 || exit 1
+ v2e --input_frame_rate $fps -i $in_folder -o $out_folder-$from-$to --overwrite  --start $from --stop  $to --dvs_aedat2 $from-$to.aedat --timestamp_res 0.001 --dvs346 --no_preview || exit 1
 done

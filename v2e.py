@@ -754,7 +754,7 @@ def main():
     if totalTime>60:
         try:
             from plyer import notification
-            notification.notify(title='v2e done', message=timestr, timeout=60)
+            notification.notify(title='v2e done', message=timestr, timeout=600)
         except Exception as e:
             logger.info(f'could not show notification: {e}')
 
