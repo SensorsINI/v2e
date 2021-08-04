@@ -395,7 +395,7 @@ def write_args_info(args, path) -> str:
     '''
     import __main__
     arguments_list = 'arguments:\n'
-    for arg, value in args._get_kwargs():
+    for arg, value in sorted(args._get_kwargs()):
         arguments_list += "{}:\t{}\n".format(arg, value)
     logger.info(arguments_list)
     basename = os.path.basename(__main__.__file__)
