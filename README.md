@@ -341,9 +341,19 @@ video_slomo.avi
 
 The [v2e site](https://sites.google.com/view/video2events/home) shows these videos.
 ## Scripting v2e
-See  <https://github.com/SensorsINI/v2e/blob/master/scripts>  for various samples of shell and cmd scripts to run v2e from terminal.
+See the [scripts folder](https://github.com/SensorsINI/v2e/blob/master/scripts)  for various samples of shell and cmd scripts to run v2e from terminal.
 
-There are also sample of python modules to generate synthetic input to v2e, e.g. [moving_dot.py](https://github.com/SensorsINI/v2e/blob/master/scripts/moving_dot.py)
+### Synthetic input
+
+There are also samples in the [scripts folder](https://github.com/SensorsINI/v2e/blob/master/scripts) of 
+python modules to generate synthetic input to v2e, e.g. [moving_dot.py](https://github.com/SensorsINI/v2e/blob/master/scripts/moving_dot.py)
+
+You can specify moving_dot as the class that generates input frames using the command line option
+````shell
+v2e --synthetic_input scripts.moving_dot ...
+````
+See [moving_dot.py](https://github.com/SensorsINI/v2e/blob/master/scripts/moving_dot.py) for more information.
+
 ## Model parameters
 
 The DVS ON and OFF threshold nominal values are set by _pos_thres_ and _neg_thres_. The pixel to pixel variation is set by _sigma_thres_. The pixel cutoff frequency in Hz is set by _cutoff_hz_. The leak event rate is set by _leak_rate_hz_. 

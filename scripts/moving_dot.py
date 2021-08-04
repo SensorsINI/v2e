@@ -1,7 +1,7 @@
 # generates moving dot(s)
 
 # use it like this:
-#v2e --synthetic_input=moving_dot --disable_slomo --dvs_aedat2=v2e.aedat --output_width=346 --output_height=260
+#v2e --synthetic_input=scripts.moving_dot --disable_slomo --dvs_aedat2=v2e.aedat --output_width=346 --output_height=260
 
 # NOTE: There are nonintuitive effects of low contrast dot moving repeatedly over the same circle:
 # The dot initially makes events and then appears to disappear. The cause is that the mean level of dot
