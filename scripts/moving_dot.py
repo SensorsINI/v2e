@@ -1,5 +1,7 @@
-# generates moving dot for DND21 paper
+# generates moving dot(s)
 
+# use it like this:
+#v2e --synthetic_input=moving_dot --disable_slomo --dvs_aedat2=v2e.aedat --output_width=346 --output_height=260
 
 # NOTE: There are nonintuitive effects of low contrast dot moving repeatedly over the same circle:
 # The dot initially makes events and then appears to disappear. The cause is that the mean level of dot
@@ -44,7 +46,7 @@ def fill_dot(pix_arr: np.ndarray, x: float, x0: float, y: float, y0: float, d: i
             pix_arr[thisy][thisx] = v
 
 
-class moving_dot():
+class moving_dot(): # the class name should be the same as the filename, like in Java
     """ Generates moving dot
     """
 

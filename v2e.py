@@ -119,8 +119,12 @@ def main():
     if synthetic_input is not None:
         try:
             synthetic_input_module = importlib.import_module(synthetic_input)
+            if '.' in synthetic_input:
+                classname=synthetic_input[synthetic_input.rindex('.')+1:]
+            else:
+                classname=synthetic_input
             synthetic_input_class = getattr(
-                synthetic_input_module, synthetic_input)
+                synthetic_input_module, classname)
             synthetic_input_instance = synthetic_input_class(
                 width=output_width, height=output_height,
                 preview=not args.no_preview)
