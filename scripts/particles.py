@@ -1,7 +1,7 @@
-# generates moving dot(s)
+# generates many linearly moving particles
 
 # use it like this:
-#v2e --synthetic_input=scripts.moving_dot --disable_slomo --dvs_aedat2=v2e.aedat --output_width=346 --output_height=260
+# v2e --leak_rate=0 --shot=0 --cutoff_hz=300 --sigma_thr=.05 --pos_thr=.2 --neg_thr=.2 --dvs_exposure duration .01 --output_folder "g:\Qsync\particles" --overwrite --dvs_aedat2=particles --output_width=346 --output_height=260 --batch=64 --disable_slomo --synthetic_input=scripts.particles --no_preview
 
 # NOTE: There are nonintuitive effects of low contrast dot moving repeatedly over the same circle:
 # The dot initially makes events and then appears to disappear. The cause is that the mean level of dot
@@ -50,17 +50,34 @@ def fill_dot(pix_arr: np.ndarray, x: float, y: float, fg: int, bg: int, dot_sigm
             pix_arr[thisy][thisx] = v
 
 class particle():
-    def __init__(self, width:int, height:int ):
+    def __init__(self, width:int, height:int , time:float):
         self.width=width
         self.height=height
-        self.position=np.array([np.random.randint(0,width), np.random.randint(0,height)])
+        # generate particle on some edge, moving into the array with random velocity
+        edge=np.random.randint(0,4) # nsew
+        if edge==0 or edge==1: #north/south
+            pos_x=np.random.randint(0,width)
+            pos_y=0 if edge==0 else height
+        else: # e or w
+            pos_y=np.random.randint(0,height)
+            pos_x=0 if edge==3 else width
+        angle_rad=0
+        if edge==1: #n
+            angle_rad=np.random.uniform(0,-np.pi)
+        elif edge==0: # s
+            angle_rad=np.random.uniform(0,np.pi)
+        elif edge==3: # e
+            angle_rad=np.random.uniform(-np.pi/2,np.pi/2)
+        elif edge==2: # w
+            angle_rad=np.random.uniform(np.pi/2,3*np.pi/2)
+
+
+        self.position=np.array([pos_x,pos_y])
         self.speed=np.random.uniform(100,2000)
-        self.angle_rad=np.random.uniform(0,2*np.pi)
-        self.velocity=np.array([self.speed*np.cos(self.angle_rad),self.speed*np.sin(self.angle_rad)])
-        self.radius=np.random.uniform(.25,.75)
-        self.contrast=np.random.uniform(1.25,1.5)
-        self.time=0
-        pass
+        self.velocity=np.array([self.speed*np.cos(angle_rad),self.speed*np.sin(angle_rad)])
+        self.radius=np.random.uniform(.25,.5)
+        self.contrast=np.random.uniform(1.2,1.5)
+        self.time=time
 
     def update(self,time:float):
         dt=time-self.time
@@ -97,18 +114,18 @@ class particles(): # the class name should be the same as the filename, like in 
         # moving particle distribution
         self.speed_pps_min = 100  # final speed, pix/s
         self.speed_pps_max = 2000  # final speed, pix/s
-        self.num_particles=10 # at any one time
+        self.num_particles=40 # at any one time
         self.particle_count=0
 
         self.particles=[]
         for i in range(self.num_particles):
-            p=particle(width=width,height=height)
+            p=particle(width=width,height=height,time=0)
             self.particles.append(p)
             self.particle_count+=1
 
         # computed values below here
         # self.t_total = 4 * np.pi * self.radius * self.cycles / self.speed_pps
-        self.t_total = 10
+        self.t_total = 30
         # t_total=cycles*period
         self.times = np.arange(0, self.t_total, self.dt)
         # constant speed
@@ -158,7 +175,7 @@ class particles(): # the class name should be the same as the filename, like in 
         for p in self.particles:
             if p.is_out_of_bounds():
                 self.particles.remove(p)
-                newp=particle(self.w,self.h)
+                newp=particle(self.w,self.h,time)
                 self.particles.append(newp)
                 self.particle_count+=1
                 # logger.info(f'made new particle {newp}')
