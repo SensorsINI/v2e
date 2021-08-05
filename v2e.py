@@ -111,6 +111,11 @@ def main():
         args.dvs640, args.dvs1024,
         logger)
 
+
+    num_frames = 0
+    srcNumFramesToBeProccessed = 0
+    srcDurationToBeProcessed=float("NaN")
+
     # setup synthetic input classes and method
     synthetic_input = args.synthetic_input
     synthetic_input_module = None
@@ -131,6 +136,10 @@ def main():
                 preview=not args.no_preview)
             synthetic_input_next_frame_method = getattr(
                 synthetic_input_class, 'next_frame')
+            synthetic_input_total_frames_method = getattr(
+                synthetic_input_class, 'total_frames')
+
+            srcNumFramesToBeProccessed=synthetic_input_instance.total_frames()
 
             logger.info(
                 f'successfully instanced {synthetic_input_instance} with'
@@ -181,8 +190,6 @@ def main():
         logger)
 
 
-    num_frames = 0
-    srcNumFramesToBeProccessed = 0
 
     # define video parameters
     # the input start and stop time, may be round to actual
@@ -470,6 +477,7 @@ def main():
         # array to batch events for rendering to DVS frames
         events = np.zeros((0, 4), dtype=np.float32)
         (fr, fr_time) = synthetic_input_instance.next_frame()
+        num_frames+=1
         i = 0
         with tqdm(total=synthetic_input_instance.total_frames(),
                   desc='dvs', unit='fr') as pbar:
@@ -488,6 +496,7 @@ def main():
                                 width=output_width)
                             events = np.zeros((0, 4), dtype=np.float32)
                     (fr, fr_time) = synthetic_input_instance.next_frame()
+                    num_frames+=1
             # process leftover events
             if len(events) > 0 and not args.skip_video_output:
                 eventRenderer.render_events_to_frames(
@@ -741,7 +750,7 @@ def main():
 
     totalTime = (time.time()-time_run_started)
     framePerS = num_frames / totalTime
-    sPerFrame = 1 / framePerS
+    sPerFrame = totalTime / num_frames if num_frames>0 else None
     throughputStr = (str(eng(framePerS)) + 'fr/s') \
         if framePerS > 1 else (str(eng(sPerFrame)) + 's/fr')
     timestr ='done processing {} frames in {}s ({})\n see output folder {}'.format(num_frames,
@@ -755,9 +764,9 @@ def main():
     logger.info(
         'avg event rate {}Hz ({}Hz on, {}Hz off)'
         .format(
-            eng(emulator.num_events_total / srcDurationToBeProcessed),
-            eng(emulator.num_events_on / srcDurationToBeProcessed),
-            eng(emulator.num_events_off / srcDurationToBeProcessed)))
+            eng(emulator.num_events_total / emulator.t_previous),
+            eng(emulator.num_events_on / emulator.t_previous),
+            eng(emulator.num_events_off / emulator.t_previous)))
     logger.info(timestr)
     if totalTime>60:
         try:
