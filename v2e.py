@@ -38,6 +38,7 @@ from v2ecore.slomo import SuperSloMo
 from v2ecore.emulator import EventEmulator
 from v2ecore.v2e_utils import inputVideoFileDialog
 import logging
+import time
 
 logging.basicConfig()
 root = logging.getLogger()
@@ -259,8 +260,6 @@ def main():
     fh.setFormatter(formatter)
     logger.addHandler(fh)
 
-    # TODO: fix this, this is not reasonable
-    import time
     time_run_started = time.time()
 
     slomoTimestampResolutionS = None
@@ -470,13 +469,13 @@ def main():
     if synthetic_input_next_frame_method is not None:
         # array to batch events for rendering to DVS frames
         events = np.zeros((0, 4), dtype=np.float32)
-        (fr, time) = synthetic_input_instance.next_frame()
+        (fr, fr_time) = synthetic_input_instance.next_frame()
         i = 0
         with tqdm(total=synthetic_input_instance.total_frames(),
                   desc='dvs', unit='fr') as pbar:
             with torch.no_grad():
                 while fr is not None:
-                    newEvents = emulator.generate_events(fr, time)
+                    newEvents = emulator.generate_events(fr, fr_time)
                     pbar.update(1)
                     i += 1
                     if newEvents is not None and newEvents.shape[0] > 0 \
@@ -488,7 +487,7 @@ def main():
                                 events, height=output_height,
                                 width=output_width)
                             events = np.zeros((0, 4), dtype=np.float32)
-                    (fr, time) = synthetic_input_instance.next_frame()
+                    (fr, fr_time) = synthetic_input_instance.next_frame()
             # process leftover events
             if len(events) > 0 and not args.skip_video_output:
                 eventRenderer.render_events_to_frames(
@@ -576,6 +575,7 @@ def main():
                     desc='rgb2luma', unit='fr'):
                 # read frame
                 ret, inputVideoFrame = cap.read()
+                num_frames+=1
                 if ret==False:
                     logger.warning(f'could not read frame {inputFrameIndex} from {cap}')
                     continue
@@ -738,7 +738,6 @@ def main():
 
     if num_frames == 0:
         logger.error('no frames read from file')
-        v2e_quit()
 
     totalTime = (time.time()-time_run_started)
     framePerS = num_frames / totalTime

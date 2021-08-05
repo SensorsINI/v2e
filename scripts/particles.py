@@ -31,7 +31,7 @@ def fill_dot(pix_arr: np.ndarray, x: float, y: float, fg: int, bg: int, dot_sigm
     :param dot_sigma: the sigma of Gaussian, i.e. radius of dot
     """
     x0, y0 = round(x), round(y)
-    d=int(dot_sigma * 3)
+    d=int(dot_sigma * 5)
 
     for iy in range(-d, +d):
         for ix in range(-d, +d):
@@ -75,8 +75,8 @@ class particle():
         self.position=np.array([pos_x,pos_y])
         self.speed=np.random.uniform(100,2000)
         self.velocity=np.array([self.speed*np.cos(angle_rad),self.speed*np.sin(angle_rad)])
-        self.radius=np.random.uniform(.25,.5)
-        self.contrast=np.random.uniform(1.2,1.5)
+        self.radius=np.random.uniform(.25,.35)
+        self.contrast=np.random.uniform(1.19,1.21) # right at threshold
         self.time=time
 
     def update(self,time:float):
@@ -125,18 +125,17 @@ class particles(): # the class name should be the same as the filename, like in 
 
         # computed values below here
         # self.t_total = 4 * np.pi * self.radius * self.cycles / self.speed_pps
-        self.t_total = 30
+        self.t_total = 100
         # t_total=cycles*period
         self.times = np.arange(0, self.t_total, self.dt)
         # constant speed
         self.w = width
         self.h = height
         self.d: int = int(self.dot_sigma * 3)  # distance to bother creating gray levels
-        self.fps = 60
         self.frame_number = 0
         self.out = None
         self.log = sys.stdout
-        self.cv2name = 'moving-dot'
+        self.cv2name = 'v2e'
         self.codec = 'HFYU'
         self.preview = preview
         self.pix_arr: np.ndarray = self.bg * np.ones((self.h, self.w), dtype=np.uint8)
@@ -147,7 +146,6 @@ class particles(): # the class name should be the same as the filename, like in 
                     f'log_contrast(base_e): {np.log(self.contrast)}\n'
                     f'duration(s): {self.t_total}\n'
                     f'dt(s): {self.dt}\n'
-                    f'fps(Hz): {self.fps}\n'
                     f'codec: {self.codec}\n')
         if self.preview:
             cv2.namedWindow(self.cv2name, cv2.WINDOW_NORMAL)
