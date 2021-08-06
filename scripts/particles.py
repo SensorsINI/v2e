@@ -7,11 +7,14 @@
 # The dot initially makes events and then appears to disappear. The cause is that the mean level of dot
 # is encoded by the baseLogFrame which is initially at zero but increases to code the average of dot and background.
 # Then the low contrast of dot causes only a single ON event on first cycle
+import argparse
 
 import numpy as np
 import cv2
 import os
 from tqdm import tqdm
+
+from v2ecore.base_synthetic_input import base_synthetic_input
 from v2ecore.v2e_utils import *
 import sys
 from typing import Tuple, Optional
@@ -19,13 +22,20 @@ from typing import Tuple, Optional
 logger = logging.getLogger(__name__)
 
 
-class particles(): # the class name should be the same as the filename, like in Java
+class particles(base_synthetic_input): # the class name should be the same as the filename, like in Java
     """ Generates moving dots on linear trajectories
     """
-    TOTAL_TIME = 100
+    CONTRAST = 1.2
+    TOTAL_TIME = 1
     NUM_PARTICLES = 40
+    RADIUS=.25
+    DT=100e-6
+    SPEED_MIN=10
+    SPEED_MAX=1000
 
-    def __init__(self, width: int = 346, height: int = 260, avi_path: Optional[str] = None, preview=True) -> None:
+
+    def __init__(self, width: int = 346, height: int = 260, avi_path: Optional[str] = None, preview=True,
+                 arg_list = None) -> None:
         """ Constructs moving-dot class to make frames for v2e
 
         :param width: width of frames in pixels
@@ -33,34 +43,44 @@ class particles(): # the class name should be the same as the filename, like in 
         :param avi_path: folder to write video to, or None if not needed
         :param preview: set true to show the pix array as cv frame
         """
+        super().__init__(width, height, avi_path, preview, arg_list)
+        parser=argparse.ArgumentParser(arg_list)
+        parser.add_argument('--num_particles',type=int,default=particles.NUM_PARTICLES)
+        parser.add_argument('--contrast',type=float,default=particles.CONTRAST)
+        parser.add_argument('--radius',type=float,default=particles.RADIUS)
+        parser.add_argument('--total_time',type=float,default=particles.TOTAL_TIME)
+        parser.add_argument('--speed_min',type=float,default=particles.SPEED_MIN)
+        parser.add_argument('--speed_max',type=float,default=particles.SPEED_MAX)
+        parser.add_argument('--dt',type=float,default=particles.DT)
+        args=parser.parse_args(arg_list)
+
+
         self.avi_path = avi_path  # to write AVI
-        self.num_dots = 100  # number of dots
-        self.contrast: float = 1.50  # compare this with pos_thres and neg_thres and sigma_thr, e.g. use 1.2 for dot to be 20% brighter than backgreound
-        self.bg: int = 100  # background gray level in range 0-255
-        self.dt = 30e-6  # frame interval sec
-        self.radius = 100  # of circular motion of dot
-        self.dot_sigma: float = 1  # gaussian sigma of dot in pixels
+        self.contrast: float = args.contrast  # compare this with pos_thres and neg_thres and sigma_thr, e.g. use 1.2 for dot to be 20% brighter than backgreound
+        self.dt = args.dt  # frame interval sec
+        self.radius: float = args.radius  # gaussian sigma of dot in pixels
         # moving particle distribution
-        self.speed_pps_min = 100  # final speed, pix/s
-        self.speed_pps_max = 2000  # final speed, pix/s
-        self.num_particles=particles.NUM_PARTICLES # at any one time
+        self.speed_pps_min = args.speed_min  # final speed, pix/s
+        self.speed_pps_max = args.speed_max  # final speed, pix/s
+        self.num_particles=args.num_particles # at any one time
         self.particle_count=0
+        self.t_total = args.total_time
+
+
 
         self.particles=[]
         for i in range(self.num_particles):
-            p=self.particle(width=width,height=height,time=0)
+            p=self.particle(width=width,height=height,time=0,radius=self.radius,speed_min=self.speed_pps_min,speed_max=self.speed_pps_max)
             self.particles.append(p)
             self.particle_count+=1
 
         # computed values below here
         # self.t_total = 4 * np.pi * self.radius * self.cycles / self.speed_pps
-        self.t_total = particles.TOTAL_TIME
         # t_total=cycles*period
         self.times = np.arange(0, self.t_total, self.dt)
         # constant speed
         self.w = width
         self.h = height
-        self.d: int = int(self.dot_sigma * 3)  # distance to bother creating gray levels
         self.frame_number = 0
         self.out = None
         self.log = sys.stdout
@@ -69,7 +89,6 @@ class particles(): # the class name should be the same as the filename, like in 
         self.preview = preview
         self.pix_arr: np.ndarray = self.bg * np.ones((self.h, self.w), dtype=np.uint8)
         logger.info(f'speed(pixels/s): {self.speed_pps_min} to {self.speed_pps_max}\n'
-                    f'dot_sigma(pixels): {self.dot_sigma}\n'
                     f'radius(pixels): {self.radius}\n'
                     f'contrast(factor): {self.contrast}\n'
                     f'log_contrast(base_e): {np.log(self.contrast)}\n'
@@ -81,7 +100,7 @@ class particles(): # the class name should be the same as the filename, like in 
             cv2.resizeWindow(self.cv2name, self.w, self.h)
 
     class particle():
-        def __init__(self, width:int, height:int , time:float):
+        def __init__(self, width:int, height:int , time:float, radius:float, speed_min, speed_max):
             self.width=width
             self.height=height
             # generate particle on some edge, moving into the array with random velocity
@@ -104,11 +123,11 @@ class particles(): # the class name should be the same as the filename, like in 
 
 
             self.position=np.array([pos_x,pos_y])
-            self.speed=np.random.uniform(100,2000)
+            self.speed=np.random.uniform(speed_min,speed_max)
             self.velocity=np.array([self.speed*np.cos(angle_rad),self.speed*np.sin(angle_rad)])
-            self.radius=np.random.uniform(.25,.35)
             self.contrast=np.random.uniform(1.19,1.21) # right at threshold
             self.time=time
+            self.radius=radius
 
         def update(self,time:float):
             dt=time-self.time
@@ -145,7 +164,7 @@ class particles(): # the class name should be the same as the filename, like in 
         for p in self.particles:
             if p.is_out_of_bounds():
                 self.particles.remove(p)
-                newp=particles.particle(self.w,self.h,time)
+                newp=particles.particle(self.w,self.h,time,self.radius,self.speed_pps_min,self.speed_pps_max)
                 self.particles.append(newp)
                 self.particle_count+=1
                 # logger.info(f'made new particle {newp}')
@@ -168,7 +187,7 @@ class particles(): # the class name should be the same as the filename, like in 
 
 
 @njit
-def fill_dot(pix_arr: np.ndarray, x: float, y: float, fg: int, bg: int, dot_sigma: float):
+def fill_dot(pix_arr: np.ndarray, x: float, y: float, fg: int, bg: int, radius: float):
     """ Generates intensity values for the 'dot'
 
     :param pix_arr: the 2d pixel array to fill values to
@@ -177,10 +196,10 @@ def fill_dot(pix_arr: np.ndarray, x: float, y: float, fg: int, bg: int, dot_sigm
     :param d: square radius range to generate dot over
     :param fg: the foreground intensity (peak value) of center of dot
     :param bg: the background value outside of dot that we approach at edge of dot
-    :param dot_sigma: the sigma of Gaussian, i.e. radius of dot
+    :param radius: the sigma of Gaussian, i.e. radius of dot
     """
     x0, y0 = round(x), round(y)
-    d=int(dot_sigma * 5)
+    d=int(radius * 5)
 
     for iy in range(-d, +d):
         for ix in range(-d, +d):
@@ -190,7 +209,7 @@ def fill_dot(pix_arr: np.ndarray, x: float, y: float, fg: int, bg: int, dot_sigm
                 continue
             ddx, ddy = thisx - x, thisy - y  # distances of this pixel to float dot location
             dist2 = ddx * ddx + ddy * ddy  # square distance
-            v = 10 * np.exp(-dist2 / (dot_sigma * dot_sigma))  # gaussian normalized intensity value
+            v = 10 * np.exp(-dist2 / (radius * radius))  # gaussian normalized intensity value
             if v > 1: # make a disk, not a gaussian blob
                 v = 1
             elif v < .01:

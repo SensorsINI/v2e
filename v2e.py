@@ -25,6 +25,7 @@ from tqdm import tqdm
 import torch
 
 import v2ecore.desktop as desktop
+from v2ecore.base_synthetic_input import base_synthetic_input
 from v2ecore.v2e_utils import all_images, read_image, \
     check_lowpass, v2e_quit
 from v2ecore.v2e_utils import set_output_dimension
@@ -82,12 +83,12 @@ def get_args():
     # eval "$(register-python-argcomplete v2e.py)"
     argcomplete.autocomplete(parser)
 
-    args = parser.parse_args()
+    (args_namespace,other_args) = parser.parse_known_args() # change to known arguments so that synthetic input module can take arguments
     argline=''
     for a in sys.argv:
         argline=argline+' '+a
     logger.info(f'Command line: \n{argline}')
-    return args
+    return args_namespace,other_args
 
 
 def main():
@@ -102,7 +103,7 @@ def main():
             f'{e}: Gooey package GUI not available, using command line arguments. \n'
             f'You can try to install with "pip install Gooey"')
 
-    args = get_args()
+    (args,other_args) = get_args()
 
     # Set output width and height based on the arguments
     output_width, output_height = set_output_dimension(
@@ -129,15 +130,20 @@ def main():
                 classname=synthetic_input[synthetic_input.rindex('.')+1:]
             else:
                 classname=synthetic_input
-            synthetic_input_class = getattr(
+            synthetic_input_class:synthetic_input = getattr(
                 synthetic_input_module, classname)
-            synthetic_input_instance = synthetic_input_class(
+            synthetic_input_instance:base_synthetic_input = synthetic_input_class(
                 width=output_width, height=output_height,
-                preview=not args.no_preview)
+                preview=not args.no_preview, arg_list=other_args)
+
+            if not isinstance(synthetic_input_instance,base_synthetic_input):
+                logger.error(f'synthetic input instance of {synthetic_input} is of type {type(synthetic_input_instance)}, but it should be a sublass of synthetic_input;'
+                             f'there is no guarentee that it implements the necessary methods')
             synthetic_input_next_frame_method = getattr(
                 synthetic_input_class, 'next_frame')
             synthetic_input_total_frames_method = getattr(
                 synthetic_input_class, 'total_frames')
+
 
             srcNumFramesToBeProccessed=synthetic_input_instance.total_frames()
 
@@ -169,7 +175,7 @@ def main():
     # input file checking
     #  if (not input_file or not os.path.isfile(input_file)
     #      or not os.path.isdir(input_file)) \
-    #          and not synthetic_input:
+    #          and not base_synthetic_input:
     if (not synthetic_input):
         if not os.path.isfile(input_file) and not os.path.isdir(input_file):
             logger.error('input file {} does not exist'.format(input_file))
@@ -753,7 +759,7 @@ def main():
     sPerFrame = totalTime / num_frames if num_frames>0 else None
     throughputStr = (str(eng(framePerS)) + 'fr/s') \
         if framePerS > 1 else (str(eng(sPerFrame)) + 's/fr')
-    timestr ='done processing {} frames in {}s ({})\n see output folder {}'.format(num_frames,
+    timestr ='done processing {} frames in {}s ({})\n **************** see output folder {}'.format(num_frames,
             eng(totalTime),
             throughputStr,
             output_folder)
@@ -767,10 +773,10 @@ def main():
             eng(emulator.num_events_total / emulator.t_previous),
             eng(emulator.num_events_on / emulator.t_previous),
             eng(emulator.num_events_off / emulator.t_previous)))
-    logger.info(timestr)
     if totalTime>60:
         try:
             from plyer import notification
+            logger.info(f'generating desktop notification')
             notification.notify(title='v2e done', message=timestr, timeout=600)
         except Exception as e:
             logger.info(f'could not show notification: {e}')
@@ -779,11 +785,13 @@ def main():
     # suppress folder opening if it's not necessary
     if not args.skip_video_output and not args.no_preview:
         try:
+            logger.info(f'showing {output_folder} in desktop')
             desktop.open(os.path.abspath(output_folder))
         except Exception as e:
             logger.warning(
                 '{}: could not open {} in desktop'.format(e, output_folder))
-
+    logger.info(timestr)
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()

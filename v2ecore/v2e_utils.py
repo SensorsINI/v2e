@@ -85,11 +85,11 @@ class ImageFolderReader(object):
         return s
 
 
-def v2e_quit(code=None):
+def v2e_quit(code=0):
     try:
         quit(code)  # not defined in pydev console, e.g. running in pycharm
     finally:
-        sys.exit()
+        sys.exit(code)
 
 
 def make_output_folder(output_folder_base, suffix_counter,overwrite, unique_output_folder) -> str:
