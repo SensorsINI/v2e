@@ -346,13 +346,16 @@ See the [scripts folder](https://github.com/SensorsINI/v2e/blob/master/scripts) 
 ### Synthetic input
 
 There are also samples in the [scripts folder](https://github.com/SensorsINI/v2e/blob/master/scripts) of 
-python modules to generate synthetic input to v2e, e.g. [moving_dot.py](https://github.com/SensorsINI/v2e/blob/master/scripts/moving_dot.py)
+python modules to generate synthetic input to v2e, e.g. [particles.py](https://github.com/SensorsINI/v2e/blob/master/scripts/particles.py)
 
-You can specify moving_dot as the class that generates input frames using the command line option
+You can specify particles as the class that generates input frames to generate DVS events from using the command line option
 ````shell
-v2e --synthetic_input scripts.moving_dot ...
+v2e --synthetic_input scripts.particles ...
 ````
-See [moving_dot.py](https://github.com/SensorsINI/v2e/blob/master/scripts/moving_dot.py) for more information.
+You synthetic input class should subclass _base_synthetic_class.py_. You should override the constructor and the _next_frame()_ method.
+
+  * See [base_synthetic_input.py](https://github.com/SensorsINI/v2e/blob/master/scripts/base_synthetic_input.py) for more information.
+  * You can pass command line arguments into your class; see [particles.py](https://github.com/SensorsINI/v2e/blob/master/scripts/particles.py) for example.
 
 ## Model parameters
 

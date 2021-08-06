@@ -8,6 +8,7 @@
 # is encoded by the baseLogFrame which is initially at zero but increases to code the average of dot and background.
 # Then the low contrast of dot causes only a single ON event on first cycle
 import argparse
+import atexit
 
 import numpy as np
 import cv2
@@ -34,7 +35,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
     SPEED_MAX=1000
 
 
-    def __init__(self, width: int = 346, height: int = 260, avi_path: Optional[str] = None, preview=True,
+    def __init__(self, width: int = 346, height: int = 260, avi_path: Optional[str] = None, preview=False,
                  arg_list = None) -> None:
         """ Constructs moving-dot class to make frames for v2e
 
@@ -99,6 +100,11 @@ class particles(base_synthetic_input): # the class name should be the same as th
             cv2.namedWindow(self.cv2name, cv2.WINDOW_NORMAL)
             cv2.resizeWindow(self.cv2name, self.w, self.h)
 
+        atexit.register(self.cleanup)
+
+    def cleanup(self):
+        logger.info(f'particles() generated {self.particle_count} particles in {self.time}s')
+
     class particle():
         def __init__(self, width:int, height:int , time:float, radius:float, speed_min, speed_max):
             self.width=width
@@ -138,7 +144,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
             return self.position[0]<0 or self.position[0]>self.width or self.position[1]<0 or self.position[1]>self.height
 
         def draw(self, pix_arr):
-            bg=100
+            bg=base_synthetic_input.BACKGROUND
             fg= int(bg * self.contrast)  # foreground dot brightness
             fill_dot(pix_arr,self.position[0], self.position[1], fg, bg, self.radius)
 
@@ -172,7 +178,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
                 p.update(time)
                 p.draw(self.pix_arr)
 
-        if self.preview:
+        if self.preview and self.frame_number % 10 == 0:
             cv2.imshow(self.cv2name, self.pix_arr)
         if self.avi_path is not None:
             self.out.write(cv2.cvtColor(self.pix_arr, cv2.COLOR_GRAY2BGR))
