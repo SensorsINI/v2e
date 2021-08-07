@@ -777,7 +777,7 @@ def main():
         try:
             from plyer import notification
             logger.info(f'generating desktop notification')
-            notification.notify(title='v2e done', message=timestr, timeout=600)
+            notification.notify(title='v2e done', message=timestr)
         except Exception as e:
             logger.info(f'could not show notification: {e}')
 
