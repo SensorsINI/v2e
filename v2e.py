@@ -67,6 +67,8 @@ except Exception as e:
 
 
 def get_args():
+    """ proceses input arguments
+    :returns: (args_namespace,other_args,command_line) """
     parser = argparse.ArgumentParser(
         description='v2e: generate simulated DVS events from video.',
         epilog='Run with no --input to open file dialog', allow_abbrev=True,
@@ -84,11 +86,10 @@ def get_args():
     argcomplete.autocomplete(parser)
 
     (args_namespace,other_args) = parser.parse_known_args() # change to known arguments so that synthetic input module can take arguments
-    argline=''
+    command_line=''
     for a in sys.argv:
-        argline=argline+' '+a
-    logger.info(f'Command line: \n{argline}')
-    return args_namespace,other_args
+        command_line=command_line+' '+a
+    return (args_namespace,other_args,command_line)
 
 
 def main():
@@ -103,7 +104,10 @@ def main():
             f'{e}: Gooey package GUI not available, using command line arguments. \n'
             f'You can try to install with "pip install Gooey"')
 
-    (args,other_args) = get_args()
+    (args,other_args,command_line) = get_args()
+
+    # set input file
+    input_file = args.input
 
     # Set output width and height based on the arguments
     output_width, output_height = set_output_dimension(
@@ -111,11 +115,6 @@ def main():
         args.dvs128, args.dvs240, args.dvs346,
         args.dvs640, args.dvs1024,
         logger)
-
-
-    num_frames = 0
-    srcNumFramesToBeProccessed = 0
-    srcDurationToBeProcessed=float("NaN")
 
     # setup synthetic input classes and method
     synthetic_input = args.synthetic_input
@@ -159,8 +158,6 @@ def main():
             logger.error(f'{synthetic_input} method incorrect?: {e}')
             v2e_quit(1)
 
-    # set input file
-    input_file = args.input
 
     if synthetic_input is None and not input_file:
         try:
@@ -172,7 +169,36 @@ def main():
             logger.error(f'no input file specified and cannot show input file dialog; are you running without graphical display? ({e})')
             v2e_quit(1)
 
-    # input file checking
+
+    # Set output folder
+    output_folder = set_output_folder(
+        args.output_folder,
+        input_file,
+        args.unique_output_folder if not args.overwrite else False,
+        args.overwrite,
+        args.output_in_place
+        if (not synthetic_input and args.output_folder is None) else False,
+        logger)
+
+    # Writing the info file
+    infofile = write_args_info(args, output_folder)
+
+    fh = logging.FileHandler(infofile)
+    fh.setLevel(logging.INFO)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+
+    logger.info(f'Command line: \n{command_line}')
+
+
+
+    num_frames = 0
+    srcNumFramesToBeProccessed = 0
+    srcDurationToBeProcessed=float("NaN")
+
+   # input file checking
     #  if (not input_file or not os.path.isfile(input_file)
     #      or not os.path.isdir(input_file)) \
     #          and not base_synthetic_input:
@@ -185,15 +211,6 @@ def main():
                 logger.error(f'input folder {input_file} is empty')
                 v2e_quit(1)
 
-    # Set output folder
-    output_folder = set_output_folder(
-        args.output_folder,
-        input_file,
-        args.unique_output_folder if not args.overwrite else False,
-        args.overwrite,
-        args.output_in_place
-        if (not synthetic_input and args.output_folder is None) else False,
-        logger)
 
 
 
@@ -263,15 +280,6 @@ def main():
     if exposure_mode == ExposureMode.DURATION:
         dvsFps = 1. / exposure_val
 
-    # Writing the info file
-    infofile = write_args_info(args, output_folder)
-
-    fh = logging.FileHandler(infofile)
-    fh.setLevel(logging.INFO)
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
 
     time_run_started = time.time()
 

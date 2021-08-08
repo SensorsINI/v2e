@@ -119,13 +119,13 @@ class particles(base_synthetic_input): # the class name should be the same as th
                 pos_x=0 if edge==3 else width
             angle_rad=0
             if edge==1: #n
-                angle_rad=np.random.uniform(0,-np.pi)
+                angle_rad=np.random.uniform(np.pi/4,-.75*np.pi)
             elif edge==0: # s
-                angle_rad=np.random.uniform(0,np.pi)
+                angle_rad=np.random.uniform(np.pi/4,.75*np.pi)
             elif edge==3: # e
-                angle_rad=np.random.uniform(-np.pi/2,np.pi/2)
+                angle_rad=np.random.uniform(-np.pi/4,np.pi/4)
             elif edge==2: # w
-                angle_rad=np.random.uniform(np.pi/2,3*np.pi/2)
+                angle_rad=np.random.uniform(np.pi/4,3*np.pi/2-np.pi/4)
 
 
             self.position=np.array([pos_x,pos_y])
