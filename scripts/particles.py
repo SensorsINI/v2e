@@ -1,7 +1,10 @@
 # generates many linearly moving particles
 
 # use it like this:
-# v2e --leak_rate=0 --shot=0 --cutoff_hz=300 --sigma_thr=.05 --pos_thr=.2 --neg_thr=.2 --dvs_exposure duration .01 --output_folder "g:\Qsync\particles" --overwrite --dvs_aedat2=particles --output_width=346 --output_height=260 --batch=64 --disable_slomo --synthetic_input=scripts.particles --no_preview
+# v2e --leak_rate=0 --shot=0 --cutoff_hz=300 --sigma_thr=.08 --pos_thr=.15 --neg_thr=.15 \
+# --dvs_exposure duration .01 --output_folder particles-slightly-less-faint-fast-2-particles --unique_output --dvs_aedat2=particles \
+# --output_width=346 --output_height=260 --batch=64 --disable_slomo --synthetic_input=scripts.particles\
+# --total_time=3 --contrast=1.15 --radius=.3 --speed_min=1000 --speed_max=3000 --dt=100e-6 --num_particles=2
 
 # NOTE: There are nonintuitive effects of low contrast dot moving repeatedly over the same circle:
 # The dot initially makes events and then appears to disappear. The cause is that the mean level of dot

@@ -10,15 +10,8 @@ See [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6U
 Vote for [new v2e features](https://docs.google.com/forms/d/e/1FAIpQLSdJoIH3wBkPANWTng56VeXiItkh_fl5Lz3QwZIpQ6ut1AMFCw/viewform?usp=sf_link).
 
 ## News
-- 28 Aug 2021: Many improvements.
-  - Try [opening v2e in google colab](https://colab.research.google.com/drive/1czx-GJnx-UkhFVBbfoACLVZs8cYlcr_M?usp=sharing).  
-  - There are improved noise models of leak and shot noise. 
-    Both now model frozen log normal rate distributions; see the _--noise_rate_cov_decades_ option.
-    The leak noise events have timing jitter that matches observed jitter; see _--leak_jitter_fraction_ option.
-  - v2e models finite refractory period; see the _--refractory_period_ option
-  - _setup.py_ includes dependencies and now installs _v2e_ as a script to your conda environment to run from command line.
-  -  HDF output will also output the frames, to allow modeling of DAVIS cameras with APS+DVS output.
-- 19 Dec 2020: Added ability to generate input frames from python class. See [moving-dot.py](https://github.com/SensorsINI/v2e/blob/master/moving_dot.py) and command line argument --synthetic_input=<module_name>
+
+See [changelog](https://github.com/SensorsINI/v2e/blob/34a24c78ba6a42f809e5014a4015b8866aaad778/CHANGELOG.txt) for latest neww
 
 ## Contact
 Yuhuang Hu (yuhuang.hu@ini.uzh.ch)
@@ -127,7 +120,7 @@ usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
               [--vid_slomo VID_SLOMO] [--slomo_stats_plot] [-i INPUT]
               [--input_frame_rate INPUT_FRAME_RATE]
               [--input_slowmotion_factor INPUT_SLOWMOTION_FACTOR]
-              [--start_time START_TIME] [--stop_time STOP_TIME]
+              [--start_time START_TIME] [--stop_time STOP_TIME] [--crop CROP]
               [--synthetic_input SYNTHETIC_INPUT]
               [--dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]]
               [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
@@ -273,6 +266,10 @@ Input file handling:
   --stop_time STOP_TIME
                         Stop at this time in seconds in video. Use None to end
                         at end of source video.
+  --crop CROP           Crop input video by (left, right, top, bottom) pixels.
+                        E.g. CROP=(100,100,0,0) crops 100 pixels from left and
+                        right of input frames. CROP can also be specified as
+                        L,R,T,B without ()
 Synthetic input:
   --synthetic_input SYNTHETIC_INPUT
                         Input from class SYNTHETIC_INPUT that has methods
@@ -294,7 +291,8 @@ Output: DVS video:
                         		-dvs_exposure count 5000;
                         	area_count M N: frame ends when any area of N x N pixels fills with M events, e.g.
                         		-dvs_exposure area_count 500 64
-  --dvs_vid DVS_VID     Output DVS events as AVI video at frame_rate.
+  --dvs_vid DVS_VID     Output DVS events as AVI video at frame_rate. To
+                        suppress, supply argument None.
   --dvs_vid_full_scale DVS_VID_FULL_SCALE
                         Set full scale event count histogram count for DVS
                         videos to be this many ON or OFF events for full white
@@ -310,7 +308,7 @@ Output: DVS events:
   --dvs_aedat2 DVS_AEDAT2
                         Output DVS events as DAVIS346 camera AEDAT-2.0 event
                         file for jAER; one file for real and one file for v2e
-                        events.
+                        events. To suppress, supply argument None.
   --dvs_text DVS_TEXT   Output DVS events as text file with one event per line
                         [timestamp (float s), x, y, polarity (0,1)].
 Run with no --input to open file dialog
