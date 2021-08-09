@@ -26,6 +26,8 @@ To reproduce the experiments of the paper, please find [this repository](https:/
 
 ## Installation
 
+If you don't want to install, try [opening v2e in google colab](https://colab.research.google.com/drive/1czx-GJnx-UkhFVBbfoACLVZs8cYlcr_M?usp=sharing).
+
 ### Advice about conversion time
 We recommend running _v2e_ on a CUDA GPU or it will be very slow. 
 With a low-end GTX-1050, _v2e_ runs about 50-200X slower than real time 
