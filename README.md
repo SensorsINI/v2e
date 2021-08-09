@@ -11,7 +11,7 @@ Vote for [new v2e features](https://docs.google.com/forms/d/e/1FAIpQLSdJoIH3wBkP
 
 ## News
 
-See [changelog](https://github.com/SensorsINI/v2e/blob/34a24c78ba6a42f809e5014a4015b8866aaad778/CHANGELOG.txt) for latest neww
+See [changelog](https://github.com/SensorsINI/v2e/master/CHANGELOG.md) for latest news
 
 ## Contact
 Yuhuang Hu (yuhuang.hu@ini.uzh.ch)
