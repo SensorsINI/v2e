@@ -8,8 +8,8 @@
   - _setup.py_ includes dependencies and now installs _v2e_ as a script to your conda environment to run from command line.
   -  HDF output will also output the frames, to allow modeling of DAVIS cameras with APS+DVS output.
   - Added ability to generate input frames from python class.
-    See [base_synthetic_input.py](https://github.com/SensorsINI/v2e/blob/master/scripts/base_synthetic_input.py) and command line argument --synthetic_input=<module_name>.
-  - Synthetic input can recieve command line arguments; see [particle.py](https://github.com/SensorsINI/v2e/master/scripts/particles.py).
+    See [base_synthetic_input.py](https://github.com/SensorsINI/v2e/blob/master/v2ecore/base_synthetic_input.py) and command line argument --synthetic_input=<module_name>.
+  - Synthetic input can recieve command line arguments; see [particle.py](https://github.com/SensorsINI/v2e/blob/master/scripts/particles.py).
   - Desktop notification is  generated for long running conversion completion.
   - Ability to crop input frames added; see --crop_input option.
 ##    Bug fixes
