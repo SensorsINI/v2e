@@ -6,6 +6,7 @@ import atexit
 import os
 import random
 import math
+from typing import Optional
 
 import cv2
 import numpy as np
@@ -13,6 +14,7 @@ import logging
 import h5py
 
 import torch
+from numpy import ndarray
 
 from v2ecore.v2e_utils import checkAddSuffix
 from v2ecore.output.aedat2_output import AEDat2Output
@@ -36,6 +38,9 @@ class EventEmulator(object):
     - contact: zhehe@student.ethz.ch
     """
 
+    # frames that can be displayed
+    SHOWABLE_FRAMES=['new_frame','base_log_frame','lp_log_frame0','lp_log_frame1','diff_frame','cs_surround_frame','cs_diff_frame']
+
     def __init__(
             self,
             pos_thres=0.2,
@@ -57,7 +62,10 @@ class EventEmulator(object):
             show_dvs_model_state: str = None,
             output_width=None,
             output_height=None,
-            device="cuda"):
+            device="cuda",
+            cs_lambda_pixels=None,
+            cs_tau_ms=None
+    ):
         """
         Parameters
         ----------
@@ -88,14 +96,19 @@ class EventEmulator(object):
             width of output in pixels
         output_height: int,
             height of output in pixels
+        cs_lambda_pixels: float
+            space constant of surround in pixels, or None to disable surround inhibition
+        cs_tau_ms: float
+            time constant of lowpass filter of surround in ms or None to make surround 'instantaneous'
         """
 
         logger.info(
             "ON/OFF log_e temporal contrast thresholds: "
             "{} / {} +/- {}".format(pos_thres, neg_thres, sigma_thres))
 
-        self.base_log_frame = None
+        self.base_log_frame:Optional[np.ndarray] = None # memorized log intensity frame (on DVS pixel memory) from which everything else is computed.
         self.t_previous = None  # time of previous frame
+
 
         # torch device
         self.device = device
@@ -123,7 +136,7 @@ class EventEmulator(object):
         # output properties
         self.output_width = output_width
         self.output_height = output_height  # set on first frame
-        self.show_input = show_dvs_model_state
+        self.show_dvs_model_state = show_dvs_model_state
 
         # generate jax key for random process
         if seed != 0:
@@ -148,6 +161,19 @@ class EventEmulator(object):
         self.num_events_on = 0
         self.num_events_off = 0
         self.frame_counter = 0
+
+        # csdvs
+        self.cs_tau_ms=cs_tau_ms
+        self.cs_lambda_pixels=cs_lambda_pixels
+        self.surround_frame:Optional[np.ndarray]=None # surround frame state
+        self.cs_diff_frame:Optional[np.ndarray]=None
+        self.csdvs=False # flag to run diffusor
+        if self.cs_lambda_pixels is not None:
+            self.csdvs=True
+            # prepare kernels
+            h,w=3,3
+            self.cs_kernel=torch.tensor([])
+
 
         try:
             if dvs_h5:
@@ -176,6 +202,9 @@ class EventEmulator(object):
                 path = checkAddSuffix(path, '.txt')
                 logger.info('opening text DVS output file ' + path)
                 self.dvs_text = DVSTextOutput(path)
+
+
+
         except Exception as e:
             logger.error(f'Output file exception "{e}" (maybe you need to specify a supported DVS camera type?)')
             raise e
@@ -224,11 +253,28 @@ class EventEmulator(object):
                 pass
 
     def _init(self, first_frame_linear):
+        '''
+
+        Parameters
+        ----------
+        first_frame_linear: np.ndarray
+            the first frame, used to initialize data structures
+
+        Returns
+            None
+        -------
+
+        '''
         logger.debug(
             'initializing random temporal contrast thresholds '
             'from from base frame')
         # base_frame are memorized lin_log pixel values
+        self.diff_frame=None
         self.base_log_frame = lin_log(first_frame_linear)
+        self.surround_frame:Optional[np.ndarray]=None # surround frame state
+        if self.csdvs:
+            self.surround_frame=self.base_log_frame.clone().detach() # detach makes true clone decoupled from torch computation tree
+
 
         # initialize first stage of 2nd order IIR to first input
         self.lp_log_frame0 = self.base_log_frame.clone().detach()
@@ -344,7 +390,19 @@ class EventEmulator(object):
         self.pos_thres = self.pos_thres_nominal
         self.neg_thres = self.neg_thres_nominal
 
-    def _show(self, inp: np.ndarray):
+    def _show(self, inp: np.ndarray, name:str):
+        """
+        Shows the ndarray in window
+        Parameters
+        ----------
+        inp: the array
+        name: label for window
+
+        Returns
+        -------
+        None
+        """
+
         inp = np.array(inp.cpu().data.numpy())
         min = np.min(inp)
         norm = (np.max(inp) - min)
@@ -352,7 +410,7 @@ class EventEmulator(object):
             logger.warning('image is blank, max-min=0')
             norm = 1
         img = ((inp - min) / norm)
-        cv2.imshow(__name__+':'+self.show_input, img)
+        cv2.imshow(name, img)
         cv2.waitKey(30)
 
     def generate_events(self, new_frame, t_frame):
@@ -382,14 +440,14 @@ class EventEmulator(object):
         self.frame_counter += 1
 
         # convert into torch tensor
-        new_frame = torch.tensor(new_frame, dtype=torch.float32,
+        self.new_frame = torch.tensor(new_frame, dtype=torch.float64,
                                  device=self.device)
         # base_frame: the change detector input,
         #              stores memorized brightness values
         # new_frame: the new intensity frame input
         # log_frame: the lowpass filtered brightness values
         if self.base_log_frame is None:
-            self._init(new_frame)
+            self._init(self.new_frame)
             self.t_previous = t_frame
             return None
 
@@ -399,7 +457,7 @@ class EventEmulator(object):
                 "previous frame time={}".format(t_frame, self.t_previous))
 
         # lin-log mapping
-        log_new_frame = lin_log(new_frame)
+        log_new_frame = lin_log(self.new_frame)
 
         # compute time difference between this and the previous frame
         delta_time = t_frame - self.t_previous
@@ -410,7 +468,7 @@ class EventEmulator(object):
             # Time constant of the filter is proportional to
             # the intensity value (with offset to deal with DN=0)
             # limit max time constant to ~1/10 of white intensity level
-            inten01 = rescale_intensity_frame(new_frame.clone().detach())
+            inten01 = rescale_intensity_frame(self.new_frame.clone().detach()) # TODO assumes 8 bit
 
         # Apply nonlinear lowpass filter here.
         # Filter is a 1st order lowpass IIR (can be 2nd order)
@@ -445,26 +503,17 @@ class EventEmulator(object):
         # log intensity (brightness) change from memorized values is computed
         # from the difference between new input
         # (from lowpass of lin-log input) and the memorized value
-        diff_frame = self.lp_log_frame1 - self.base_log_frame
+        self.diff_frame = self.lp_log_frame1 - self.base_log_frame
 
-        if self.show_input:
-            if self.show_input == 'new_frame':
-                self._show(new_frame)
-            elif self.show_input == 'baseLogFrame':
-                self._show(self.base_log_frame)
-            elif self.show_input == 'lpLogFrame0':
-                self._show(self.lp_log_frame0)
-            elif self.show_input == 'lpLogFrame1':
-                self._show(self.lp_log_frame1)
-            elif self.show_input == 'diff_frame':
-                self._show(diff_frame)
-            else:
-                logger.error("don't know about showing {}".format(
-                    self.show_input))
+        for s in self.show_dvs_model_state:
+            f=getattr(self,s)
+            if f is None:
+                raise(f'{s} does not exist so we cannot show it')
+            self._show(f,s)
 
         # generate event map
         pos_evts_frame, neg_evts_frame = compute_event_map(
-            diff_frame, self.pos_thres, self.neg_thres)
+            self.diff_frame, self.pos_thres, self.neg_thres)
         num_iters = max(pos_evts_frame.max(), neg_evts_frame.max())
 
         # record final events update

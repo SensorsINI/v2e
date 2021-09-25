@@ -139,20 +139,22 @@ def set_output_folder(output_folder,
                       logger) -> str:
     """Set output folder in a single function.
 
-    :param output_folder: path to folder
-    :param input_file: the input file to v2e, used for output_in_place
+    :param output_folder: path to folder, if supplied, otherwise None
+    :param input_file: the input file to v2e, used for output_in_place. If folder, this folder is used.
     :param overwrite: set true to overwrite existing files in the folder
-    :param output_in_place: set True to output in input_file folder
+    :param output_in_place: set True to output in input_file or input folder folder
     :param logger: logger to report errors and warnings to
 
     :returns: the output folder path
     """
 
     if output_in_place:
-        parts = os.path.split(input_file)
-        output_folder = parts[0]
-        p=Path(output_folder)
-        logger.info(f'output_in_place==True so output_folder={p.absolute()}')
+        ip=Path(input_file)
+        if ip.is_file():
+            output_folder=ip.parent.absolute()
+        elif ip.is_dir():
+            output_folder=ip.absolute()
+        logger.info(f'output_in_place==True so output_folder={output_folder}')
     else:
         output_folder = make_output_folder(
             output_folder, 0, overwrite, unique_output_folder)

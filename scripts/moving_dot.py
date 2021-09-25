@@ -11,6 +11,8 @@ import numpy as np
 import cv2
 import os
 from tqdm import tqdm
+
+from v2ecore.base_synthetic_input import base_synthetic_input
 from v2ecore.v2e_utils import *
 import sys
 from typing import Tuple, Optional
@@ -46,11 +48,11 @@ def fill_dot(pix_arr: np.ndarray, x: float, x0: float, y: float, y0: float, d: i
             pix_arr[thisy][thisx] = v
 
 
-class moving_dot(): # the class name should be the same as the filename, like in Java
+class moving_dot(base_synthetic_input): # the class name should be the same as the filename, like in Java
     """ Generates moving dot
     """
 
-    def __init__(self, width: int = 346, height: int = 260, avi_path: Optional[str] = None, preview=True) -> None:
+    def __init__(self, width: int = 346, height: int = 260, avi_path: Optional[str] = None, preview=True, arg_list=None) -> None:
         """ Constructs moving-dot class to make frames for v2e
 
         :param width: width of frames in pixels

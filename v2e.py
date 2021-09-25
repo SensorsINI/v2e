@@ -176,8 +176,7 @@ def main():
         input_file,
         args.unique_output_folder if not args.overwrite else False,
         args.overwrite,
-        args.output_in_place
-        if (not synthetic_input and args.output_folder is None) else False,
+        args.output_in_place if (not synthetic_input) else False,
         logger)
 
     # Writing the info file
@@ -470,7 +469,9 @@ def main():
         output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2,
         dvs_text=dvs_text, show_dvs_model_state=args.show_dvs_model_state,
         output_width=output_width, output_height=output_height,
-        device=torch_device)
+        device=torch_device,
+        cs_lambda_pixels=args.cs_lambda_pixels, cs_tau_ms=args.cs_tau_ms,
+    )
 
     if args.dvs_params is not None:
         logger.warning(

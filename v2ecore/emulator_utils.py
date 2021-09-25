@@ -14,11 +14,11 @@ def lin_log(x, threshold=20):
     linear mapping + logarithmic mapping.
 
     :param x: float or ndarray
-        the input linear value in range 0-255
+        the input linear value in range 0-255 TODO assumes 8 bit
     :param threshold: float threshold 0-255
-        the threshold for transisition from linear to log mapping
+        the threshold for transition from linear to log mapping
     """
-    # converting x into np.float32.
+    # converting x into np.float64.
     if x.dtype is not torch.float64:  # note float64 to get rounding to work
         x = x.double()
 

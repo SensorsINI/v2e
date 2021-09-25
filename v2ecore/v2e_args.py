@@ -62,6 +62,11 @@ def v2e_args(parser):
     # else:
     #     prepend = ''
 
+    # center surround DVS emulation
+    csdvs=parser.add_argument_group('Center-Surround DVS')
+    csdvs.add_argument('--cs_lambda_pixels',type=float,default=None,help='space constant of surround in pixels, None to disable')
+    csdvs.add_argument('--cs_tau_ms',type=float,default=None,help='time constant of surround in ms, or None or zero to disable')
+
     # general arguments for output folder, overwriting, etc
     outGroupGeneral = parser.add_argument_group('Output: General')
     outGroupGeneral.add_argument(
@@ -75,7 +80,7 @@ def v2e_args(parser):
     outGroupGeneral.add_argument(
         "--output_in_place", default=True, type=str2bool,
         const=True, nargs='?',
-        help="store output files in same folder as source video.")
+        help="store output files in same folder as source video (in same folder as frames if using folder of frames).")
     outGroupGeneral.add_argument(
         "--overwrite", action="store_true",
         help="overwrites files in existing folder "
@@ -187,10 +192,9 @@ def v2e_args(parser):
              "default is 0 which means the random seed is not fixed.")
 
     modelGroup.add_argument(
-        "--show_dvs_model_state", type=str, default=None,
-        # default for good lighting, very low rate
-        help="one of new_frame baseLogFrame lpLogFrame0 lpLogFrame1 "
-             "diff_frame (without quotes)")
+        "--show_dvs_model_state", nargs='+', default=None,
+        help="one or more space separated list of of new_frame baseLogFrame lpLogFrame0  lpLogFrame1  "
+             "diff_frame (without quotes). Do not use =. E.g. --show_dvs_model_state new_frame baseLogFrame")
 
     # common camera types
     camGroup = modelGroup.add_argument_group(
@@ -294,7 +298,7 @@ def v2e_args(parser):
         "--crop", type=tuple_type, default=None,
         help="Crop input video by (left, right, top, bottom) pixels. E.g. CROP=(100,100,0,0) crops 100 pixels from left and right of input frames. CROP can also be specified as L,R,T,B without ()")
 
-# synthetic input handling
+    # synthetic input handling
     syntheticInputGroup = parser.add_argument_group('Synthetic input')
     syntheticInputGroup.add_argument(
         "--synthetic_input", type=str,
@@ -338,7 +342,7 @@ def v2e_args(parser):
     outGroupDvsVideo.add_argument(
         "--no_preview", action="store_true",
         help="disable preview in cv2 windows for faster processing.")
-# outGroupDvsVideo.add_argument(
+    # outGroupDvsVideo.add_argument(
     #     "--frame_rate", type=float,
     #     help="implies --dvs_exposure duration 1/framerate.  "
     #          "Equivalent frame rate of --dvs_vid output video; "
