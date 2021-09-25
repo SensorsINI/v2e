@@ -306,7 +306,7 @@ class SuperSloMo(object):
 
         # prepare preview
         if self.preview:
-            self.name = str(__file__)
+            self.name = os.path.basename(str(__file__))
             cv2.namedWindow(self.name, cv2.WINDOW_NORMAL)
 
         outputFrameCounter=0 # counts frames written out (input + interpolated)

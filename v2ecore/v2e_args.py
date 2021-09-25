@@ -64,8 +64,9 @@ def v2e_args(parser):
 
     # center surround DVS emulation
     csdvs=parser.add_argument_group('Center-Surround DVS')
-    csdvs.add_argument('--cs_lambda_pixels',type=float,default=None,help='space constant of surround in pixels, None to disable')
-    csdvs.add_argument('--cs_tau_ms',type=float,default=None,help='time constant of surround in ms, or None or zero to disable')
+    csdvs.add_argument('--cs_lambda_pixels',type=float,default=None,help='space constant of surround in pixels, None to disable.  This space constant lambda is sqrt(1/gR) where g is the transverse conductance and R is the lateral resistance.')
+    csdvs.add_argument('--cs_tau_p_ms',type=float,default=None,help='time constant of photoreceptor center in ms, or None or zero to disable. Defined as C/g where C is capacitance and g is the transverse conductance from photoreceptor to horizontal cell network. This time is'
+                                                                  'the time constant for global input to photoreceptors.')
 
     # general arguments for output folder, overwriting, etc
     outGroupGeneral = parser.add_argument_group('Output: General')
