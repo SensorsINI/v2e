@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="moving-dot synthetic" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="moving-dot synthetic" type="PythonConfigurationType" factoryName="Python" folderName="synthetic_input">
     <module name="v2e" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
