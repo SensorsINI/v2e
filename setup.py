@@ -39,7 +39,8 @@ setup(
         'numba',
         #  'Gooey',
         'matplotlib',
-        'plyer'
+        'plyer',
+        'screeninfo' # to get monitor sizes for cv2 window placement
     ],
 
     entry_points={

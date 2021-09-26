@@ -79,7 +79,7 @@ def v2e_args(parser):
              "only affects playback rate. ")
 
     outGroupGeneral.add_argument(
-        "--output_in_place", default=True, type=str2bool,
+        "--output_in_place", default=False, type=str2bool,
         const=True, nargs='?',
         help="store output files in same folder as source video (in same folder as frames if using folder of frames).")
     outGroupGeneral.add_argument(

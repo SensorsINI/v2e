@@ -133,7 +133,7 @@ def main():
                 synthetic_input_module, classname)
             synthetic_input_instance:base_synthetic_input = synthetic_input_class(
                 width=output_width, height=output_height,
-                preview=not args.no_preview, arg_list=other_args)
+                preview=not args.no_preview, arg_list=other_args, avi_path=os.path.join(args.output_folder,args.vid_orig)) #TODO output folder might not be unique, could write to first output folder
 
             if not isinstance(synthetic_input_instance,base_synthetic_input):
                 logger.error(f'synthetic input instance of {synthetic_input} is of type {type(synthetic_input_instance)}, but it should be a sublass of synthetic_input;'

@@ -148,6 +148,9 @@ def set_output_folder(output_folder,
     :returns: the output folder path
     """
 
+    if (not output_folder is None) and output_in_place:
+        raise ValueError(f'both output_folder={output_folder} and output_in_place={output_in_place} cannot be set true at same time')
+
     if output_in_place:
         ip=Path(input_file)
         if ip.is_file():

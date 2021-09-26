@@ -13,6 +13,7 @@ import cv2
 import h5py
 import numpy as np
 import torch  # https://pytorch.org/docs/stable/torch.html
+from screeninfo import get_monitors
 
 from v2ecore.emulator_utils import compute_event_map
 from v2ecore.emulator_utils import generate_shot_noise
@@ -111,6 +112,7 @@ class EventEmulator(object):
         self.t_previous = None  # time of previous frame
 
         self.dont_show_list = []  # list of frame types to not show and not print warnings for except for once
+        self.show_list = []  # list of named windows shown for internal states
         # torch device
         self.device = device
 
@@ -221,6 +223,17 @@ class EventEmulator(object):
         except Exception as e:
             logger.error(f'Output file exception "{e}" (maybe you need to specify a supported DVS camera type?)')
             raise e
+
+        self.screen_width=1600
+        self.screen_height=1200
+        try:
+            mi=get_monitors()
+            for m in mi:
+                if m.is_primary:
+                    self.screen_width=int(m.width)
+                    self.screen_height=int(m.height)
+        except Exception as e:
+            logger.warning(f'cannot get screen size for window placement: {e}')
 
         atexit.register(self.cleanup)
 
@@ -420,6 +433,10 @@ class EventEmulator(object):
             norm = 1
         img = ((inp - min) / norm)
         cv2.namedWindow(name)
+        if not name in self.show_list:
+            d=len(self.show_list)*100
+            cv2.moveWindow(name,int(self.screen_width/2)+d,int(self.screen_height/2)+d)
+            self.show_list.append(name)
         cv2.imshow(name, img)
         cv2.waitKey(30)
 
@@ -507,15 +524,17 @@ class EventEmulator(object):
                 alpha_h = actual_delta_time / (1e-3 * self.cs_tau_h_ms)
                 p_ten = torch.unsqueeze(torch.unsqueeze(self.lp_log_frame1, 0), 0)
                 h_ten = torch.unsqueeze(torch.unsqueeze(self.cs_surround_frame, 0), 0)
+                padding=torch.nn.ReplicationPad2d(1)
                 for i in range(num_steps):
                     diff = p_ten - h_ten
                     p_term = alpha_p * diff
                     # For the conv2d, unfortunately the zero padding pulls down the border pixels,
-                    # so we subtract the mean first and then add it back later
-                    h_mean=torch.mean(h_ten)
-                    h_conv = torch.conv2d(h_ten-h_mean, self.cs_k_hh, padding='same')+h_mean
+                    # so we use replication padding to reduce this effect on border.
+                    # TODO check if possible to implement some form of open circuit resistor termination condition by correct padding
+                    h_conv = torch.conv2d(padding(h_ten), self.cs_k_hh)
                     h_term = alpha_h * h_conv
                     h_ten = h_ten + p_term + h_term
+                    pass
                 self.cs_surround_frame = torch.squeeze(h_ten)
 
         # Leak events: switch in diff change amp leaks at some rate
@@ -542,14 +561,15 @@ class EventEmulator(object):
         else:
             self.diff_frame=(self.lp_log_frame1 - self.cs_surround_frame) - self.base_log_frame
 
-        for s in self.show_dvs_model_state:
-            if not s in self.dont_show_list:
-                f = getattr(self, s, None)
-                if f is None:
-                    logger.error(f'{s} does not exist so we cannot show it')
-                    self.dont_show_list.append(s)
-                else:
-                    self._show(f, s)
+        if not self.show_dvs_model_state is None:
+            for s in self.show_dvs_model_state:
+                if not s in self.dont_show_list:
+                    f = getattr(self, s, None)
+                    if f is None:
+                        logger.error(f'{s} does not exist so we cannot show it')
+                        self.dont_show_list.append(s)
+                    else:
+                        self._show(f, s)
 
         # generate event map
         pos_evts_frame, neg_evts_frame = compute_event_map(

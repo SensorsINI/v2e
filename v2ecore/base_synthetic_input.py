@@ -1,6 +1,7 @@
 # superclass for v2e synthetic input
 
 import argparse
+import atexit
 
 import numpy as np
 import cv2
@@ -45,8 +46,18 @@ class base_synthetic_input(): # the class name should be the same as the filenam
         if self.preview:
             cv2.namedWindow(self.cv2name, cv2.WINDOW_NORMAL)
             cv2.resizeWindow(self.cv2name, self.width, self.height)
+        self.video_writer=None
+        if avi_path is not None:
+            # construct AVI video output writer now that we know the frame size
+            self.video_writer:video_writer = video_writer(
+                output_path=avi_path,
+                width=width,
+                height=height, frame_rate=30
+            )
+        atexit.register(self.cleanup)
 
- 
+
+
     def total_frames(self):
         """:returns: total number of frames"""
         return 0
@@ -60,9 +71,21 @@ class base_synthetic_input(): # the class name should be the same as the filenam
             If there are no more frames frame should return None.
             time is in float seconds.
         """
-
         return (self.pix_arr, self.time)
 
+    def write_video_frame(self,frame=None):
+        """ writes the current self.pix_array to video output file as source frames
+        :param frame
+            the frame, or None to write self.pix_arr
+        :returns: None
+        """
+        self.video_writer.write(
+            cv2.cvtColor(frame if frame is not None else self.pix_arr, cv2.COLOR_GRAY2BGR))
+
+    def cleanup(self):
+        if self.video_writer is not None:
+            logger.info(f'closing AVI output file {self.avi_path}')
+            self.video_writer.release()
 
 
 
