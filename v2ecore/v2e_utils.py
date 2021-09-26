@@ -285,7 +285,7 @@ def video_writer(output_path, height, width,
                 fourcc,
                 frame_rate,
                 (width, height))
-    logger.debug(
+    logger.info(
         'opened {} with {} https://www.fourcc.org/ codec, {}fps, '
         'and ({}x{}) size'.format(
             output_path, OUTPUT_VIDEO_CODEC_FOURCC, frame_rate,

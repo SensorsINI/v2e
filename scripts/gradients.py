@@ -118,17 +118,27 @@ class gradients(base_synthetic_input):  # the class name should be the same as t
 
     def im_function(self, y, x, t):
         # compute high and low pixel values for contrast between high and low and average equal background
+        # makes a triangular bump that moves to right. There is a sharp rectangular edge in front of the bump to test high spatial frequencies.
+
         low = (self.bg * 2) / (self.contrast + 1)
         high = self.contrast * low
         diff = high - low
         w2 = (self.bump_width*self.w) / 2
-        p = w2 + t * self.speed_pps
+        p = w2 + t * self.speed_pps # center of bump location
+        p2=p+w2*2 # center of sharp edges
         g = np.ones((self.h, self.w)) * low
         x = np.squeeze(x)
+        # left side of bump
         ind=(x > p - w2) & (x < p)
         g[:, ind] = high + (-diff / w2) * (p-x[ind])
+        # right side of bump
         ind= (x <= p + w2) & (x >= p)
         g[:,ind] = high + (-diff / w2) * (x[ind]-p)
+
+        #square wave
+        ind= (x >p2) & (x <= p2+10)
+        g[:,ind] = high
+
         return np.uint8(g)
 
 
