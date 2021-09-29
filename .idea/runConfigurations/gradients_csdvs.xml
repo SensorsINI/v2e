@@ -13,7 +13,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/v2e.py" />
-    <option name="PARAMETERS" value="--leak_rate=0 --shot=0 --cutoff_hz=300 --sigma_thr=.05 --dvs_params clean --dvs_exposure duration .01 --output_folder=&quot;output/gradients-csdvs&quot; --overwrite --dvs_aedat2=gradients --output_width=346 --output_height=260 --batch=64 --disable_slomo --vid_orig=bump.avi --synthetic_input=scripts.gradients --cs_lambda=5 --cs_tau_p_ms=10" />
+    <option name="PARAMETERS" value="--leak_rate=0 --shot=0 --cutoff_hz=300 --sigma_thr=.05 --dvs_params clean --dvs_exposure duration .01 --output_folder=&quot;output/gradients-csdvs&quot; --overwrite --dvs_aedat2=gradients --output_width=346 --output_height=260 --batch=64 --disable_slomo --vid_orig=bump.avi --show_dvs new_frame diff_frame cs_surround_frame --synthetic_input=scripts.gradients --cs_lambda=5 --cs_tau_p_ms=10" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />
