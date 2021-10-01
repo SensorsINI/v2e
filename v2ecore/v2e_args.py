@@ -53,20 +53,21 @@ def tuple_type(strings):
 
 
 def v2e_args(parser):
-    # check and add prefix if running script in subfolder
-    # dir_path = os.getcwd()
-    v2ecore_path=os.path.dirname(__file__)
-    prepend=''
-    # if dir_path.endswith('ddd'):
-    #     prepend = '../../'
-    # else:
-    #     prepend = ''
+    """
 
-    # center surround DVS emulation
-    csdvs=parser.add_argument_group('Center-Surround DVS')
-    csdvs.add_argument('--cs_lambda_pixels',type=float,default=None,help='space constant of surround in pixels, None to disable.  This space constant lambda is sqrt(1/gR) where g is the transverse conductance and R is the lateral resistance.')
-    csdvs.add_argument('--cs_tau_p_ms',type=float,default=None,help='time constant of photoreceptor center in ms, or None or zero to disable. Defined as C/g where C is capacitance and g is the transverse conductance from photoreceptor to horizontal cell network. This time is'
-                                                                  'the time constant for global input to photoreceptors.')
+    Parameters
+    ----------
+    parser
+        the argparse object to be populated with arguments
+
+    Returns
+    -------
+     the parser with all the standard v2e arguments
+
+    """
+    v2ecore_path=os.path.dirname(__file__)
+
+
 
     # general arguments for output folder, overwriting, etc
     outGroupGeneral = parser.add_argument_group('Output: General')
@@ -372,6 +373,13 @@ def v2e_args(parser):
     #      help="Accumulates DVS events to memory and writes final numpy data "
     #           "file with this name holding vector of events. "
     #           "WARNING: memory use is unbounded.")
+
+
+    # center surround DVS emulation
+    csdvs=parser.add_argument_group('Center-Surround DVS')
+    csdvs.add_argument('--cs_lambda_pixels',type=float,default=None,help='space constant of surround in pixels, None to disable.  This space constant lambda is sqrt(1/gR) where g is the transverse conductance and R is the lateral resistance.')
+    csdvs.add_argument('--cs_tau_p_ms',type=float,default=None,help='time constant of photoreceptor center in ms, or None or zero to disable. Defined as C/g where C is capacitance and g is the transverse conductance from photoreceptor to horizontal cell network. This time is'
+                                                                    'the time constant for global input to photoreceptors.')
 
     # # perform basic checks, however this fails if script adds
     # # more arguments later
