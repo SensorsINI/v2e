@@ -24,7 +24,8 @@ setup(
     author="Tobi Delbruck, Yuhuang Hu, Zhe He",
     author_email="yuhuang.hu@ini.uzh.ch",
 
-    packages=find_packages(include=['v2ecore', 'v2e.*']),
+    #  packages=find_packages(include=['v2ecore', 'v2e.*']),
+    packages=find_packages(),
     url='https://github.com/SensorsINI/v2e',
     scripts=["v2e.py"],
     install_requires=[
