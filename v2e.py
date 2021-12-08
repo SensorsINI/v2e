@@ -147,8 +147,7 @@ def main():
             srcNumFramesToBeProccessed=synthetic_input_instance.total_frames()
 
             logger.info(
-                f'successfully instanced {synthetic_input_instance} with'
-                'method {synthetic_input_next_frame_method}:'
+                f'successfully instanced {synthetic_input_instance} with method {synthetic_input_next_frame_method}:'
                 '{synthetic_input_module.__doc__}')
 
         except ModuleNotFoundError as e:

@@ -60,10 +60,10 @@ class moving_dot(base_synthetic_input): # the class name should be the same as t
         :param avi_path: folder to write video to, or None if not needed
         :param preview: set true to show the pix array as cv frame
         """
-        self.avi_path = avi_path  # to write AVI
+        super().__init__(width, height, avi_path, preview, arg_list)
         self.num_dots = 5  # number of dots, spaced around center
-        self.contrast: float = 1.50  # compare this with pos_thres and neg_thres and sigma_thr, e.g. use 1.2 for dot to be 20% brighter than backgreound
-        self.bg: int = 100  # background gray level in range 0-255
+        self.contrast: float = 3  # compare this with pos_thres and neg_thres and sigma_thr, e.g. use 1.2 for dot to be 20% brighter than backgreound
+        self.bg: int = 5  # background gray level in range 0-255
         self.dt = 30e-6  # frame interval sec
         self.radius = 100  # of circular motion of dot
         self.dot_sigma: float = 1  # gaussian sigma of dot in pixels
@@ -85,7 +85,6 @@ class moving_dot(base_synthetic_input): # the class name should be the same as t
         self.d: int = int(self.dot_sigma * 3)  # distance to bother creating gray levels
         self.fps = 60
         self.frame_number = 0
-        self.out = None
         self.log = sys.stdout
         self.cv2name = 'moving-dot'
         self.codec = 'HFYU'
@@ -120,7 +119,7 @@ class moving_dot(base_synthetic_input): # the class name should be the same as t
         """
         if self.frame_number >= len(self.times):
             if self.avi_path is not None:
-                self.out.release()
+                self.video_writer.release()
             cv2.destroyAllWindows()
             logger.info('finished after {} frames'.format(self.frame_number))
             return None, self.times[-1]
@@ -155,7 +154,7 @@ class moving_dot(base_synthetic_input): # the class name should be the same as t
         if self.preview:
             cv2.imshow(self.cv2name, pix_arr)
         if self.avi_path is not None:
-            self.out.write(cv2.cvtColor(pix_arr, cv2.COLOR_GRAY2BGR))
+            self.video_writer.write(cv2.cvtColor(pix_arr, cv2.COLOR_GRAY2BGR))
         if self.preview and self.frame_number % 50 == 0:
             k = cv2.waitKey(1)
             if k == ord('x'):

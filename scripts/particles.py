@@ -59,7 +59,6 @@ class particles(base_synthetic_input): # the class name should be the same as th
         args=parser.parse_args(arg_list)
 
 
-        self.avi_path = avi_path  # to write AVI
         self.contrast: float = args.contrast  # compare this with pos_thres and neg_thres and sigma_thr, e.g. use 1.2 for dot to be 20% brighter than backgreound
         self.dt = args.dt  # frame interval sec
         self.radius: float = args.radius  # gaussian sigma of dot in pixels
