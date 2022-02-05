@@ -2,7 +2,10 @@
 
 Python torch + opencv code to go from conventional stroboscopic video frames with low frame rate into realistic synthetic DVS event streams with much higher effective timing precision. v2e includes finite intensity-depenedent photoreceptor bandwidth, Gaussian pixel to pixel event threshold variation, and noise 'leak' events.
 
-See the [v2e home page](https://sites.google.com/view/video2events/home) for videos and further information.
+See the [v2e home page](https://sites.google.com/view/video2events/home) for videos and further information. 
+
+Our paper (below) about _v2e_ **debunks incorrect assertions about event cameras that pervade the current computer vision literature.**
+
 See [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6UylAdxg5O1ko_GaIXz7wo?usp=sharing) for sample input files.
 
 ![v2e-tennis-example](media/v2e-tennis-split-screen.gif)
