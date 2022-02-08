@@ -49,11 +49,14 @@ class base_synthetic_input(): # the class name should be the same as the filenam
         self.video_writer=None
         if avi_path is not None:
             # construct AVI video output writer now that we know the frame size
+            if not avi_path.endswith('avi'):
+                avi_path=avi_path+'.avi'
             self.video_writer:video_writer = video_writer(
                 output_path=avi_path,
                 width=width,
                 height=height, frame_rate=30
             )
+            logger.info(f'Writing synthetic input frame video to {avi_path}')
         atexit.register(self.cleanup)
 
 

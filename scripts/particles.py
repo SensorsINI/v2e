@@ -102,7 +102,6 @@ class particles(base_synthetic_input): # the class name should be the same as th
             cv2.namedWindow(self.cv2name, cv2.WINDOW_NORMAL)
             cv2.resizeWindow(self.cv2name, self.w, self.h)
 
-        atexit.register(self.cleanup)
 
     def cleanup(self):
         logger.info(f'particles() generated {self.particle_count} particles in {self.time}s')

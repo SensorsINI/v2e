@@ -1,10 +1,8 @@
 # generates barberpole illusion
 
 # use it like this:
-# v2e --leak_rate=0 --shot=0 --cutoff_hz=300 --sigma_thr=.08 --pos_thr=.15 --neg_thr=.15 \
-# --dvs_exposure duration .01 --output_folder particles-slightly-less-faint-fast-2-particles --unique_output --dvs_aedat2=particles \
-# --output_width=346 --output_height=260 --batch=64 --disable_slomo --synthetic_input=scripts.particles\
-# --total_time=3 --contrast=1.15 --radius=.3 --speed_min=1000 --speed_max=3000 --dt=100e-6 --num_particles=2
+# v2e  --output_folder gradients --unique_output --dvs_aedat2=gradients \
+# --output_width=346 --output_height=260 --batch=64 --disable_slomo --synthetic_input=scripts.gradients
 
 import argparse
 import atexit
@@ -37,7 +35,7 @@ class gradients(base_synthetic_input):  # the class name should be the same as t
         :param avi_path: folder to write video to, or None if not needed
         :param preview: set true to show the pix array as cv frame
         """
-        super().__init__(width, height, avi_path, preview, arg_list)
+        super().__init__(width, height, avi_path,  preview, arg_list)
         parser = argparse.ArgumentParser(arg_list)
         parser.add_argument('--contrast', type=float, default=gradients.CONTRAST)
         parser.add_argument('--total_time', type=float, default=gradients.TOTAL_TIME)
