@@ -23,7 +23,7 @@ from v2ecore.emulator_utils import rescale_intensity_frame
 from v2ecore.emulator_utils import subtract_leak_current
 from v2ecore.output.ae_text_output import DVSTextOutput
 from v2ecore.output.aedat2_output import AEDat2Output
-from v2ecore.v2e_utils import checkAddSuffix
+from v2ecore.v2e_utils import checkAddSuffix, v2e_quit
 
 # import rosbag # not yet for python 3
 
@@ -433,7 +433,9 @@ class EventEmulator(object):
             cv2.moveWindow(name,int(self.screen_width/2)+d,int(self.screen_height/2)+d)
             self.show_list.append(name)
         cv2.imshow(name, img)
-        cv2.waitKey(30)
+        k=cv2.waitKey(30)
+        if k==27 or k==ord('x'):
+            v2e_quit()
 
     def generate_events(self, new_frame, t_frame):
         """Compute events in new frame.

@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 import torchvision.transforms as transforms
 
-from v2ecore.v2e_utils import video_writer
+from v2ecore.v2e_utils import video_writer, v2e_quit
 import v2ecore.dataloader as dataloader
 import v2ecore.model as model
 
@@ -458,7 +458,9 @@ class SuperSloMo(object):
                             cv2.resizeWindow(self.name, 800, 600)
                             self.preview_resized = True
                         # wait minimally since interp takes time anyhow
-                        cv2.waitKey(1)
+                        k=cv2.waitKey(1)
+                        if k==27 or k==ord('x'):
+                            v2e_quit()
                 # Set counter accounting for batching of frames
                 inputFrameCounter += num_batch_frames # batch_size-1 because we repeat frame1 as frame0
                 outputFrameCounter += numOutputFramesThisBatch # batch_size-1 because we repeat frame1 as frame0

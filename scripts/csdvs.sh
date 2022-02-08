@@ -19,7 +19,19 @@ dt=.001
 
 # cloudy sky
 seq=cloudy-sky
+stop=5
 input=input/CloudySky_Slomo.mp4
-#v2e --input=$input --disable_slomo --cs_lambda_pixels=$lambda --cs_tau_p_ms=$tau --output_folder=output/$seq-csdvs-l$lambda-t$tau --pos_thr=0.2 --neg_thr=0.2 --sigma_thr=0.02 --cutoff_hz=100 --leak_rate_hz=0 --vid_orig=inten --dvs_vid=csdvs --unique_output --dvs_aedat2=csdvs --output_width=346 --output_height=260 --batch=1 --disable_slomo --dvs_exposure=source
-v2e --input=$input --disable_slomo --output_folder=output/$seq-dvs --pos_thr=0.2 --neg_thr=0.2 --sigma_thr=0.02 --cutoff_hz=100 --leak_rate_hz=0 --vid_orig=inten --dvs_vid=dvs --unique_output --dvs_aedat2=dvs --output_width=346 --output_height=260 --batch=1 --disable_slomo --synthetic_input=scripts.spots --dt=$dt --freq=20 --contrast=1.5 --radius=80 --dvs_exposure=source
+#v2e --output_folder=output/$seq-dvs --stop=$stop --input=$input --input_slowmotion_factor=10 --disable_slomo  --pos_thr=0.2 --neg_thr=0.2 --sigma_thr=0.02 --cutoff_hz=100 --leak_rate_hz=0 --vid_orig=inten --dvs_vid=dvs --unique_output --dvs_aedat2=dvs --dvs346  --dvs_exposure=source
+#v2e --output_folder=output/$seq-csdvs --stop=$stop --input=$input --input_slowmotion_factor=10 --disable_slomo --cs_lambda_pixels=$lambda --cs_tau_p_ms=$tau  --pos_thr=0.2 --neg_thr=0.2 --sigma_thr=0.02 --cutoff_hz=100 --leak_rate_hz=0 --vid_orig=inten --dvs_vid=csdvs --unique_output --dvs_aedat2=dvs --dvs346  --dvs_exposure=source
 
+# flicker
+seq=flicker
+start=3
+stop=10
+input=input/flicker.mp4
+lambda=10
+tau=2
+
+# --input_slowmotion_factor=10
+v2e --output_folder=output/$seq-dvs --start=$start --stop=$stop --input=$input --vid_orig=$seq-input --disable_slomo  --pos_thr=0.2 --neg_thr=0.2 --sigma_thr=0.02 --cutoff_hz=100 --leak_rate_hz=0 --dvs_vid=dvs --unique_output --dvs_aedat2=dvs --dvs346  --dvs_exposure=source
+v2e --output_folder=output/$seq-csdvs --start=$start --stop=$stop --input=$input  --vid_orig=$seq-input --disable_slomo --cs_lambda_pixels=$lambda --cs_tau_p_ms=$tau  --pos_thr=0.2 --neg_thr=0.2 --sigma_thr=0.02 --cutoff_hz=100 --leak_rate_hz=0 --dvs_vid=csdvs --unique_output --dvs_aedat2=dvs --dvs346  --dvs_exposure=source

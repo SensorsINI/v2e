@@ -10,7 +10,7 @@ from enum import Enum
 from numba import jit, njit
 
 from v2ecore.emulator import EventEmulator
-from v2ecore.v2e_utils import video_writer, read_image, checkAddSuffix
+from v2ecore.v2e_utils import video_writer, read_image, checkAddSuffix, v2e_quit
 from v2ecore.v2e_utils import hist2d_numba_seq
 
 logger = logging.getLogger(__name__)
@@ -359,7 +359,9 @@ class EventRenderer(object):
                     if not self.preview_resized:
                         cv2.resizeWindow(name, 800, 600)
                         self.preview_resized = True
-                    cv2.waitKey(30)  # 30 hz playback
+                    k=cv2.waitKey(30)
+                    if k==27 or k==ord('x'):
+                        v2e_quit()
 
         return returnedFrames
 

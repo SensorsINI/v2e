@@ -457,6 +457,9 @@ def main():
                         .format(eng(dvsFps), eng(1 / dvsFps),
                                 dvsNumFrames, eng(dvsDuration),
                                 eng(dvsPlaybackDuration)))
+        elif exposure_mode==ExposureMode.SOURCE:
+            logger.info(f'v2e DVS video will have constant-duration frames \n'
+                        f'at the source video {eng(srcFps)} fps (accumulation time {eng(srcFrameIntervalS)}s)')
         else:
             logger.info(
                 'v2e DVS video will have constant-count '
@@ -521,7 +524,7 @@ def main():
             if len(events) > 0 and not args.skip_video_output:
                 eventRenderer.render_events_to_frames(
                     events, height=output_height, width=output_width)
-    else:  # file input
+    else:  # video file folder or (avi/mp4) file input
         # timestamps of DVS start at zero and end with
         # span of video we processed
         srcVideoRealProcessedDuration = (stop_time-start_time) / \
@@ -643,6 +646,9 @@ def main():
                     inputVideoFrame = cv2.cvtColor(
                         inputVideoFrame, cv2.COLOR_BGR2GRAY)  # much faster
 
+                    # TODO add vid_orig output if not using slomo
+
+
                 # save frame into numpy records
                 save_path = os.path.join(
                     source_frames_dir, str(inputFrameIndex).zfill(8) + ".npy")
@@ -653,7 +659,7 @@ def main():
             with TemporaryDirectory() as interpFramesFolder:
                 interpTimes = None
                 # make input to slomo
-                if auto_timestamp_resolution or slowdown_factor != NO_SLOWDOWN:
+                if slomo is not None and (auto_timestamp_resolution or slowdown_factor != NO_SLOWDOWN):
                     # interpolated frames are stored to tmpfolder as
                     # 1.png, 2.png, etc
 
