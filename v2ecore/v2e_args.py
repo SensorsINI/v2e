@@ -136,8 +136,8 @@ def v2e_args(parser):
     modelGroup.add_argument(
         "--dvs_params", type=str, default=None,
         help="Easy optional setting of parameters for DVS model:"
-             "None, 'clean', 'noisy'; 'clean' turns off noise and "
-             "makes threshold variation zero. 'noisy' sets "
+             "None, 'clean', 'noisy'; 'clean' turns off noise, sets unlimited bandwidth and "
+             "makes threshold variation small. 'noisy' sets "
              "limited bandwidth and adds leak events and shot noise."
              "This option by default will disable user set "
              "DVS parameters. To use custom DVS paramters, "
@@ -324,10 +324,11 @@ def v2e_args(parser):
              "\n\tduration time: Use fixed accumulation time in seconds, e.g. "
              "\n\t\t--dvs_exposure duration .005; "
              "\n\tcount n: Count n events per frame,e.g."
-             "\n\t\t-dvs_exposure count 5000;"
+             "\n\t\t--dvs_exposure count 5000;"
              "\n\tarea_count M N: frame ends when any area of N x N "
              "pixels fills with M events, e.g."
-             "\n\t\t-dvs_exposure area_count 500 64")
+             "\n\t\t-dvs_exposure area_count 500 64"
+             "\n\tsource: each DVS frame is from one source frame (slomo or original, depending on if slomo is used)")
     outGroupDvsVideo.add_argument(
         "--dvs_vid", type=str, default="dvs-video.avi",
         help="Output DVS events as AVI video at frame_rate. To suppress, supply argument None.")
@@ -377,9 +378,15 @@ def v2e_args(parser):
 
     # center surround DVS emulation
     csdvs=parser.add_argument_group('Center-Surround DVS')
-    csdvs.add_argument('--cs_lambda_pixels',type=float,default=None,help='space constant of surround in pixels, None to disable.  This space constant lambda is sqrt(1/gR) where g is the transverse conductance and R is the lateral resistance.')
-    csdvs.add_argument('--cs_tau_p_ms',type=float,default=None,help='time constant of photoreceptor center in ms, or None or zero to disable. Defined as C/g where C is capacitance and g is the transverse conductance from photoreceptor to horizontal cell network. This time is'
-                                                                    'the time constant for global input to photoreceptors.')
+    csdvs.add_argument('--cs_lambda_pixels',type=float,default=None,help='space constant of surround in pixels, None to disable.  '
+                                                                         'This space constant lambda is sqrt(1/gR) '
+                                                                         'where g is the transverse conductance and R is the lateral resistance.')
+    csdvs.add_argument('--cs_tau_p_ms',type=float,default=None,help='time constant of photoreceptor center in ms, or 0 to disable for instantaneous surround. '
+                                                                    'Defined as C/g where C is capacitance and '
+                                                                    'g is the transverse conductance from photoreceptor to horizontal cell network. '
+                                                                    'This time is'
+                                                                    'the time constant for h cell diffuser network response '
+                                                                    'time to global input to photoreceptors.')
 
     # # perform basic checks, however this fails if script adds
     # # more arguments later
@@ -434,8 +441,11 @@ def v2e_check_dvs_exposure_args(args):
     except Exception:
         raise ValueError(
             "dvs_exposure first parameter '{}' must be 'duration','count', "
-            "or 'area_count'".format(dvs_exposure[0]))
+            " 'area_count' or 'source'".format(dvs_exposure[0]))
 
+    if exposure_mode == ExposureMode.SOURCE:
+        logger.info('DVS video exposure mode is SOURCE')
+        return exposure_mode,None,None
     if exposure_mode == ExposureMode.AREA_COUNT and not len(dvs_exposure) == 3:
         raise ValueError("area_event argument needs three parameters:  "
                          "'area_count M N'; frame ends when any area of M x M pixels "

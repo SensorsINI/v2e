@@ -100,7 +100,7 @@ class EventEmulator(object):
         cs_lambda_pixels: float
             space constant of surround in pixels, or None to disable surround inhibition
         cs_tau_ms: float
-            time constant of lowpass filter of surround in ms or None to make surround 'instantaneous'
+            time constant of lowpass filter of surround in ms or 0 to make surround 'instantaneous'
         """
 
         logger.info(
@@ -109,7 +109,7 @@ class EventEmulator(object):
 
         self.base_log_frame: Optional[
             np.ndarray] = None  # memorized log intensity frame (on DVS pixel memory) from which everything else is computed.
-        self.t_previous = None  # time of previous frame
+        self.t_previous = 0  # time of previous frame
 
         self.dont_show_list = []  # list of frame types to not show and not print warnings for except for once
         self.show_list = []  # list of named windows shown for internal states
@@ -166,6 +166,8 @@ class EventEmulator(object):
         self.frame_counter = 0
 
         # csdvs
+        self.cs_steps_warning_printed=False
+        self.cs_alpha_warning_printed=False
         self.cs_tau_p_ms = cs_tau_p_ms
         self.cs_lambda_pixels = cs_lambda_pixels
         self.cs_surround_frame: Optional[torch.Tensor] = None  # surround frame state
@@ -175,7 +177,7 @@ class EventEmulator(object):
             self.csdvs_enabled = True
             # prepare kernels
             h, w = 3, 3
-            self.cs_tau_h_ms = self.cs_lambda_pixels / (self.cs_lambda_pixels ** 2)
+            self.cs_tau_h_ms = 0 if (self.cs_tau_p_ms is None or self.cs_tau_p_ms==0) else self.cs_tau_p_ms / (self.cs_lambda_pixels ** 2)
             lat_res = 1 / (self.cs_lambda_pixels ** 2)
             trans_cond = 1 / self.cs_lambda_pixels
             self.cs_k_hh = torch.tensor([[[[0, 1, 0],
@@ -185,8 +187,8 @@ class EventEmulator(object):
                                            [0, 1, 0],
                                            [0, 0, 0]]]], dtype=torch.float32).to(self.device)
             logger.info(f'Center-surround parameters:\n\t'
-                        f'cs_tau_p_ms: {self.cs_tau_p_ms:.2f}\n\t'
-                        f'cs_tau_h_ms:  {self.cs_tau_h_ms:.2f}\n\t'
+                        f'cs_tau_p_ms: {self.cs_tau_p_ms}\n\t'
+                        f'cs_tau_h_ms:  {self.cs_tau_h_ms}\n\t'
                         f'cs_lambda_pixels:  {self.cs_lambda_pixels:.2f}\n\t'
                         )
 
@@ -296,13 +298,6 @@ class EventEmulator(object):
             'from from base frame')
         # base_frame are memorized lin_log pixel values
         self.diff_frame = None
-        self.base_log_frame = lin_log(first_frame_linear)
-
-        # initialize first stage of 2nd order IIR to first input
-        self.lp_log_frame0 = self.base_log_frame.clone().detach()
-        # 2nd stage is initialized to same,
-        # so diff will be zero for first frame
-        self.lp_log_frame1 = self.base_log_frame.clone().detach()
 
         # take the variance of threshold into account.
         if self.sigma_thres > 0:
@@ -429,8 +424,8 @@ class EventEmulator(object):
         min = np.min(inp)
         norm = (np.max(inp) - min)
         if norm == 0:
-            logger.warning('image is blank, max-min=0')
-            norm = 1
+            # logger.warning(f'debugging image {name} is blank, not rendering')
+            return
         img = ((inp - min) / norm)
         cv2.namedWindow(name)
         if not name in self.show_list:
@@ -457,6 +452,12 @@ class EventEmulator(object):
             x cordinate, sign of event].
             # TODO validate that this order of x and y is correctly documented
         """
+
+        # base_frame: the change detector input,
+        #              stores memorized brightness values
+        # new_frame: the new intensity frame input
+        # log_frame: the lowpass filtered brightness values
+
         # like a DAVIS, write frame into the file if it's HDF5
         if self.frame_h5_dataset is not None:
             # save frame data
@@ -466,29 +467,22 @@ class EventEmulator(object):
         # update frame counter
         self.frame_counter += 1
 
-        # convert into torch tensor
-        self.new_frame = torch.tensor(new_frame, dtype=torch.float64,
-                                      device=self.device)
-        # base_frame: the change detector input,
-        #              stores memorized brightness values
-        # new_frame: the new intensity frame input
-        # log_frame: the lowpass filtered brightness values
-        if self.base_log_frame is None:
-            self._init(self.new_frame)
-            self.t_previous = t_frame
-            return None
-
-        if t_frame <= self.t_previous:
+        if t_frame < self.t_previous:
             raise ValueError(
                 "this frame time={} must be later than "
                 "previous frame time={}".format(t_frame, self.t_previous))
 
+        # compute time difference between this and the previous frame
+        delta_time = t_frame - self.t_previous
+        self.t_previous = t_frame
+        # logger.debug('delta_time={}'.format(delta_time))
+
+        # convert into torch tensor
+        self.new_frame = torch.tensor(new_frame, dtype=torch.float64,
+                                      device=self.device)
         # lin-log mapping
         log_new_frame = lin_log(self.new_frame)
 
-        # compute time difference between this and the previous frame
-        delta_time = t_frame - self.t_previous
-        # logger.debug('delta_time={}'.format(delta_time))
 
         inten01 = None  # define for later
         if self.cutoff_hz > 0 or self.shot_noise_rate_hz > 0:  # will use later
@@ -503,6 +497,12 @@ class EventEmulator(object):
         # to store stages of cascaded first order RC filters.
         # Time constant of the filter is proportional to
         # the intensity value (with offset to deal with DN=0)
+        if self.base_log_frame is None:
+            # initialize first stage of 2nd order IIR to first input
+            self.lp_log_frame0 = log_new_frame
+            # 2nd stage is initialized to same,
+            # so diff will be zero for first frame
+            self.lp_log_frame1 = log_new_frame
         self.lp_log_frame0, self.lp_log_frame1 = low_pass_filter(
             log_new_frame=log_new_frame,
             lp_log_frame0=self.lp_log_frame0,
@@ -511,17 +511,31 @@ class EventEmulator(object):
             delta_time=delta_time,
             cutoff_hz=self.cutoff_hz)
 
-        # center surround computations
+        # surround computations by time stepping the diffuser
         if self.csdvs_enabled:
             if self.cs_surround_frame is None:
                 self.cs_surround_frame = self.lp_log_frame1.clone().detach()  # detach makes true clone decoupled from torch computation tree
             else:
-                min_tau = 1e-3 * min(self.cs_tau_p_ms, self.cs_tau_h_ms)
+                # we still need to simulate dynamics even if "instantaneous", unfortunately it will be really slow with Euler stepping and
+                # no gear-shifting
+                abs_min_tau_p=1e-8
+                tau_p= abs_min_tau_p if (self.cs_tau_p_ms is None or self.cs_tau_p_ms==0) else self.cs_tau_p_ms*1e-3
+                tau_h= abs_min_tau_p/(self.cs_lambda_pixels**2) if (self.cs_tau_h_ms is None or self.cs_tau_h_ms==0) else self.cs_tau_h_ms*1e-3
+                min_tau = min(tau_p, tau_h)
+                if min_tau<abs_min_tau_p:
+                    min_tau=abs_min_tau_p
                 NUM_STEPS_PER_TAU = 10
                 num_steps = int(np.ceil((delta_time / min_tau) * NUM_STEPS_PER_TAU))
                 actual_delta_time = delta_time / num_steps
-                alpha_p = actual_delta_time / (1e-3 * self.cs_tau_p_ms)
-                alpha_h = actual_delta_time / (1e-3 * self.cs_tau_h_ms)
+                if num_steps>1000 and not self.cs_steps_warning_printed:
+                    logger.warning(f'CSDVS timestepping of diffuser takes {num_steps} steps per frame for actual delta time {actual_delta_time:.3g}s')
+                    self.cs_steps_warning_printed=True
+
+                alpha_p = actual_delta_time / tau_p
+                alpha_h = actual_delta_time / tau_h
+                if alpha_p>.25 or alpha_h>.25:
+                    logger.warning(f'CSDVS update alpha (of IIR update) is large: alpha_p={alpha_p:.3f} alpha_h={alpha_h:.3f}')
+                    self.cs_alpha_warning_printed=True
                 p_ten = torch.unsqueeze(torch.unsqueeze(self.lp_log_frame1, 0), 0)
                 h_ten = torch.unsqueeze(torch.unsqueeze(self.cs_surround_frame, 0), 0)
                 padding=torch.nn.ReplicationPad2d(1)
@@ -531,7 +545,7 @@ class EventEmulator(object):
                     # For the conv2d, unfortunately the zero padding pulls down the border pixels,
                     # so we use replication padding to reduce this effect on border.
                     # TODO check if possible to implement some form of open circuit resistor termination condition by correct padding
-                    h_conv = torch.conv2d(padding(h_ten), self.cs_k_hh)
+                    h_conv = torch.conv2d(padding(h_ten.float()), self.cs_k_hh.float())
                     h_term = alpha_h * h_conv
                     h_ten = h_ten + p_term + h_term
                     pass
@@ -552,6 +566,15 @@ class EventEmulator(object):
                 pos_thres=self.pos_thres,
                 leak_jitter_fraction=self.leak_jitter_fraction,
                 noise_rate_array=self.noise_rate_array)
+
+        if self.base_log_frame is None:
+            self._init(new_frame)
+            if not self.csdvs_enabled:
+                self.base_log_frame = log_new_frame
+            else:
+                self.base_log_frame = self.lp_log_frame1 - self.cs_surround_frame
+
+            return None
 
         # log intensity (brightness) change from memorized values is computed
         # from the difference between new input
@@ -574,10 +597,13 @@ class EventEmulator(object):
         # generate event map
         pos_evts_frame, neg_evts_frame = compute_event_map(
             self.diff_frame, self.pos_thres, self.neg_thres)
-        num_iters = max(pos_evts_frame.max(), neg_evts_frame.max()) # max number of events in any pixel for this interframe
-        if num_iters>1000:
-            logger.warning(f'num_iter={num_iters}>1000 events')
+        max_num_events_any_pixel = max(pos_evts_frame.max(), neg_evts_frame.max()) # max number of events in any pixel for this interframe
+        if max_num_events_any_pixel>1000:
+            logger.warning(f'num_iter={max_num_events_any_pixel}>1000 events')
 
+        if max_num_events_any_pixel==0:
+            logger.warning('no events generated for frame, generating any noise for this frame with 1 iteration')
+            max_num_events_any_pixel=1
         # record final events update
         final_pos_evts_frame = torch.zeros(
             pos_evts_frame.shape, dtype=torch.int32, device=self.device)
@@ -604,11 +630,11 @@ class EventEmulator(object):
         # e.g. t_start=0, t_end=1, num_iters=2, i=0,1
         # ts=1*1/2, 2*1/2
         #  ts = self.t_previous + delta_time * (i + 1) / num_iters
-        ts_step = delta_time / num_iters
+        ts_step = delta_time / max_num_events_any_pixel
         ts = torch.linspace(
             start=self.t_previous + ts_step,
             end=t_frame,
-            steps=num_iters, dtype=torch.float32, device=self.device)
+            steps=max_num_events_any_pixel, dtype=torch.float32, device=self.device)
 
         # NOISE: add temporal noise here by
         # simple Poisson process that has a base noise rate
@@ -626,13 +652,13 @@ class EventEmulator(object):
             shot_on_cord, shot_off_cord = generate_shot_noise(
                 shot_noise_rate_hz=self.shot_noise_rate_hz,
                 delta_time=delta_time,
-                num_iters=num_iters,
+                num_iters=max_num_events_any_pixel,
                 shot_noise_inten_factor=self.SHOT_NOISE_INTEN_FACTOR,
                 inten01=inten01,
                 pos_thres_pre_prob=self.pos_thres_pre_prob,
                 neg_thres_pre_prob=self.neg_thres_pre_prob)
 
-        for i in range(num_iters):
+        for i in range(max_num_events_any_pixel):
             # events for this iteration
             events_curr_iter = None
 

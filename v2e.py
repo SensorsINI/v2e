@@ -40,6 +40,7 @@ from v2ecore.emulator import EventEmulator
 from v2ecore.v2e_utils import inputVideoFileDialog
 import logging
 import time
+from typing import Optional
 
 logging.basicConfig()
 root = logging.getLogger()
@@ -108,6 +109,26 @@ def main():
 
     # set input file
     input_file = args.input
+    synthetic_input:str = args.synthetic_input
+
+    if synthetic_input is None and not input_file:
+        try:
+            input_file = inputVideoFileDialog()
+            if input_file is None:
+                logger.info('no file selected, quitting')
+                v2e_quit()
+        except Exception as e:
+            logger.error(f'no input file specified and cannot show input file dialog; are you running without graphical display? ({e})')
+            v2e_quit(1)
+
+    # Set output folder
+    output_folder = set_output_folder(
+        args.output_folder,
+        input_file,
+        args.unique_output_folder if not args.overwrite else False,
+        args.overwrite,
+        args.output_in_place if (not synthetic_input) else False,
+        logger)
 
     # Set output width and height based on the arguments
     output_width, output_height = set_output_dimension(
@@ -117,10 +138,9 @@ def main():
         logger)
 
     # setup synthetic input classes and method
-    synthetic_input = args.synthetic_input
     synthetic_input_module = None
     synthetic_input_class = None
-    synthetic_input_instance = None
+    synthetic_input_instance:Optional[base_synthetic_input] = None
     synthetic_input_next_frame_method = None
     if synthetic_input is not None:
         try:
@@ -133,7 +153,7 @@ def main():
                 synthetic_input_module, classname)
             synthetic_input_instance:base_synthetic_input = synthetic_input_class(
                 width=output_width, height=output_height,
-                preview=not args.no_preview, arg_list=other_args, avi_path=os.path.join(args.output_folder,args.vid_orig)) #TODO output folder might not be unique, could write to first output folder
+                preview=not args.no_preview, arg_list=other_args, avi_path=os.path.join(output_folder,args.vid_orig)) #TODO output folder might not be unique, could write to first output folder
 
             if not isinstance(synthetic_input_instance,base_synthetic_input):
                 logger.error(f'synthetic input instance of {synthetic_input} is of type {type(synthetic_input_instance)}, but it should be a sublass of synthetic_input;'
@@ -158,25 +178,7 @@ def main():
             v2e_quit(1)
 
 
-    if synthetic_input is None and not input_file:
-        try:
-            input_file = inputVideoFileDialog()
-            if input_file is None:
-                logger.info('no file selected, quitting')
-                v2e_quit()
-        except Exception as e:
-            logger.error(f'no input file specified and cannot show input file dialog; are you running without graphical display? ({e})')
-            v2e_quit(1)
 
-
-    # Set output folder
-    output_folder = set_output_folder(
-        args.output_folder,
-        input_file,
-        args.unique_output_folder if not args.overwrite else False,
-        args.overwrite,
-        args.output_in_place if (not synthetic_input) else False,
-        logger)
 
     # Writing the info file
     infofile = write_args_info(args, output_folder)
@@ -758,6 +760,8 @@ def main():
     emulator.cleanup()
     if slomo is not None:
         slomo.cleanup()
+    if synthetic_input_instance is not None:
+        synthetic_input_instance.cleanup()
 
     if num_frames == 0:
         logger.error('no frames read from file')
