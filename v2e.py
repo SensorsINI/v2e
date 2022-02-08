@@ -111,7 +111,11 @@ def main():
     input_file = args.input
     synthetic_input:str = args.synthetic_input
 
-    if synthetic_input is None and not input_file:
+    if synthetic_input is not None and input_file is not None:
+        logger.error(f'Both input_file {input_file} and synthetic_input {synthetic_input} are specified - you can only specify one of them')
+        v2e_quit(1)
+
+    if synthetic_input is None and input_file is None:
         try:
             input_file = inputVideoFileDialog()
             if input_file is None:
