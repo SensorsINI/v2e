@@ -40,7 +40,7 @@ from v2ecore.emulator import EventEmulator
 from v2ecore.v2e_utils import inputVideoFileDialog
 import logging
 import time
-from typing import Optional
+from typing import Optional, Any
 
 logging.basicConfig()
 root = logging.getLogger()
@@ -223,6 +223,16 @@ def main():
     # frame timestamp
     input_start_time = args.start_time
     input_stop_time = args.stop_time
+    def is_float(element: Any) -> bool:
+        try:
+            float(element)
+            return True
+        except ValueError:
+            return False
+
+    if not input_start_time is None and not input_stop_time is None and is_float(input_start_time) and is_float(input_stop_time) and input_stop_time<=input_start_time:
+        logger.error(f'stop time {input_stop_time} must be later than start time {input_start_time}')
+        v2e_quit(1)
 
     input_slowmotion_factor: float = args.input_slowmotion_factor
     timestamp_resolution: float = args.timestamp_resolution
