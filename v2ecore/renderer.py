@@ -138,7 +138,7 @@ class EventRenderer(object):
             raise ValueError('height and width not set for output video')
 
         if self.output_path is None and self.video_output_file is str:
-            logger.warning('output_path is None; will not write DVS video')
+            logger.warning('output_folder is None; will not write DVS video')
 
         if self.output_path and type(self.video_output_file_name) is str:
             fn = checkAddSuffix(

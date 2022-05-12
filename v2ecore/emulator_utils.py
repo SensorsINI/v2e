@@ -180,7 +180,7 @@ def generate_shot_noise(
     rand01 = torch.rand(
         size=[num_iters]+list(inten01.shape),
         dtype=torch.float32,
-        device=inten01.device)  # draw samples
+        device=inten01.device)  # draw_frame samples
 
     # pre compute all the shot noise cords
     shot_on_cord = torch.gt(

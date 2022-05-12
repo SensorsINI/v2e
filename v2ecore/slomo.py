@@ -230,7 +230,7 @@ class SuperSloMo(object):
 
     def interpolate(self, source_frame_path, output_folder, frame_size):
         """Run interpolation. \
-            Interpolated frames will be saved in folder self.output_path.
+            Interpolated frames will be saved in folder self.output_folder.
 
         Parameters
         ----------

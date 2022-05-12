@@ -195,8 +195,12 @@ def v2e_args(parser):
 
     modelGroup.add_argument(
         "--show_dvs_model_state", nargs='+', default=None,
-        help="one or more space separated list of of new_frame baseLogFrame lpLogFrame0  lpLogFrame1  "
-             "diff_frame (without quotes). Do not use =. E.g. --show_dvs_model_state new_frame baseLogFrame")
+        help="one or more space separated list of of new_frame base_log_frame lp_log_frame0  lp_log_frame1  "
+             "diff_frame (and cs_surround_frame for CSDVS). Do not use '='. E.g. --show_dvs_model_state new_frame baseLogFrame")
+
+    modelGroup.add_argument(
+        "--save_dvs_model_state", action="store_true",
+        help="save the model states that are shown (cf --show_dvs_model_state) to avi files")
 
     # common camera types
     camGroup = modelGroup.add_argument_group(

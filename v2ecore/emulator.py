@@ -23,7 +23,7 @@ from v2ecore.emulator_utils import rescale_intensity_frame
 from v2ecore.emulator_utils import subtract_leak_current
 from v2ecore.output.ae_text_output import DVSTextOutput
 from v2ecore.output.aedat2_output import AEDat2Output
-from v2ecore.v2e_utils import checkAddSuffix, v2e_quit
+from v2ecore.v2e_utils import checkAddSuffix, v2e_quit, video_writer
 
 # import rosbag # not yet for python 3
 
@@ -42,16 +42,16 @@ class EventEmulator(object):
 
     def __init__(
             self,
-            pos_thres=0.2,
-            neg_thres=0.2,
-            sigma_thres=0.03,
-            cutoff_hz=0,
-            leak_rate_hz=0.1,
-            refractory_period_s=0,
-            shot_noise_rate_hz=0,  # rate in hz of temporal noise events
-            leak_jitter_fraction=0.1,
-            noise_rate_cov_decades=0.1,
-            seed=0,
+            pos_thres:float=0.2,
+            neg_thres:float=0.2,
+            sigma_thres:float=0.03,
+            cutoff_hz:float=0.0,
+            leak_rate_hz:float=0.1,
+            refractory_period_s:float=0.0,
+            shot_noise_rate_hz:float=0.0,  # rate in hz of temporal noise events
+            leak_jitter_fraction:float=0.1,
+            noise_rate_cov_decades:float=0.1,
+            seed:int=0,
             output_folder: str = None,
             dvs_h5: str = None,
             dvs_aedat2: str = None,
@@ -59,11 +59,12 @@ class EventEmulator(object):
             # change as you like to see 'baseLogFrame',
             # 'lpLogFrame', 'diff_frame'
             show_dvs_model_state: str = None,
-            output_width=None,
-            output_height=None,
-            device="cuda",
-            cs_lambda_pixels=None,
-            cs_tau_p_ms=None
+            save_dvs_model_state: bool = False,
+            output_width:int=None,
+            output_height:int=None,
+            device:str="cuda",
+            cs_lambda_pixels:float=None,
+            cs_tau_p_ms:float=None
     ):
         """
         Parameters
@@ -91,6 +92,8 @@ class EventEmulator(object):
         show_dvs_model_state: List[str],
             None or 'new_frame' 'baseLogFrame','lpLogFrame0','lpLogFrame1',
             'diff_frame' etc
+        output_folder: str
+            Path to optional model state videos
         output_width: int,
             width of output in pixels
         output_height: int,
@@ -108,7 +111,7 @@ class EventEmulator(object):
             "{} / {} +/- {}".format(pos_thres, neg_thres, sigma_thres))
 
         self.base_log_frame: Optional[
-            np.ndarray] = None  # memorized log intensity frame (on DVS pixel memory) from which everything else is computed.
+            np.ndarray] = None  # memorized lowpass filtered photoreceptor output log intensity frame (on DVS pixel memory) from which events are detected.
         self.t_previous = 0  # time of previous frame
 
         self.dont_show_list = []  # list of frame types to not show and not print warnings for except for once
@@ -137,9 +140,12 @@ class EventEmulator(object):
         self.SHOT_NOISE_INTEN_FACTOR = 0.25
 
         # output properties
+        self.output_folder=output_folder
         self.output_width = output_width
         self.output_height = output_height  # set on first frame
         self.show_dvs_model_state = show_dvs_model_state
+        self.save_dvs_model_state = save_dvs_model_state
+        self.video_writers:dict[str, video_writer]={} # list of avi file writers for saving model state videos
 
         # generate jax key for random process
         if seed != 0:
@@ -171,7 +177,6 @@ class EventEmulator(object):
         self.cs_tau_p_ms = cs_tau_p_ms
         self.cs_lambda_pixels = cs_lambda_pixels
         self.cs_surround_frame: Optional[torch.Tensor] = None  # surround frame state
-        self.cs_diff_frame: Optional[np.ndarray] = None
         self.csdvs_enabled = False  # flag to run center surround DVS emulation
         if self.cs_lambda_pixels is not None:
             self.csdvs_enabled = True
@@ -279,6 +284,10 @@ class EventEmulator(object):
                 self.dvs_text.close()
             except:
                 pass
+
+        for vw in self.video_writers:
+            logger.info(f'closing video AVI {vw}')
+            self.video_writers[vw].release()
 
     def _init(self, first_frame_linear):
         '''
@@ -409,7 +418,7 @@ class EventEmulator(object):
 
     def _show(self, inp: torch.Tensor, name: str):
         """
-        Shows the ndarray in window
+        Shows the ndarray in window, and save frame to avi file if self.save_dvs_model_state==True
         Parameters
         ----------
         inp: the array
@@ -427,12 +436,20 @@ class EventEmulator(object):
             # logger.warning(f'debugging image {name} is blank, not rendering')
             return
         img = ((inp - min) / norm)
-        cv2.namedWindow(name)
+        cv2.namedWindow(name, cv2.WINDOW_NORMAL)
         if not name in self.show_list:
             d=len(self.show_list)*100
             cv2.moveWindow(name,int(self.screen_width/2)+d,int(self.screen_height/2)+d)
             self.show_list.append(name)
+            if self.save_dvs_model_state:
+                fn = os.path.join(self.output_folder, name+'.avi')
+                vw=video_writer(fn,self.output_height,self.output_width)
+                self.video_writers[name]=vw
         cv2.imshow(name, img)
+        if self.save_dvs_model_state:
+            self.video_writers[name].write(
+                        cv2.cvtColor((img * 255).astype(np.uint8),
+                                     cv2.COLOR_GRAY2BGR))
         k=cv2.waitKey(30)
         if k==27 or k==ord('x'):
             v2e_quit()
@@ -529,7 +546,7 @@ class EventEmulator(object):
                 NUM_STEPS_PER_TAU = 10
                 num_steps = int(np.ceil((delta_time / min_tau) * NUM_STEPS_PER_TAU))
                 actual_delta_time = delta_time / num_steps
-                if num_steps>1000 and not self.cs_steps_warning_printed:
+                if num_steps>100 and not self.cs_steps_warning_printed:
                     logger.warning(f'CSDVS timestepping of diffuser takes {num_steps} steps per frame for actual delta time {actual_delta_time:.3g}s')
                     self.cs_steps_warning_printed=True
 
@@ -553,6 +570,15 @@ class EventEmulator(object):
                     pass
                 self.cs_surround_frame = torch.squeeze(h_ten)
 
+        if self.base_log_frame is None:
+            self._init(new_frame)
+            if not self.csdvs_enabled:
+                self.base_log_frame = self.lp_log_frame1
+            else:
+                self.base_log_frame = self.lp_log_frame1 - self.cs_surround_frame # init base log frame (input to diff) to DC value, TODO check might not be correct to avoid transient
+
+            return None # on first input frame we just setup the state of all internal nodes of pixels
+
         # Leak events: switch in diff change amp leaks at some rate
         # equivalent to some hz of ON events.
         # Actual leak rate depends on threshold for each pixel.
@@ -568,15 +594,6 @@ class EventEmulator(object):
                 pos_thres=self.pos_thres,
                 leak_jitter_fraction=self.leak_jitter_fraction,
                 noise_rate_array=self.noise_rate_array)
-
-        if self.base_log_frame is None:
-            self._init(new_frame)
-            if not self.csdvs_enabled:
-                self.base_log_frame = log_new_frame
-            else:
-                self.base_log_frame = self.lp_log_frame1 - self.cs_surround_frame
-
-            return None
 
         # log intensity (brightness) change from memorized values is computed
         # from the difference between new input

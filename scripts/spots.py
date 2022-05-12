@@ -16,28 +16,53 @@ from v2ecore.v2e_utils import *
 
 logger = logging.getLogger(__name__)
 
-def im_function(height, width, t, bg, contrast, radius, freq):  # make spots
+def draw_frame(height, width, t, bg, contrast, radius, freq):  # make spots
     gray = bg
     bright = gray * contrast
     dark = gray / contrast
-    sine = np.sin(t * freq * np.pi * 2)
-    color = gray if np.abs(sine) < .5 else (bright if sine > .5 else dark)
 
     frame = np.ones((height, width), dtype=np.uint8) * gray
-    rr, cc = draw.disk((height / 2, width / 2), radius)
-    frame[rr, cc] = color
+
+    if t<spots.TOTAL_TIME_S/2: # flashing
+        tot_time=spots.TOTAL_TIME_S/2
+        total_displacement=radius
+        speed=total_displacement/tot_time
+        dt=t
+        color=bright
+        dx=-total_displacement+ dt*speed
+        draw_spot(frame, color, radius/8, width/4+dx, height/4)
+        draw_square(frame, color, radius/4, 3*width/4+dx, height/4)
+        draw_spot(frame, color, radius/2, width/4+dx, 3*height/4)
+        draw_square(frame, color, radius/1, 3*width/4+dx, 3*height/4)
+    else: # moving spots
+        dt=t-spots.TOTAL_TIME_S/2
+        sine = np.sin(t * freq * np.pi * 2)
+        color = gray if np.abs(sine) < .5 else (bright if sine > .5 else dark)
+        draw_spot(frame, color, radius/8, width/4, height/4)
+        draw_square(frame, color, radius/4, 3*width/4, height/4)
+        draw_spot(frame, color, radius/2, width/4, 3*height/4)
+        draw_square(frame, color, radius/1, 3*width/4, 3*height/4)
 
     return frame.astype(np.uint8)
+
+
+def draw_spot(frame, color, radius, x,y):
+    rr, cc = draw.disk((int(y),int(x)), radius)
+    frame[rr, cc] = color
+
+def draw_square(frame, color, radius, x,y):
+    rr, cc = draw.rectangle((int(y-radius),int(x-radius)),(int(y+radius),int(x+radius)))
+    frame[rr, cc] = color
 
 
 class spots(base_synthetic_input):  # the class name should be the same as the filename, like in Java
     """ Generates moving dots on linear trajectories
     """
     CONTRAST = 1.5  # contrast of spot
-    TOTAL_TIME_S = .1  # total time of animation
+    TOTAL_TIME_S = .2  # total time of animation
     DT_S = 100e-6  # timestemp in seconds
     RADIUS_PIX = 60  # radius of spot
-    FREQ_HZ = 30  # freq of spot in Hz
+    FREQ_HZ = 20  # freq of spot in Hz
 
     def __init__(self, width: int = 346, height: int = 260, avi_path: Optional[str] = None, preview=False,
                  arg_list=None) -> None:
@@ -54,7 +79,6 @@ class spots(base_synthetic_input):  # the class name should be the same as the f
         parser.add_argument('--contrast', type=float, default=spots.CONTRAST)
         parser.add_argument('--total_time', type=float, default=spots.TOTAL_TIME_S)
         parser.add_argument('--dt', type=float, default=spots.DT_S)
-        parser.add_argument('--radius', type=float, default=spots.RADIUS_PIX)
         parser.add_argument('--freq', type=float, default=spots.FREQ_HZ)
         args = parser.parse_args(arg_list)
 
@@ -62,13 +86,14 @@ class spots(base_synthetic_input):  # the class name should be the same as the f
         self.contrast: float = args.contrast  # spot contrast - compare with pos_thres and neg_thres and sigma_thr,
         # e.g. use 1.2 for dot to be 20% brighter than backgreound
         self.dt = args.dt  # frame interval sec
-        self.bg = base_synthetic_input.BACKGROUND  # 127
+        self.bg = 64  # 127
         # moving particle distribution
         self.t_total = args.total_time
 
         self.times = np.arange(0, self.t_total, self.dt)
 
-        self.radius = args.radius
+        self.radius = spots.RADIUS_PIX # radius of largest spot
+
         self.freq = args.freq
 
         self.frame_number = 0
@@ -106,7 +131,7 @@ class spots(base_synthetic_input):  # the class name should be the same as the f
             return None, self.times[-1]
         time = self.times[self.frame_number]
         # self.pix_arr.fill(self.bg)
-        self.pix_arr = im_function(self.height, self.width, time, self.bg, self.contrast, self.radius, self.freq)
+        self.pix_arr = draw_frame(self.height, self.width, time, self.bg, self.contrast, self.radius, self.freq)
 
         if self.preview and self.frame_number % 1 == 0:
             cv2.imshow(self.cv2name, self.pix_arr)

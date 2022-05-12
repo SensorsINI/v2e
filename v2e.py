@@ -486,6 +486,7 @@ def main():
         seed=args.dvs_emulator_seed,
         output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2,
         dvs_text=dvs_text, show_dvs_model_state=args.show_dvs_model_state,
+        save_dvs_model_state=args.save_dvs_model_state,
         output_width=output_width, output_height=output_height,
         device=torch_device,
         cs_lambda_pixels=args.cs_lambda_pixels, cs_tau_p_ms=args.cs_tau_p_ms,
