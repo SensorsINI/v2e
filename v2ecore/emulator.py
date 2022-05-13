@@ -173,6 +173,7 @@ class EventEmulator(object):
 
         # csdvs
         self.cs_steps_warning_printed=False
+        self.cs_steps_taken=[]
         self.cs_alpha_warning_printed=False
         self.cs_tau_p_ms = cs_tau_p_ms
         self.cs_lambda_pixels = cs_lambda_pixels
@@ -273,6 +274,11 @@ class EventEmulator(object):
             self.frame_ev_idx_dataset = None
 
     def cleanup(self):
+        if len(self.cs_steps_taken)>1:
+            mean_staps=np.mean(self.cs_steps_taken)
+            std_steps=np.std(self.cs_steps_taken)
+            median_steps=np.median(self.cs_steps_taken)
+            logger.info(f'CSDVS steps statistics: mean+std= {mean_staps:.0f} + {std_steps:.0f} (median= {median_steps:.0f})')
         if self.dvs_h5 is not None:
             self.dvs_h5.close()
 
@@ -438,8 +444,8 @@ class EventEmulator(object):
         img = ((inp - min) / norm)
         cv2.namedWindow(name, cv2.WINDOW_NORMAL)
         if not name in self.show_list:
-            d=len(self.show_list)*100
-            cv2.moveWindow(name,int(self.screen_width/2)+d,int(self.screen_height/2)+d)
+            d=len(self.show_list)*300
+            cv2.moveWindow(name,int(self.screen_width/5)+d,int(self.screen_height/5)+d)
             self.show_list.append(name)
             if self.save_dvs_model_state:
                 fn = os.path.join(self.output_folder, name+'.avi')
@@ -450,9 +456,6 @@ class EventEmulator(object):
             self.video_writers[name].write(
                         cv2.cvtColor((img * 255).astype(np.uint8),
                                      cv2.COLOR_GRAY2BGR))
-        k=cv2.waitKey(30)
-        if k==27 or k==ord('x'):
-            v2e_quit()
 
     def generate_events(self, new_frame, t_frame):
         """Compute events in new frame.
@@ -537,6 +540,8 @@ class EventEmulator(object):
             else:
                 # we still need to simulate dynamics even if "instantaneous", unfortunately it will be really slow with Euler stepping and
                 # no gear-shifting
+                MAX_EPS=1e-5
+                # TODO change to compute steady-state 'instantaneous' solution by better method than Euler stepping
                 abs_min_tau_p=1e-8
                 tau_p= abs_min_tau_p if (self.cs_tau_p_ms is None or self.cs_tau_p_ms==0) else self.cs_tau_p_ms*1e-3
                 tau_h= abs_min_tau_p/(self.cs_lambda_pixels**2) if (self.cs_tau_h_ms is None or self.cs_tau_h_ms==0) else self.cs_tau_h_ms*1e-3
@@ -558,7 +563,9 @@ class EventEmulator(object):
                 p_ten = torch.unsqueeze(torch.unsqueeze(self.lp_log_frame1, 0), 0)
                 h_ten = torch.unsqueeze(torch.unsqueeze(self.cs_surround_frame, 0), 0)
                 padding=torch.nn.ReplicationPad2d(1)
-                for i in range(num_steps):
+                max_change=2*MAX_EPS
+                steps=0
+                while max_change>MAX_EPS:
                     diff = p_ten - h_ten
                     p_term = alpha_p * diff
                     # For the conv2d, unfortunately the zero padding pulls down the border pixels,
@@ -566,8 +573,12 @@ class EventEmulator(object):
                     # TODO check if possible to implement some form of open circuit resistor termination condition by correct padding
                     h_conv = torch.conv2d(padding(h_ten.float()), self.cs_k_hh.float())
                     h_term = alpha_h * h_conv
-                    h_ten = h_ten + p_term + h_term
-                    pass
+                    change_ten = p_term + h_term
+                    max_change=torch.max(change_ten)
+                    h_ten = h_ten + change_ten
+                    steps+=1
+
+                self.cs_steps_taken.append(steps)
                 self.cs_surround_frame = torch.squeeze(h_ten)
 
         if self.base_log_frame is None:
@@ -612,6 +623,9 @@ class EventEmulator(object):
                         self.dont_show_list.append(s)
                     else:
                         self._show(f, s)
+            k = cv2.waitKey(30)
+            if k == 27 or k == ord('x'):
+                v2e_quit()
 
         # generate event map
         pos_evts_frame, neg_evts_frame = compute_event_map(
