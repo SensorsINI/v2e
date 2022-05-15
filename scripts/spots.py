@@ -23,20 +23,20 @@ def draw_frame(height, width, t, bg, contrast, radius, freq):  # make spots
 
     frame = np.ones((height, width), dtype=np.uint8) * gray
 
-    if t<spots.TOTAL_TIME_S/2: # flashing
+    if t>spots.TOTAL_TIME_S/2: # moving
         tot_time=spots.TOTAL_TIME_S/2
         total_displacement=radius
         speed=total_displacement/tot_time
-        dt=t
-        color=bright
+        dt=t-spots.TOTAL_TIME_S/2
+        color=dark
         dx=-total_displacement+ dt*speed
         draw_spot(frame, color, radius/8, width/4+dx, height/4)
         draw_square(frame, color, radius/4, 3*width/4+dx, height/4)
         draw_spot(frame, color, radius/2, width/4+dx, 3*height/4)
         draw_square(frame, color, radius/1, 3*width/4+dx, 3*height/4)
-    else: # moving spots
-        dt=t-spots.TOTAL_TIME_S/2
-        sine = np.sin(t * freq * np.pi * 2)
+    else: # flashing
+        dt=t
+        sine = np.sin(dt * freq * np.pi * 2)
         color = gray if np.abs(sine) < .5 else (bright if sine > .5 else dark)
         draw_spot(frame, color, radius/8, width/4, height/4)
         draw_square(frame, color, radius/4, 3*width/4, height/4)
@@ -59,7 +59,7 @@ class spots(base_synthetic_input):  # the class name should be the same as the f
     """ Generates moving dots on linear trajectories
     """
     CONTRAST = 1.5  # contrast of spot
-    TOTAL_TIME_S = .2  # total time of animation
+    TOTAL_TIME_S = 1  # total time of animation
     DT_S = 100e-6  # timestemp in seconds
     RADIUS_PIX = 60  # radius of spot
     FREQ_HZ = 20  # freq of spot in Hz

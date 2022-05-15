@@ -56,6 +56,11 @@ logger = logging.getLogger(__name__)
 
 # torch device
 torch_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+logger.info(f'torch device is {torch_device}')
+if torch_device=='cpu':
+    logger.warning('CUDA GPU acceleration of pytorch operations is not available; '
+                   'see https://pytorch.org/get-started/locally/ '
+                   'to generate the correct conda install command to enable GPU-accelerated CUDA.')
 
 # may only apply to windows
 try:

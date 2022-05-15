@@ -2,6 +2,7 @@ import argparse
 import os
 import logging
 from pathlib import Path
+from v2ecore.emulator import EventEmulator
 
 from v2ecore.renderer import ExposureMode
 
@@ -195,8 +196,8 @@ def v2e_args(parser):
 
     modelGroup.add_argument(
         "--show_dvs_model_state", nargs='+', default=None,
-        help="one or more space separated list of of new_frame base_log_frame lp_log_frame0  lp_log_frame1  "
-             "diff_frame (and cs_surround_frame for CSDVS). Do not use '='. E.g. --show_dvs_model_state new_frame baseLogFrame")
+        help="One or more space separated list model states. Do not use '='. E.g. '--show_dvs_model_state all'. "
+             f"Possible models states are (without quotes) either 'all' or chosen from {EventEmulator.MODEL_STATES.keys()}")
 
     modelGroup.add_argument(
         "--save_dvs_model_state", action="store_true",
@@ -385,12 +386,15 @@ def v2e_args(parser):
     csdvs.add_argument('--cs_lambda_pixels',type=float,default=None,help='space constant of surround in pixels, None to disable.  '
                                                                          'This space constant lambda is sqrt(1/gR) '
                                                                          'where g is the transverse conductance and R is the lateral resistance.')
-    csdvs.add_argument('--cs_tau_p_ms',type=float,default=None,help='time constant of photoreceptor center in ms, or 0 to disable for instantaneous surround. '
+    csdvs.add_argument('--cs_tau_p_ms',type=float,default=None,help='time constant of photoreceptor center of diffuser in ms, or 0 to disable for instantaneous surround. '
                                                                     'Defined as C/g where C is capacitance and '
                                                                     'g is the transverse conductance from photoreceptor to horizontal cell network. '
                                                                     'This time is'
                                                                     'the time constant for h cell diffuser network response '
-                                                                    'time to global input to photoreceptors.')
+                                                                    'time to global input to photoreceptors. If set to zero,'
+                                                                    ' then the simulation of diffuser runs until it converges, '
+                                                                    'i.e. until the maximum change between timesteps '
+                                                                    'is smaller than a threshold value')
 
     # # perform basic checks, however this fails if script adds
     # # more arguments later
