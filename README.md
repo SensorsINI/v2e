@@ -45,7 +45,7 @@ We advise using the _--stop_ option for trial run before starting a long convers
 If you don't want to install, try [opening v2e in google colab](https://colab.research.google.com/drive/1czx-GJnx-UkhFVBbfoACLVZs8cYlcr_M?usp=sharing).
 
 ### Make conda environment
-You are encouraged to install v2e on a separate Python environment
+Install v2e to a separate Python environment
 such as `conda` environment:
 
 ```bash
@@ -54,18 +54,21 @@ conda activate v2e  # activate the environment
 ```
 ### Ensure you have CUDA enabled GPU-accelerated pytorch
 See https://pytorch.org/get-started/locally/ to generate the correct
-conda install command to enable GPU-accelerated CUDA.
+conda install command to enable GPU-accelerated CUDA. On windows 10, for example, this tool generated the following command
+```
+conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+```
 
 You may want to check this stackoverflow question:
 https://stackoverflow.com/questions/57238344/i-have-a-gpu-and-cuda-installed-in-windows-10-but-pytorchs-torch-cuda-is-availa
 
 ### Install v2e
-To install v2e in developer mode (so your edits to source take effect immediately), run the following command in your terminal inside the activated conda environment:
+After installing pytorch to your CUDA environment, to install v2e in developer mode (so your edits to source take effect immediately), run the following command in your terminal inside the activated conda environment:
 ```bash
-conda activate v2e
+conda activate v2e # activate your env with pytoch already installed by conda
 git clone https://github.com/SensorsINI/v2e
 cd v2e
-python setup.py develop
+python -m pip install -e . # use pip to install requirements from requirements.txt in user mode (so your edits to source files in v2e take effect immeediately
 ```
 
 + For additional Windows GUI interface, you will need to install [Gooey](https://github.com/chriskiehl/Gooey) package. This package works the best on Windows:
