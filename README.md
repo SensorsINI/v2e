@@ -27,13 +27,9 @@ If you use v2e, we appreciate a citation to the paper below. See the [v2e home p
 
 To reproduce the experiments of the paper, please find [this repository](https://github.com/SensorsINI/v2e_exps_public).
 
-## Installation
-
-If you don't want to install, try [opening v2e in google colab](https://colab.research.google.com/drive/1czx-GJnx-UkhFVBbfoACLVZs8cYlcr_M?usp=sharing).
-
 ### Advice about conversion time
-We recommend running _v2e_ on a CUDA GPU or it will be very slow. 
-With a low-end GTX-1050, _v2e_ runs about 50-200X slower than real time 
+We recommend running _v2e_ on a CUDA GPU or it will be very slow, particularly when using SuperSloMo upsampling. 
+Even with a low-end GTX-1050, _v2e_ runs about 50-200X slower than real time 
 using 10X slowdown factor and 346x260 video.
 
 Conversion speed depends linearly on the reciprocal of the desired DVS timestamp resolution.
@@ -44,6 +40,9 @@ of over 800X and the 220k frames that needed to be produced for DVS modeling.
 
 We advise using the _--stop_ option for trial run before starting a long conversion.
 
+## Installation
+
+If you don't want to install, try [opening v2e in google colab](https://colab.research.google.com/drive/1czx-GJnx-UkhFVBbfoACLVZs8cYlcr_M?usp=sharing).
 
 ### Make conda environment
 You are encouraged to install v2e on a separate Python environment
@@ -61,8 +60,9 @@ You may want to check this stackoverflow question:
 https://stackoverflow.com/questions/57238344/i-have-a-gpu-and-cuda-installed-in-windows-10-but-pytorchs-torch-cuda-is-availa
 
 ### Install v2e
-v2e works with Python 3.6 and above. To install v2e in developer mode (so your edits to source take effect immediately), run the following command in terminal:
+To install v2e in developer mode (so your edits to source take effect immediately), run the following command in your terminal inside the activated conda environment:
 ```bash
+conda activate v2e
 git clone https://github.com/SensorsINI/v2e
 cd v2e
 python setup.py develop
