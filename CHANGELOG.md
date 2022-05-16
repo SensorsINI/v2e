@@ -1,3 +1,13 @@
+# v1.5.0
+##    New Features
+  - v2e can display and save as AVI videos all the internal DVS model states via the _--show_dvs_model_state_ and _--save_dvs_model_state_ options.
+  - v2e can model the **CSDVS** (center-surround DVS) proposed in Delbruck, Tobi, Chenghan Li, Rui Graca, and Brian Mcreynolds. 2022. “_Utility and Feasibility of a Center Surround Event Camera_.” arXiv [cs.CV]. arXiv. http://arxiv.org/abs/2202.13076.
+##    Bug fixes
+- More improvements to user experience with improved CUDA supported pytorch installation instructions and warnings printed if CUDA is not available.
+- More bug fixes for synthetic input script handling and more example scripts, e.g. _spots.py_.
+- Displayed DVS model state cv2 windows can now be dragged and resized by included cv2.pollkey() calls periodically.
+
+
 # v1.4.3
 ##    New Features
   - Try [opening v2e in google colab](https://colab.research.google.com/drive/1czx-GJnx-UkhFVBbfoACLVZs8cYlcr_M?usp=sharing).
