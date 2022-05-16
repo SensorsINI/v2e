@@ -71,14 +71,13 @@ cd v2e
 python -m pip install -e . # use pip to install requirements from requirements.txt in user mode (so your edits to source files in v2e take effect immeediately
 ```
 
-+ For additional Windows GUI interface, you will need to install [Gooey](https://github.com/chriskiehl/Gooey) package. This package works the best on Windows:
++ If you want an additional Windows GUI interface, you will need to install [Gooey](https://github.com/chriskiehl/Gooey) package. This package works the best on Windows:
     ```bash
     pip install Gooey
     ```
     On Linux, `Gooey` can be hard to install.
 
     For a sample of conversion using the gooey GUI, see https://youtu.be/THJqRC_q2kY
-
 
 ### Download SuperSloMo model
 
