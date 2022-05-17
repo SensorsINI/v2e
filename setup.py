@@ -8,21 +8,26 @@ Development Status :: 4 - Beta
 Intended Audience :: Science/Research
 Natural Language :: English
 Operating System :: OS Independent
-Programming Language :: Python :: 3.6
-Programming Language :: Python :: 3.7
+Programming Language :: Python :: 3.8
+Programming Language :: Python :: 3.9
 Topic :: Utilities
 Topic :: Scientific/Engineering
 Topic :: Software Development :: Libraries :: Python Modules
 License :: OSI Approved :: MIT License
 """
 
+version="1.5.1"
+package_name="v2e"
+
 setup(
-    name='v2e',
-    version="1.4.2",
+    name=package_name,
+    version=version,
     description='Generates synthetic DVS events from conventional video',
 
     author="Tobi Delbruck, Yuhuang Hu, Zhe He",
-    author_email="yuhuang.hu@ini.uzh.ch",
+    author_email="yuhuang.hu@ini.uzh.ch, tobi@ini.uzh.ch",
+
+    python_requires=">={}".format("3.8"),
 
     #  packages=find_packages(include=['v2ecore', 'v2e.*']),
     packages=find_packages(),
