@@ -39,20 +39,26 @@ with GPU, it took 500s per second of 12FPS source video, because of the very hig
 of over 800X and the 220k frames that needed to be produced for DVS modeling.
 
 We advise using the _--stop_ option for trial run before starting a long conversion.
-
-## Installation
-
+## Using v2e in Google CoLab
 If you don't want to install, try [opening v2e in google colab](https://colab.research.google.com/drive/1czx-GJnx-UkhFVBbfoACLVZs8cYlcr_M?usp=sharing).
 
+## Local Installation
+There are 3 general steps
+1. Make a _conda_ environment
+2. Install _pytoch_ and other _conda_ distributed packages to this environment
+3. Install the rest of the packages and _v2e_ to the conda enviroment with _pip_.
+
+_pip_ is needed because some packages are not availble from the conda repositories. It is important to go in this order because _conda_ in general is not aware of _pip_ installs.
+
 ### Make conda environment
-Install v2e to a separate Python environment
+Install _v2e_ to a separate Python environment
 such as `conda` environment:
 
 ```bash
 conda create -n v2e python=3.9  # create a new environment
 conda activate v2e  # activate the environment
 ```
-### Ensure you have CUDA enabled GPU-accelerated pytorch
+### Ensure you have CUDA enabled GPU-accelerated _pytorch_
 See https://pytorch.org/get-started/locally/ to generate the correct
 conda install command to enable GPU-accelerated CUDA. On windows 10, for example, this tool generated the following command
 ```
@@ -62,8 +68,8 @@ conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
 You may want to check this stackoverflow question:
 https://stackoverflow.com/questions/57238344/i-have-a-gpu-and-cuda-installed-in-windows-10-but-pytorchs-torch-cuda-is-availa
 
-### Install v2e
-After installing pytorch to your CUDA environment, to install v2e in developer mode (so your edits to source take effect immediately), run the following command in your terminal inside the activated conda environment:
+### Use pip to install rest of packages and v2e
+After installing pytorch to your CUDA environment, to install v2e in developer mode (so your edits to source take effect immediately), run the following command in your terminal inside the activated conda environment. The `python -m pip install -e .` command installs all the packages in _requirements.txt_ and adds v2e to the conda enviroment python path:
 ```bash
 conda activate v2e # activate your env with pytoch already installed by conda
 git clone https://github.com/SensorsINI/v2e
