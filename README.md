@@ -69,12 +69,12 @@ You may want to check this stackoverflow question:
 https://stackoverflow.com/questions/57238344/i-have-a-gpu-and-cuda-installed-in-windows-10-but-pytorchs-torch-cuda-is-availa
 
 ### Use pip to install rest of packages and v2e
-After installing pytorch to your CUDA environment, to install v2e in developer mode (so your edits to source take effect immediately), run the following command in your terminal inside the activated conda environment. The `python -m pip install -e .` command installs all the packages in _requirements.txt_ and adds v2e to the conda enviroment python path:
+After installing pytorch to your CUDA environment, to install v2e in developer mode (so your edits to source take effect immediately), run the following command in your terminal inside the activated conda environment. The `python -m pip install -e .` command runs _setup.py_ which installs more packages and adds a script to run _v2e_ from the command line to the _conda_ enviroment python path; see https://stackoverflow.com/questions/39023758/what-does-pip-install-dot-mean:
 ```bash
 conda activate v2e # activate your env with pytoch already installed by conda
 git clone https://github.com/SensorsINI/v2e
 cd v2e
-python -m pip install -e . # use pip to install requirements from requirements.txt in user mode (so your edits to source files in v2e take effect immeediately
+python -m pip install -e . # use pip to install requirements from setup.py in user mode (so your edits to source files in v2e take effect immeediately
 ```
 
 + If you want an additional Windows GUI interface, you will need to install [Gooey](https://github.com/chriskiehl/Gooey) package. This package works the best on Windows:
