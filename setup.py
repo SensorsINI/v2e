@@ -33,7 +33,7 @@ setup(
     packages=find_packages(),
     url='https://github.com/SensorsINI/v2e',
     install_requires=[
-        'numpy==1.20',
+        'numpy==1.21.0',
         'argcomplete',
         'engineering-notation', # not available on conda
         'tqdm',
