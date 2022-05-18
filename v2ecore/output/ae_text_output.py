@@ -66,9 +66,9 @@ class DVSTextOutput:
             return
         n = events.shape[0]
         t = (events[:, 0]).astype(np.float)
-        x = events[:, 1].astype(np.int32)
+        x = events[:, 2].astype(np.int32) # Issue #37, thanks Mohsi Jawaid
         if self.flipx: x = (self.sizex - 1) - x  # 0 goes to sizex-1
-        y = events[:, 2].astype(np.int32)
+        y = events[:, 1].astype(np.int32)
         if self.flipy: y = (self.sizey - 1) - y
         p = ((events[:, 3] + 1) / 2).astype(np.int32) # go from -1/+1 to 0,1
         for i in range(n):

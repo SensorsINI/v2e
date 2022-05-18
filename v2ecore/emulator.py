@@ -484,16 +484,16 @@ class EventEmulator(object):
         Parameters
         ----------
         new_frame: np.ndarray
-            [height, width]
+            [height, width], NOTE y is first dimension, like in matlab the column, x is 2nd dimension, i.e. row.
         t_frame: float
             timestamp of new frame in float seconds
 
         Returns
         -------
         events: np.ndarray if any events, else None
-            [N, 4], each row contains [timestamp, y cordinate,
-            x cordinate, sign of event].
-            # TODO validate that this order of x and y is correctly documented
+            [N, 4], each row contains [timestamp, y coordinate,
+            x coordinate, sign of event].
+            NOTE y then x, not x,y.
         """
 
         # base_frame: the change detector input,
