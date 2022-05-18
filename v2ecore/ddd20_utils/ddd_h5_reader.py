@@ -60,6 +60,7 @@ class DDD20SimpleReader(object):
 
         self.davisData=dvsGroup['data']
         logger.info('The DAVIS data has the shape '+str(self.davisData.shape))
+        self.shape = None # the shape of the DVS/APS pixel array
 
         self.numPackets=self.davisData.shape[0] # start here, this is not actual size
         self.firstPacketNumber=0
@@ -196,6 +197,8 @@ class DDD20SimpleReader(object):
                     )
                 )
                 frames.append(data)
+                self.shape = frame.shape
+
                 current = ts
                 continue
             if d['etype'] == 'polarity_event':
@@ -251,9 +254,8 @@ class DDD20ReaderMultiProcessing(object):
         Read entire file to memory.
 
         Returns
+        frames, events
         -------
-        aps_ts: np.array,
-            timestamps of aps frames.
         aps_frame: np.ndarray, [n, width, height]
             aps frames
         events: numpy record array.
@@ -292,6 +294,7 @@ class DDD20ReaderMultiProcessing(object):
                     )
                 )
                 frames.append(data)
+                self.shape=frame.shape
                 current = ts
                 continue
             if d['etype'] == 'polarity_event':

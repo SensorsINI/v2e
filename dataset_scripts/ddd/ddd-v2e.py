@@ -19,15 +19,15 @@ from sys import platform
 if platform.startswith('linux'):
     import resource
 
-from v2e.ddd20_utils import ddd_h5_reader
-from v2e.ddd20_utils.ddd_h5_reader import DDD20SimpleReader
-from v2e.output.aedat2_output import AEDat2Output
-from v2e.renderer import EventEmulator, EventRenderer, ExposureMode
-from v2e.slomo import SuperSloMo
-from v2e.v2e_utils import OUTPUT_VIDEO_FPS, all_images, \
+from v2ecore.ddd20_utils import ddd_h5_reader
+from v2ecore.ddd20_utils.ddd_h5_reader import DDD20SimpleReader
+from v2ecore.output.aedat2_output import AEDat2Output
+from v2ecore.renderer import EventEmulator, EventRenderer, ExposureMode
+from v2ecore.slomo import SuperSloMo
+from v2ecore.v2e_utils import all_images, \
     read_image, checkAddSuffix, inputDDDFileDialog, check_lowpass, v2e_quit
-from v2e.v2e_args import v2e_args, write_args_info, v2e_check_dvs_exposure_args
-import v2e.desktop as desktop
+from v2ecore.v2e_args import v2e_args, write_args_info, v2e_check_dvs_exposure_args
+import v2ecore.desktop as desktop
 
 logging.basicConfig()
 root = logging.getLogger()
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     dvsNumFrames = int(np.math.floor(dvsFps * srcDurationToBeProcessed))
     if dvsNumFrames==0: dvsNumFrames=1                  # we need at least 1
     dvsDuration = srcDurationToBeProcessed
-    dvsPlaybackDuration = dvsNumFrames / OUTPUT_VIDEO_FPS
+    dvsPlaybackDuration = dvsNumFrames / args.avi_frame_rate
     dvsFrameTimestamps = np.linspace(davisData.firstTimeS + start_time,
                                      davisData.firstTimeS + start_time + srcDurationToBeProcessed, dvsNumFrames)
 

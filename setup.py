@@ -32,7 +32,6 @@ setup(
     #  packages=find_packages(include=['v2ecore', 'v2e.*']),
     packages=find_packages(),
     url='https://github.com/SensorsINI/v2e',
-    scripts=["v2e.py"],
     install_requires=[
         'numpy==1.20',
         'argcomplete',
@@ -46,8 +45,11 @@ setup(
         #  'Gooey',
         'matplotlib',
         'plyer',
-        'screeninfo' # to get monitor sizes for cv2 window placement
+        'screeninfo', # to get monitor sizes for cv2 window placement
+        'easygui'
     ],
+
+    scripts=['v2e.py', 'dataset_scripts/ddd/ddd_extract_data.py'],
 
     entry_points={
         'console_scripts': ['v2e=v2e:main']

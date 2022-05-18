@@ -1,11 +1,12 @@
 import logging
 import os
 import sys
+import tempfile
 
 import numpy as np
 import cv2
 import glob
-import tkinter as tk
+import easygui
 from tkinter import filedialog
 from numba import njit
 from engineering_notation import EngNumber as eng
@@ -239,17 +240,30 @@ def inputDDDFileDialog():
 
 
 def _inputFileDialog(types):
-    from pathlib import Path
-    root = tk.Tk()
-    root.tk.call('tk', 'scaling', 4.0)  # doesn't help on hdpi screen
-    root.withdraw()
-    indir = './input'
-    if Path(indir).is_dir():
-        os.chdir(indir)
-    filetypes = types
-    filepath = filedialog.askopenfilename(filetypes=filetypes)
-    os.chdir('..')
-    return filepath
+    LAST_FILE_NAME_FILE = 'v2e_last_file_chosen.txt'
+    fn = os.path.join(tempfile.gettempdir(), LAST_FILE_NAME_FILE)
+    default = None
+    try:
+        with open(fn, 'r') as f:
+            default = f.read()
+    except FileNotFoundError:
+        pass
+    filename = easygui.fileopenbox(msg='Select file to convert',
+                                   title='DDD file',
+                                   filetypes=[types],
+                                   multiple=False,
+                                   default=default
+                                   )
+    if filename is None:
+        logger.info('no file selected, quitting')
+        quit(0)
+    logger.info(f'selected {filename} with file dialog')
+    try:
+        with open(fn, 'w') as f:
+            f.write(filename)
+    except:
+        pass
+    return filename
 
 
 def checkAddSuffix(path: str, suffix: str):

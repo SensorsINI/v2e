@@ -355,6 +355,7 @@ The DVS allows arbritrary frame rates. _v2e_ provides 3 methods to 'expose' DVS 
  1. **Constant-Duration**: _--dvs_exposure _duration_ _T__:  - Each frame has constant duration _T_.
  2. **Constant-Count**: _--dvs_exposure_count_ _N_:  - each frame has the same number _N_ of DVS events, as first described in Delbruck, Tobi. 2008. “Frame-Free Dynamic Digital Vision.” In Proceedings of Intl. Symp. on Secure-Life Electronics, Advanced Electronics for Quality Life and Society, 1:21–26. Tokyo, Japan: Tokyo. https://drive.google.com/open?id=0BzvXOhBHjRheTS1rSVlZN0l2MDg..
  3. **Area-Event**: _--dvs_exposure_ _area_event_ _N_ _M_:  - frames are accumulated until any block of *M*x*M* pixels fills up with _N_ events, as first described in Liu, Min, and T. Delbruck. 2018. “Adaptive Time-Slice Block-Matching Optical Flow Algorithm for Dynamic Vision Sensors.” In Proceedings of British Machine Vision Conference (BMVC 2018). Newcastle upon Tyne, UK: Proceedings of BMVC 2018. https://doi.org/10.5167/uzh-168589.
+ 4. **Source**: _--dvs_exposure source_: DVS timestamps are based on source video timestamps. Extra events per frame are spaced between frames accoruding to the maximum number of events for that frame.
 
  - _Constant-Duration_ is like normal video, i.e. sampled at regular, ideally Nyquist rate. 
  - _Constant-Count_ frames have the same number of pixel brightness change events per frame. But if the scene is very textured (i.e. busy) then frame can get very brief, while parts of the input with only a small object moving can have very long frames.
@@ -385,105 +386,32 @@ mv rec1501902136.hdf5 ./input
 _ddd_h5_extract_data.py_ extracts the DDD recording DVS events to jAER _.aedat_ and video _.avi_ files.
 
 ```
-(pt-v2e) $ python -m dataset_scripts.ddd.ddd_extract_data.py -h
-usage: ddd_h5_extract_data.py [-h] [-i INPUT] -o OUTPUT_FOLDER
-                              [--start_time START_TIME]
-                              [--stop_time STOP_TIME] [--rotate180]
-                              [--overwrite]
+ddd_extract_data.py -h
+usage: ddd_extract_data.py [-h] [-i INPUT] -o OUTPUT_FOLDER [--start_time START_TIME] [--stop_time STOP_TIME] [--rotate180] [--overwrite] [--dvs240] [--dvs346]
+
+Extract data from DDD recording
 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT, --input INPUT
-                        input video file; leave empty for file chooser dialog
+                        input video file; leave empty for file chooser dialog (default: None)
   -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
-                        folder to store outputs
+                        folder to store outputs (default: None)
   --start_time START_TIME
-                        start at this time in seconds in video
+                        start at this time in seconds in video (default: None)
   --stop_time STOP_TIME
-                        stop point of video stream
-  --rotate180           rotate output 180 deg
-  --overwrite           overwrites files in existing folder (checks existance
-                        of non-empty output_folder)
+                        stop point of video stream (default: None)
+  --rotate180           rotate output 180 deg (default: False)
+  --overwrite           overwrites files in existing folder (checks existance of non-empty output_folder) (default: False)
+  --dvs240              Set size for 240x180 DVS (Davis240). Use for DDD17 recording. (default: False)
+  --dvs346              Set size for 346x260 DVS (Davis346). Use for DDD20 recording. (default: False)
 
-```
-Running it from python console with
-```python
-runfile('E:\\Dropbox\\GitHub\\SensorsINI\\v2e\\ddd_extract_data.py', args=['--overwrite', '--output_folder=output/output-ddd-h5-data', '--overwrite', '--rotate180'], wdir='E:/Dropbox/GitHub/SensorsINI/v2e')
-```
-produces
-```
-output/output-ddd-h5-data/rec1501350986.aedat
-output/output-ddd-h5-data/rec1501350986.avi
-```
-### Synthesize events from DDD recording
-
-_ddd-v2e.py_ is like _v2e.py_ but it reads DDD .hdf5 recordings and extracts the real DVS events from the same part of the recording used for the synthesis of DVS events.
-
-You can try it like this: 
-```
-$ python -m dataset_scripts.ddd.ddd-v2e.py --input input/rec1501350986.hdf5 --slomo_model input/SuperSloMo39.ckpt --slowdown_factor 20 --start 70 --stop 73 --output_folder output/ddd20-v2e-short --dvs_aedat dvs --pos_thres=.2 --neg_thres=.2 --overwrite --dvs_vid_full_scale=2 --frame_rate=100
-INFO:__main__:arguments:
-cutoff_hz:      300
-dvs_aedat2:     dvs
-dvs_h5: None
-dvs_text:       None
-dvs_vid:        dvs-video.avi
-dvs_vid_full_scale:     2
-frame_rate:     100
-input:  input/rec1501350986.hdf5
-leak_rate_hz:   0.05
-neg_thres:      0.2
-no_preview:     False
-output_folder:  output/ddd20-v2e-short
-output_height:  260
-output_width:   346
-overwrite:      True
-pos_thres:      0.2
-rotate180:      True
-sigma_thres:    0.03
-slomo_model:    input/SuperSloMo39.ckpt
-slowdown_factor:        20
-start_time:     70.0
-stop_time:      73.0
-vid_orig:       video_orig.avi
-vid_slomo:      video_slomo.avi
-
-INFO:__main__:opening output files
-INFO:src.slomo:CUDA available, running on GPU :-)
-INFO:src.emulator:ON/OFF log_e temporal contrast thresholds: 0.2 / 0.2 +/- 0.03
-INFO:src.emulator:opening AEDAT-2.0 output file output/ddd20-v2e-short/dvs.aedat
-INFO:root:opening AEDAT-2.0 output file output/ddd20-v2e-short/dvs.aedat in binary mode
-INFO:src.output.aedat2_output:opened output/ddd20-v2e-short/dvs.aedat for DVS output data for jAER
-INFO:src.ddd20_utils.ddd_h5_reader:making reader for DDD recording input/rec1501350986.hdf5
-INFO:src.ddd20_utils.ddd_h5_reader:input/rec1501350986.hdf5 contains following keys
-accelerator_pedal_position
-brake_pedal_status
-dvs
-
-...
-
-INFO:src.ddd20_utils.ddd_h5_reader:input/rec1501350986.hdf5 has 38271 packets with start time 1123.34s and end time 1246.31s (duration    123.0s)
-INFO:src.ddd20_utils.ddd_h5_reader:searching for time 70.0
-ddd-h5-search:  56%|███████████████████████████████████████▉                                | 21244/38271 [00:08<00:05, 3002.45packet/s]INFO:src.ddd20_utils.ddd_h5_reader:
-found start time 70.0 at packet 21369
-
-...
-
-:src.v2e_utils:opened output/ddd20-v2e-short/dvs-video-real.avi with  XVID https://www.fourcc.org/ codec, 30.0fps, and (346x260) size
-v2e-ddd20:   5%|███▊                                                                              | 51/1100 [00:00<00:15, 67.70packet/s]INFO:src.slomo:loading SuperSloMo model from input/SuperSloMo39.ckpt
+Run with no --input to open file dialog
 
 ```
 
-The generated outputs in folder _output/ddd20-v2e-short_ will be
-```
-dvs-v2e.aedat
-dvs-v2e-real.aedat
-dvs-video-fake.avi
-dvs-video-real.avi
-info.txt
-original.avi
-slomo.avi
-```
+You can then synthesize events from the DDD APS video .avi file that is produced and compare with the real events extracted to the AEDAT-2.0 file that is also extracted.
+
 
 ## Working with jAER DAVIS recordings
 
