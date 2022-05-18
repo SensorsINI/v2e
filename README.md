@@ -343,6 +343,10 @@ There are several different 'frame rates' in v2e. On opening the input video, v2
  * _--dvs-exposure_: See next section
  * _--input_slowmotion_factor_: Specifies by what factor the input video is slowed down.
  
+### Effect of multiple events per (sub) frame
+Anytime a source (or upsampled source) video generates more than 1 event per frame, these events need to be distributed over the time between frames. v2e arbitrarily stacks them as shown in the example below, resulting in pyramids of events and periodic overall bursts of events at each frame.  I.e. v2e first computes the maximum number of events by any pixel, then it subdivides the interframe interval by this number, then it puts all pixels with 1 event at the frame, then pixels with 2 events have thier events placed at the first sub-interval and so on. The reduce this effect, use a smaller timestamp resolution.
+
+ ![v2e_pyramid](media/v2e-pyr.gif)
 
 ## DVS frame exposure modes
 
