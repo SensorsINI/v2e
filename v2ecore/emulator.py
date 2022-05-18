@@ -399,7 +399,7 @@ class EventEmulator(object):
             self.leak_rate_hz = 0.1
             # rate in hz of temporal noise events
             self.shot_noise_rate_hz = 5.0
-            self.refractory_period_s = 0.01
+            self.refractory_period_s = 0
             self.leak_jitter_fraction = 0.1
             self.noise_rate_cov_decades = 0.1
         else:
@@ -517,7 +517,6 @@ class EventEmulator(object):
 
         # compute time difference between this and the previous frame
         delta_time = t_frame - self.t_previous
-        self.t_previous = t_frame
         # logger.debug('delta_time={}'.format(delta_time))
 
         # convert into torch tensor
