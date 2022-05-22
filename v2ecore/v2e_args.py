@@ -303,7 +303,16 @@ def v2e_args(parser):
              "Use None to end at end of source video.")
     inGroup.add_argument(
         "--crop", type=tuple_type, default=None,
-        help="Crop input video by (left, right, top, bottom) pixels. E.g. CROP=(100,100,0,0) crops 100 pixels from left and right of input frames. CROP can also be specified as L,R,T,B without ()")
+        help="Crop input video by (left, right, top, bottom) pixels. "
+             "E.g. CROP=(100,100,0,0) crops 100 pixels "
+             "from left and right of input frames."
+             " CROP can also be specified as L,R,T,B without ()")
+    inGroup.add_argument('--log_input',action='store_true',
+                         help='Treat input video as logarithmic, '
+                              'i.e. skip the linlog conversion step. '
+                              'Use --log_input for high dynamic range input with floating '
+                              'point gray scale input videos. Units of log input are based '
+                              'on white 255 pixels have values ln(255)=5.5441')
 
     # synthetic input handling
     syntheticInputGroup = parser.add_argument_group('Synthetic input')
@@ -410,27 +419,39 @@ def v2e_args(parser):
     return parser
 
 
-def write_args_info(args, path) -> str:
+def write_args_info(args, path, other_args=None, command_line=None) -> str:
     '''
     Writes arguments to logger and file named from startup __main__
     Parameters
     ----------
     args: parser.parse_args()
+    path: file to write to
+    other_args: possible extra arguments\
+    command_line: the whole command line
 
     Returns
     -------
     full path to file
     '''
     import __main__
-    arguments_list = 'arguments:\n'
+    arguments_list = '\n*** arguments:\n'
     for arg, value in sorted(args._get_kwargs()):
         arguments_list += "{}:\t{}\n".format(arg, value)
     logger.info(arguments_list)
+    other_arguments_list=None
+    if other_args is not None:
+        other_arguments_list = '\n**** extra other arguments:\n'
+        for arg in sorted(other_args):
+            other_arguments_list += "{}\n".format(arg)
+        logger.info(arguments_list)
     basename = os.path.basename(__main__.__file__)
     argsFilename = basename.strip('.py') + '-args.txt'
     filepath = os.path.join(path, argsFilename)
     with open(filepath, "w") as f:
         f.write(arguments_list)
+        if other_arguments_list is not None:
+            f.write(other_arguments_list)
+        f.write(f'\n*** command line:\n'+command_line)
     return filepath
 
 

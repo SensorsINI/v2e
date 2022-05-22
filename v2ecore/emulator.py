@@ -72,7 +72,8 @@ class EventEmulator(object):
             output_height: int = None,
             device: str = "cuda",
             cs_lambda_pixels: float = None,
-            cs_tau_p_ms: float = None
+            cs_tau_p_ms: float = None,
+            log_input:bool=False
     ):
         """
         Parameters
@@ -110,6 +111,8 @@ class EventEmulator(object):
             space constant of surround in pixels, or None to disable surround inhibition
         cs_tau_p_ms: float
             time constant of lowpass filter of surround in ms or 0 to make surround 'instantaneous'
+        log_input: bool
+            Treqt input as floating point logarithmic gray scale with 255 input scaled as ln(255)=5.5441
         """
 
         logger.info(
@@ -205,6 +208,7 @@ class EventEmulator(object):
                         f'cs_tau_h_ms:  {self.cs_tau_h_ms}\n\t'
                         f'cs_lambda_pixels:  {self.cs_lambda_pixels:.2f}\n\t'
                         )
+        self.log_input=log_input
 
         try:
             if dvs_h5:
@@ -519,11 +523,14 @@ class EventEmulator(object):
         delta_time = t_frame - self.t_previous
         # logger.debug('delta_time={}'.format(delta_time))
 
+        if self.log_input and new_frame.dtype!=np.float32:
+            logger.warning('log_frame is True but input frome is not np.float32 datatype')
+
         # convert into torch tensor
         self.new_frame = torch.tensor(new_frame, dtype=torch.float64,
                                       device=self.device)
-        # lin-log mapping
-        log_new_frame = lin_log(self.new_frame)
+        # lin-log mapping, if input is not already float32 log input
+        log_new_frame = lin_log(self.new_frame) if not self.log_input else self.new_frame
 
         inten01 = None  # define for later
         if self.cutoff_hz > 0 or self.shot_noise_rate_hz > 0:  # will use later

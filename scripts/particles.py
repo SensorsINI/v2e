@@ -46,16 +46,20 @@ class particles(base_synthetic_input): # the class name should be the same as th
         :param height: height in pixels
         :param avi_path: folder to write video to, or None if not needed
         :param preview: set true to show the pix array as cv frame
+        :param arg_list: list of arguments from super
         """
         super().__init__(width, height, avi_path, preview, arg_list)
         parser=argparse.ArgumentParser(arg_list)
         parser.add_argument('--num_particles',type=int,default=particles.NUM_PARTICLES)
         parser.add_argument('--contrast',type=float,default=particles.CONTRAST)
+        parser.add_argument('--bg',type=float,default=particles.BACKGROUND)
         parser.add_argument('--radius',type=float,default=particles.RADIUS)
         parser.add_argument('--total_time',type=float,default=particles.TOTAL_TIME)
         parser.add_argument('--speed_min',type=float,default=particles.SPEED_MIN)
         parser.add_argument('--speed_max',type=float,default=particles.SPEED_MAX)
         parser.add_argument('--dt',type=float,default=particles.DT)
+        parser.add_argument('--hdr',action='store_true')
+
         args=parser.parse_args(arg_list)
 
 
@@ -69,11 +73,14 @@ class particles(base_synthetic_input): # the class name should be the same as th
         self.particle_count=0
         self.t_total = args.total_time
 
-
+        self.fg=self.bg*self.contrast
+        if args.hdr:
+            self.bg=np.log(self.bg)
+            self.fg=np.log(self.fg)
 
         self.particles=[]
         for i in range(self.num_particles):
-            p=self.particle(width=width,height=height,time=0,radius=self.radius,speed_min=self.speed_pps_min,speed_max=self.speed_pps_max)
+            p=self.particle(self,width=width,height=height,time=0,radius=self.radius,speed_min=self.speed_pps_min,speed_max=self.speed_pps_max)
             self.particles.append(p)
             self.particle_count+=1
 
@@ -85,12 +92,11 @@ class particles(base_synthetic_input): # the class name should be the same as th
         self.w = width
         self.h = height
         self.frame_number = 0
-        self.out = None
         self.log = sys.stdout
         self.cv2name = 'v2e'
         self.codec = 'HFYU'
         self.preview = preview
-        self.pix_arr: np.ndarray = self.bg * np.ones((self.h, self.w), dtype=np.uint8)
+        self.pix_arr: np.ndarray = self.bg * np.ones((self.h, self.w), dtype=np.float32)
         logger.info(f'speed(pixels/s): {self.speed_pps_min} to {self.speed_pps_max}\n'
                     f'radius(pixels): {self.radius}\n'
                     f'contrast(factor): {self.contrast}\n'
@@ -107,7 +113,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
         logger.info(f'particles() generated {self.particle_count} particles in {self.time}s')
 
     class particle():
-        def __init__(self, width:int, height:int , time:float, radius:float, speed_min, speed_max):
+        def __init__(self,  outer, width:int, height:int , time:float, radius:float, speed_min, speed_max):
             self.width=width
             self.height=height
             # generate particle on some edge, moving into the array with random velocity
@@ -135,6 +141,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
             self.contrast=np.random.uniform(1.19,1.21) # right at threshold
             self.time=time
             self.radius=radius
+            self.outer=outer
 
         def update(self,time:float):
             dt=time-self.time
@@ -145,8 +152,8 @@ class particles(base_synthetic_input): # the class name should be the same as th
             return self.position[0]<0 or self.position[0]>self.width or self.position[1]<0 or self.position[1]>self.height
 
         def draw(self, pix_arr):
-            bg=base_synthetic_input.BACKGROUND
-            fg= int(bg * self.contrast)  # foreground dot brightness
+            bg=self.outer.bg
+            fg= self.outer.fg  # foreground dot brightness
             fill_dot(pix_arr,self.position[0], self.position[1], fg, bg, self.radius)
 
     def total_frames(self):
@@ -161,8 +168,8 @@ class particles(base_synthetic_input): # the class name should be the same as th
             time is in seconds.
         """
         if self.frame_number >= len(self.times):
-            if self.avi_path is not None:
-                self.out.release()
+            if self.video_writer is not None:
+                self.video_writer.release()
             cv2.destroyAllWindows()
             logger.info(f'finished after {self.frame_number} frames having made {self.particle_count} particles')
             return None, self.times[-1]
@@ -171,7 +178,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
         for p in self.particles:
             if p.is_out_of_bounds():
                 self.particles.remove(p)
-                newp=particles.particle(self.w,self.h,time,self.radius,self.speed_pps_min,self.speed_pps_max)
+                newp=particles.particle(self,self.w,self.h,time,self.radius,self.speed_pps_min,self.speed_pps_max)
                 self.particles.append(newp)
                 self.particle_count+=1
                 # logger.info(f'made new particle {newp}')
@@ -181,8 +188,8 @@ class particles(base_synthetic_input): # the class name should be the same as th
 
         if self.preview and self.frame_number % 10 == 0:
             cv2.imshow(self.cv2name, self.pix_arr)
-        if self.avi_path is not None:
-            self.out.write(cv2.cvtColor(self.pix_arr, cv2.COLOR_GRAY2BGR))
+        if self.video_writer is not None:
+            self.video_writer.write(cv2.cvtColor(self.pix_arr, cv2.COLOR_GRAY2BGR))
         if self.preview and self.frame_number % 50 == 0:
             k = cv2.waitKey(1)
             if k == ord('x'):
@@ -194,7 +201,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
 
 
 @njit
-def fill_dot(pix_arr: np.ndarray, x: float, y: float, fg: int, bg: int, radius: float):
+def fill_dot(pix_arr: np.ndarray, x: float, y: float, fg: float, bg: float, radius: float):
     """ Generates intensity values for the 'dot'
 
     :param pix_arr: the 2d pixel array to fill values to
@@ -221,7 +228,7 @@ def fill_dot(pix_arr: np.ndarray, x: float, y: float, fg: int, bg: int, radius: 
                 v = 1
             elif v < .01:
                 v = 0
-            v = bg + (fg - bg) * v  # intensity value from 0-1 intensity
+            v = fg * v  # intensity value from 0-1 intensity
             pix_arr[thisy][thisx] = v
 
 

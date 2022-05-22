@@ -55,7 +55,7 @@ logging.addLevelName(
 logger = logging.getLogger(__name__)
 
 # torch device
-torch_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+torch_device:str = torch.device('cuda' if torch.cuda.is_available() else 'cpu').type
 logger.info(f'torch device is {torch_device}')
 if torch_device=='cpu':
     logger.warning('CUDA GPU acceleration of pytorch operations is not available; '
@@ -190,7 +190,7 @@ def main():
 
 
     # Writing the info file
-    infofile = write_args_info(args, output_folder)
+    infofile = write_args_info(args, output_folder,other_args,command_line)
 
     fh = logging.FileHandler(infofile)
     fh.setLevel(logging.INFO)
@@ -199,7 +199,6 @@ def main():
     fh.setFormatter(formatter)
     logger.addHandler(fh)
 
-    logger.info(f'Command line: \n{command_line}')
 
 
 
@@ -481,6 +480,10 @@ def main():
                 'frames with {} events), '
                 .format(exposure_val))
 
+    log_input: bool = args.log_input
+    if log_input:
+        logger.info('Treating input as HDR logarithmic video')
+
     emulator = EventEmulator(
         pos_thres=pos_thres, neg_thres=neg_thres,
         sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,
@@ -495,6 +498,7 @@ def main():
         output_width=output_width, output_height=output_height,
         device=torch_device,
         cs_lambda_pixels=args.cs_lambda_pixels, cs_tau_p_ms=args.cs_tau_p_ms,
+        log_input=log_input
     )
 
     if args.dvs_params is not None:
@@ -583,6 +587,7 @@ def main():
             c_t=c[2] if c[2]>0 else 0
             c_b=-c[3] if c[3]>0 else None
             logger.info(f'cropping video by (left,right,top,bottom)=({c_l},{c_r},{c_t},{c_b})')
+
 
         with TemporaryDirectory() as source_frames_dir:
             if os.path.isdir(input_file):  # folder input
@@ -758,6 +763,8 @@ def main():
                 # right before event emulation
                 if args.davis_output:
                     emulator.prepare_storage(nFrames, interpTimes)
+
+                # generate events from frames and accumulate events to DVS frames for output DVS video
                 with tqdm(total=nFrames, desc='dvs', unit='fr') as pbar:
                     with torch.no_grad():
                         for i in range(nFrames):
