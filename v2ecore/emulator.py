@@ -73,7 +73,7 @@ class EventEmulator(object):
             device: str = "cuda",
             cs_lambda_pixels: float = None,
             cs_tau_p_ms: float = None,
-            log_input:bool=False
+            hdr:bool=False
     ):
         """
         Parameters
@@ -111,8 +111,8 @@ class EventEmulator(object):
             space constant of surround in pixels, or None to disable surround inhibition
         cs_tau_p_ms: float
             time constant of lowpass filter of surround in ms or 0 to make surround 'instantaneous'
-        log_input: bool
-            Treqt input as floating point logarithmic gray scale with 255 input scaled as ln(255)=5.5441
+        hdr: bool
+            Treqt input as HDR floating point logarithmic gray scale with 255 input scaled as ln(255)=5.5441
         """
 
         logger.info(
@@ -208,7 +208,7 @@ class EventEmulator(object):
                         f'cs_tau_h_ms:  {self.cs_tau_h_ms}\n\t'
                         f'cs_lambda_pixels:  {self.cs_lambda_pixels:.2f}\n\t'
                         )
-        self.log_input=log_input
+        self.log_input=hdr
 
         try:
             if dvs_h5:

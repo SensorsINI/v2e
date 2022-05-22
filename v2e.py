@@ -162,7 +162,7 @@ def main():
                 synthetic_input_module, classname)
             synthetic_input_instance:base_synthetic_input = synthetic_input_class(
                 width=output_width, height=output_height,
-                preview=not args.no_preview, arg_list=other_args, avi_path=os.path.join(output_folder,args.vid_orig)) #TODO output folder might not be unique, could write to first output folder
+                preview=not args.no_preview, arg_list=other_args, avi_path=os.path.join(output_folder,args.vid_orig),parent_args=args) #TODO output folder might not be unique, could write to first output folder
 
             if not isinstance(synthetic_input_instance,base_synthetic_input):
                 logger.error(f'synthetic input instance of {synthetic_input} is of type {type(synthetic_input_instance)}, but it should be a sublass of synthetic_input;'
@@ -480,8 +480,8 @@ def main():
                 'frames with {} events), '
                 .format(exposure_val))
 
-    log_input: bool = args.log_input
-    if log_input:
+    hdr: bool = args.hdr
+    if hdr:
         logger.info('Treating input as HDR logarithmic video')
 
     emulator = EventEmulator(
@@ -498,7 +498,7 @@ def main():
         output_width=output_width, output_height=output_height,
         device=torch_device,
         cs_lambda_pixels=args.cs_lambda_pixels, cs_tau_p_ms=args.cs_tau_p_ms,
-        log_input=log_input
+        hdr=hdr
     )
 
     if args.dvs_params is not None:

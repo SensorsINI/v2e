@@ -19,14 +19,16 @@ class base_synthetic_input(): # the class name should be the same as the filenam
     """
     BACKGROUND = 127 # defined as gray level of BACKGROUND of pix_arr
 
-    def __init__(self, width: int = 346, height: int = 260, avi_path: Optional[str] = None, preview=True, args:Optional[List]=None) -> None:
+    def __init__(self, width: int = 346, height: int = 260, avi_path: Optional[str] = None, preview=True, args:Optional[List]=None, parent_args:Optional[
+        argparse.Namespace]=None) -> None:
         """ prototype constructor
 
         :param width: width of frames in pixels
         :param height: height in pixels
         :param avi_path: folder to write video to, or None if not needed
         :param preview: set true to show the pix array as cv frame
-        :param args: pass in arguments from command line via this list
+        :param args: pass in unparsed list of extra synthetic method arguments from command line via this list
+        :param parent_args: pass in parsed arguments to v2e from command line via this list
         """
         self.height=height
         self.width=width
@@ -43,6 +45,7 @@ class base_synthetic_input(): # the class name should be the same as the filenam
         self.height = height
         self.frame_number=0
         self.args=args
+        self.parent_args=parent_args
         if self.preview:
             cv2.namedWindow(self.cv2name, cv2.WINDOW_NORMAL)
             cv2.resizeWindow(self.cv2name, self.width, self.height)

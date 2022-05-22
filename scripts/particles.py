@@ -39,7 +39,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
 
 
     def __init__(self, width: int = 346, height: int = 260, avi_path: Optional[str] = None, preview=False,
-                 arg_list = None) -> None:
+                 arg_list = None, parent_args=None) -> None:
         """ Constructs moving-dot class to make frames for v2e
 
         :param width: width of frames in pixels
@@ -48,7 +48,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
         :param preview: set true to show the pix array as cv frame
         :param arg_list: list of arguments from super
         """
-        super().__init__(width, height, avi_path, preview, arg_list)
+        super().__init__(width, height, avi_path, preview, arg_list, parent_args)
         parser=argparse.ArgumentParser(arg_list)
         parser.add_argument('--num_particles',type=int,default=particles.NUM_PARTICLES)
         parser.add_argument('--contrast',type=float,default=particles.CONTRAST)
@@ -58,7 +58,6 @@ class particles(base_synthetic_input): # the class name should be the same as th
         parser.add_argument('--speed_min',type=float,default=particles.SPEED_MIN)
         parser.add_argument('--speed_max',type=float,default=particles.SPEED_MAX)
         parser.add_argument('--dt',type=float,default=particles.DT)
-        parser.add_argument('--hdr',action='store_true')
 
         args=parser.parse_args(arg_list)
 
@@ -74,7 +73,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
         self.t_total = args.total_time
 
         self.fg=self.bg*self.contrast
-        if args.hdr:
+        if self.parent_args.hdr:
             self.bg=np.log(self.bg)
             self.fg=np.log(self.fg)
 

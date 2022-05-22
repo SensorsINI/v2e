@@ -307,10 +307,10 @@ def v2e_args(parser):
              "E.g. CROP=(100,100,0,0) crops 100 pixels "
              "from left and right of input frames."
              " CROP can also be specified as L,R,T,B without ()")
-    inGroup.add_argument('--log_input',action='store_true',
-                         help='Treat input video as logarithmic, '
+    inGroup.add_argument('--hdr',action='store_true',
+                         help='Treat input video as high dynamic range (HDR) logarithmic, '
                               'i.e. skip the linlog conversion step. '
-                              'Use --log_input for high dynamic range input with floating '
+                              'Use --hdr for HDR input with floating '
                               'point gray scale input videos. Units of log input are based '
                               'on white 255 pixels have values ln(255)=5.5441')
 
@@ -443,7 +443,7 @@ def write_args_info(args, path, other_args=None, command_line=None) -> str:
         other_arguments_list = '\n**** extra other arguments:\n'
         for arg in sorted(other_args):
             other_arguments_list += "{}\n".format(arg)
-        logger.info(arguments_list)
+        logger.info(other_arguments_list)
     basename = os.path.basename(__main__.__file__)
     argsFilename = basename.strip('.py') + '-args.txt'
     filepath = os.path.join(path, argsFilename)
