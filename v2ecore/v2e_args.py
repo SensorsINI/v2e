@@ -101,7 +101,7 @@ def v2e_args(parser):
     timestampResolutionGroup.add_argument(
         "--auto_timestamp_resolution", default=True, type=str2bool,
         const=True, nargs='?',
-        help="(Ignored by --disable_slomo.) "
+        help="(Ignored by --disable_slomo or --synthetic_input.) "
              "\nIf True (default), upsampling_factor is automatically "
              "determined to limit maximum movement between frames to 1 pixel."
              "\nIf False, --timestamp_resolution sets the upsampling factor "
@@ -110,7 +110,7 @@ def v2e_args(parser):
              "ensure DVS events have at most some resolution.")
     timestampResolutionGroup.add_argument(
         "--timestamp_resolution", type=float,
-        help="(Ignored by --disable_slomo.) "
+        help="(Ignored by --disable_slomo or --synthetic_input.) "
              "Desired DVS timestamp resolution in seconds; "
              "determines slow motion upsampling factor;  "
              "the video will be upsampled from source fps to "
@@ -162,7 +162,7 @@ def v2e_args(parser):
              "see https://ieeexplore.ieee.org/document/4444573."
              "CAUTION: See interaction with timestamp_resolution "
              "and auto_timestamp_resolution; "
-             "check output logger warnings."
+             "check output logger warnings. The input sample rate (frame rate) must be fast enough to allow this IIR lowpass filtering."
     )
     modelGroup.add_argument(
         "--leak_rate_hz", type=float, default=0.01,
@@ -174,6 +174,10 @@ def v2e_args(parser):
         # default for good lighting, very low rate
         help="Temporal noise rate of ON+OFF events in "
              "darkest parts of scene; reduced in brightest parts. ")
+    modelGroup.add_argument('--photoreceptor_noise',action='store_true',help='Create temporal noise by injecting Gaussian noise to the log photoreceptor before lowpass filtering.'
+                                                                             'This way, more accurate statistics of temporal noise will tend to result but the noise rate will only approximate the desired noise rate;'
+                                                                             ' the photoreceptor noise will be computed to result in the --shot_noise_rate noise value. '
+                                                                             'Overrides the default shot noise mechanism reported in 2020 v2e paper.')
     modelGroup.add_argument(
         "--leak_jitter_fraction", type=float, default=0.1,
         help="Jitter of leak noise events relative to the (FPN) "
@@ -320,11 +324,11 @@ def v2e_args(parser):
         "--synthetic_input", type=str,
         help="Input from class SYNTHETIC_INPUT that "
              "\nhas methods next_frame() and total_frames()."
-             "\nDisables file input and SuperSloMo frame interpolation. "
-             "\nSYNTHETIC_INPUT.next_frame() should return a frame of "
+             "\nDisables file input and SuperSloMo frame interpolation and the DVS timestamp resolution is set by the times returned by next_frame() method. "
+             "\nSYNTHETIC_INPUT.next_frame() should return a tuple (frame, time) with frame having"
              "\nthe correct resolution (see DVS model arguments) "
              "\nwhich is array[y][x] with "
-             "\npixel [0][0] at upper left corner and pixel values 0-255. "
+             "\npixel [0][0] at upper left corner and pixel values 0-255. The time is a float in seconds."
              "\nSYNTHETIC_INPUT must be resolvable from the classpath. "
              "\nSYNTHETIC_INPUT is the module name without .py suffix."
              "\nSee example moving_dot.py."

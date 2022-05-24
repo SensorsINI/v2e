@@ -15,7 +15,7 @@ import numpy as np
 import torch  # https://pytorch.org/docs/stable/torch.html
 from screeninfo import get_monitors
 
-from v2ecore.emulator_utils import compute_event_map
+from v2ecore.emulator_utils import compute_event_map, compute_photoreceptor_noise_voltage
 from v2ecore.emulator_utils import generate_shot_noise
 from v2ecore.emulator_utils import lin_log
 from v2ecore.emulator_utils import low_pass_filter
@@ -36,13 +36,12 @@ class EventEmulator(object):
     - contact: zhehe@student.ethz.ch
     """
 
-    # frames that can be displayed and saved to video
-    gr=(0,255)
+    # frames that can be displayed and saved to video with their plotting/display settings
     l255=np.log(255)
-    lg=(0,l255)
-    slg=(-l255/8,l255/8)
-
-    MODEL_STATES = {'new_frame':gr, 'lp_log_frame0':lg,
+    gr=(0,255) # display as 8 bit int gray image
+    lg=(0,l255) # display as log image with max ln(255)
+    slg=(-l255/8,l255/8) # display as signed log image with 1/8 of full scale for better visibility of faint contrast
+    MODEL_STATES = {'new_frame':gr, 'log_new_frame':lg,
                     'lp_log_frame1':lg, 'cs_surround_frame':lg,
                     'c_minus_s_frame':slg, 'base_log_frame':slg, 'diff_frame':slg}
 
@@ -57,6 +56,7 @@ class EventEmulator(object):
             leak_rate_hz: float = 0.1,
             refractory_period_s: float = 0.0,
             shot_noise_rate_hz: float = 0.0,  # rate in hz of temporal noise events
+            photoreceptor_noise: bool = False,
             leak_jitter_fraction: float = 0.1,
             noise_rate_cov_decades: float = 0.1,
             seed: int = 0,
@@ -91,6 +91,8 @@ class EventEmulator(object):
             from junction leakage in reset switch
         shot_noise_rate_hz: float
             shot noise rate in Hz
+        photoreceptor_noise: bool
+            model photoreceptor noise to create the desired shot noise rate
         seed: int, default=0
             seed for random threshold variations,
             fix it to nonzero value to get same mismatch every time
@@ -141,6 +143,20 @@ class EventEmulator(object):
         self.leak_rate_hz = leak_rate_hz
         self.refractory_period_s = refractory_period_s
         self.shot_noise_rate_hz = shot_noise_rate_hz
+        self.photoreceptor_noise=photoreceptor_noise
+        if not photoreceptor_noise is None:
+            if shot_noise_rate_hz == 0:
+                logger.warning(
+                    '--photoreceptor_noise is specified but --shot_noise_rate_hz is 0; set a finite rate of shot noise events per pixel')
+                v2e_quit(1)
+            if cutoff_hz == 0:
+                logger.warning(
+                    '--photoreceptor_noise is specified but --cutoff_hz is zero; set a finite photoreceptor cutoff frequency')
+                v2e_quit(1)
+
+        self.photoreceptor_noise_vrms=None
+        if self.photoreceptor_noise:
+            self.photoreceptor_noise_vrms = compute_photoreceptor_noise_voltage(rate_hz=self.shot_noise_rate_hz, f3db=self.cutoff_hz, pos_thr=self.pos_thres_nominal, neg_thr=self.neg_thres_nominal)
 
         self.leak_jitter_fraction = leak_jitter_fraction
         self.noise_rate_cov_decades = noise_rate_cov_decades
@@ -355,6 +371,7 @@ class EventEmulator(object):
         self.neg_thres_pre_prob = torch.div(
             self.neg_thres_nominal, self.neg_thres)
 
+
         # If leak is non-zero, then initialize each pixel memorized value
         # some fraction of ON threshold below first frame value, to create leak
         # events from the start; otherwise leak would only gradually
@@ -437,6 +454,7 @@ class EventEmulator(object):
 
         # add names of new states to potentially show with --show_model_states all
         self.new_frame: Optional[np.ndarray] = None
+        self.log_new_frame: Optional[np.ndarray] = None
         self.lp_log_frame0: Optional[np.ndarray] = None  # lowpass stage 0
         self.lp_log_frame1: Optional[np.ndarray] = None  # stage 1
         self.cs_surround_frame: Optional[np.ndarray] = None
@@ -475,7 +493,8 @@ class EventEmulator(object):
                 fn = os.path.join(self.output_folder, name + '.avi')
                 vw = video_writer(fn, self.output_height, self.output_width)
                 self.video_writers[name] = vw
-        cv2.putText(img,f'fr:{self.frame_counter} t:{self.t_previous:.4f}s', org=(0,self.output_height),fontScale=1.5, color=(0,0,0), fontFace=cv2.FONT_HERSHEY_PLAIN, thickness=2)
+        cv2.putText(img,f'fr:{self.frame_counter} t:{self.t_previous:.4f}s', org=(0,self.output_height),fontScale=1.3, color=(0,0,0), fontFace=cv2.FONT_HERSHEY_PLAIN, thickness=1)
+        cv2.putText(img,f'fr:{self.frame_counter} t:{self.t_previous:.4f}s', org=(1,self.output_height-1),fontScale=1.3, color=(255,255,255), fontFace=cv2.FONT_HERSHEY_PLAIN, thickness=1)
         cv2.imshow(name, img)
         if self.save_dvs_model_state:
             self.video_writers[name].write(
@@ -530,7 +549,12 @@ class EventEmulator(object):
         self.new_frame = torch.tensor(new_frame, dtype=torch.float64,
                                       device=self.device)
         # lin-log mapping, if input is not already float32 log input
-        log_new_frame = lin_log(self.new_frame) if not self.log_input else self.new_frame
+        self.log_new_frame = lin_log(self.new_frame) if not self.log_input else self.new_frame
+
+        # add photoreceptor noise if we are using photoreceptor noise to create shot noise
+        if self.photoreceptor_noise:
+            self.log_new_frame+=self.photoreceptor_noise_vrms*torch.randn(self.log_new_frame.shape, dtype=torch.float32,
+                device=self.device)
 
         inten01 = None  # define for later
         if self.cutoff_hz > 0 or self.shot_noise_rate_hz > 0:  # will use later
@@ -547,12 +571,14 @@ class EventEmulator(object):
         # the intensity value (with offset to deal with DN=0)
         if self.base_log_frame is None:
             # initialize first stage of 2nd order IIR to first input
-            self.lp_log_frame0 = log_new_frame
+            self.lp_log_frame0 = self.log_new_frame
             # 2nd stage is initialized to same,
             # so diff will be zero for first frame
-            self.lp_log_frame1 = log_new_frame
+            self.lp_log_frame1 = self.log_new_frame
+
+
         self.lp_log_frame0, self.lp_log_frame1 = low_pass_filter(
-            log_new_frame=log_new_frame,
+            log_new_frame=self.log_new_frame,
             lp_log_frame0=self.lp_log_frame0,
             lp_log_frame1=self.lp_log_frame1,
             inten01=inten01,
@@ -667,7 +693,7 @@ class EventEmulator(object):
         shot_on_cord, shot_off_cord = None, None
 
         # This was in the loop, here we calculate loop-independent quantities
-        if self.shot_noise_rate_hz > 0:
+        if self.shot_noise_rate_hz > 0 and not self.photoreceptor_noise:
             shot_on_cord, shot_off_cord = generate_shot_noise(
                 shot_noise_rate_hz=self.shot_noise_rate_hz,
                 delta_time=delta_time,
@@ -691,7 +717,7 @@ class EventEmulator(object):
             neg_cord = (neg_evts_frame >= i + 1)
 
             # generate shot noise
-            if self.shot_noise_rate_hz > 0:
+            if self.shot_noise_rate_hz > 0 and not self.photoreceptor_noise:
                 # update event list
                 pos_cord = torch.logical_or(pos_cord, shot_on_cord[i])
                 neg_cord = torch.logical_or(neg_cord, shot_off_cord[i])

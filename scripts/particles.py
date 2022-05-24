@@ -72,6 +72,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
         self.particle_count=0
         self.t_total = args.total_time
 
+        self.bg=args.bg
         self.fg=self.bg*self.contrast
         if self.parent_args.hdr:
             self.bg=np.log(self.bg)

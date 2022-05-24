@@ -274,6 +274,7 @@ def main():
             'so all leak events will be synchronous')
     shot_noise_rate_hz = args.shot_noise_rate_hz
 
+
     # Visualization
     avi_frame_rate = args.avi_frame_rate
     dvs_vid = args.dvs_vid
@@ -487,7 +488,7 @@ def main():
     emulator = EventEmulator(
         pos_thres=pos_thres, neg_thres=neg_thres,
         sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,
-        leak_rate_hz=leak_rate_hz, shot_noise_rate_hz=shot_noise_rate_hz,
+        leak_rate_hz=leak_rate_hz, shot_noise_rate_hz=shot_noise_rate_hz, photoreceptor_noise=args.photoreceptor_noise,
         leak_jitter_fraction=args.leak_jitter_fraction,
         noise_rate_cov_decades=args.noise_rate_cov_decades,
         refractory_period_s=args.refractory_period,

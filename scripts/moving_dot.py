@@ -56,7 +56,7 @@ class moving_dot(base_synthetic_input): # the class name should be the same as t
     """ Generates moving dot
     """
 
-    def __init__(self, width: int = 346, height: int = 260, avi_path: Optional[str] = None, preview=True, arg_list=None) -> None:
+    def __init__(self, width: int = 346, height: int = 260, avi_path: Optional[str] = None, preview=True, arg_list=None, parent_args=None) -> None:
         """ Constructs moving-dot class to make frames for v2e
 
         :param width: width of frames in pixels
@@ -68,7 +68,7 @@ class moving_dot(base_synthetic_input): # the class name should be the same as t
         self.num_dots = 5  # number of dots, spaced around center
         self.contrast: float = 10  # compare this with pos_thres and neg_thres and sigma_thr, e.g. use 1.2 for dot to be 20% brighter than backgreound
         self.bg: int = 5  # background gray level in range 0-255
-        self.dt = 30e-6  # frame interval sec
+        self.dt = 500e-6  # frame interval sec
         self.radius = 100  # of circular motion of dot
         self.dot_sigma: float = 1  # gaussian sigma of dot in pixels
         self.speed_pps = 1000  # final speed, pix/s

@@ -3,10 +3,12 @@
 Author: Yuhuang Hu
 Email : yuhuang.hu@ini.uzh.ch
 """
-
+import logging
 import math
 import torch
 import torch.nn.functional as F
+
+logger = logging.getLogger(__name__)
 
 
 def lin_log(x, threshold=20):
@@ -17,6 +19,8 @@ def lin_log(x, threshold=20):
         the input linear value in range 0-255 TODO assumes 8 bit
     :param threshold: float threshold 0-255
         the threshold for transition from linear to log mapping
+
+    Returns: the log value
     """
     # converting x into np.float64.
     if x.dtype is not torch.float64:  # note float64 to get rounding to work
@@ -78,6 +82,8 @@ def low_pass_filter(
     # make the update proportional to the local intensity
     # the more intensity, the shorter the time constant
     eps = inten01*(delta_time/tau)
+    if eps>0.3:
+        logger.warning(f'IIR lowpass filter update has large update eps={eps:.2f} from delta_time/tau={delta_time:.3g}/{tau:.3g}')
     eps = torch.clamp(eps, max=1)  # keep filter stable
 
     # first internal state is updated
@@ -148,6 +154,59 @@ def compute_event_map(diff_frame, pos_thres, neg_thres):
 
     return pos_evts_frame, neg_evts_frame
     #  return pos_evts_cord_post, neg_evts_cord_post, max_events
+
+
+def compute_photoreceptor_noise_voltage(rate_hz, f3db, pos_thr, neg_thr) -> float:
+    """
+     Computes the necessary photoreceptor noise voltage to result in obseved shot noise rate at low light intensity.
+     This computation relies on the known f3dB photoreceptor lowpass filter cutoff frequency and the known (nominal) event threshold.
+     emulator.py injects Gaussian distributed noise to the photoreceptor that should in principle generate the desired shot noise events.
+
+     See the file media/noise_event_rate_simulation.xlsx for the simulation data and curve fit.
+
+    Parameters
+    -----------
+     rate_hz: float
+        the desired pixel shot noise rate in hz
+     f3db: float
+        the cutoff frequency in Hz
+     pos_thr:float
+        on threshold in ln units
+     neg_thr:float
+        off threshold in ln units. The on and off thresholds are averaged to obtain a single threshold.
+
+    Returns
+    -----------
+    float
+         Noise voltage Gaussian RMS value
+    """
+
+    # Excel 6th order polynomial fit to Rui's simulation results of noise rate Rn in Hz per f3db bandwidth as a function of noise voltage Vn compared to threshold voltage thr
+    # x = log10(thr/Vn)
+    # y = log10(Rn/f3db)
+    # y = -1.4883*x^^6 - 6.1187*x^^5 - 7.5137*x^^4 - 2.2628*x^^3 + 0.6095*x^^2 - 1.9891*x + 3.7154
+
+    # y = log10(thr/Vn)
+    # x = log10(Rn/f3db)
+    # y = -0.0026x3 - 0.0127x2 - 0.0486x + 0.6512
+    # see the plot Fig. 3 from Graca, Rui, and Tobi Delbruck. 2021. “Unraveling the Paradox of Intensity-Dependent DVS Pixel Noise.” arXiv [eess.SY]. arXiv. http://arxiv.org/abs/2109.08640.
+    thr= (pos_thr + neg_thr) / 2
+    rate_per_bw=2*rate_hz/f3db # simulation data are on ON event rates, so we double the desired rate here
+    if rate_per_bw>0.5:
+        logger.warning(f'shot noise rate per hz of bandwidth is larger than 0.1 (rate_hz={rate_hz} Hz, 3dB bandwidth={f3db} Hz)')
+    x=math.log10(rate_per_bw)
+    if x<-4.0:
+        logger.warning(f'desired noise rate of {rate_hz}Hz is too low to accurately compute a threshold value')
+    elif x>3.0:
+        logger.warning(f'desired noise rate of {rate_hz}Hz is too large to accurately compute a threshold value')
+    y= -0.0026*x**3 - 0.0127*x**2 - 0.0486*x + 0.6512
+
+    vn_per_thr=10**y
+    vn=vn_per_thr*thr
+    logger.info(
+        f'Computed photoreceptor_noise_vrms={vn:.3f} for shot_noise_rate_hz={rate_hz}, cutoff_hz={f3db} Hz and average on/off threshold={thr}')
+
+    return vn
 
 
 def generate_shot_noise(
