@@ -7,6 +7,8 @@
 # The dot initially makes events and then appears to disappear. The cause is that the mean level of dot
 # is encoded by the baseLogFrame which is initially at zero but increases to code the average of dot and background.
 # Then the low contrast of dot causes only a single ON event on first cycle
+import argparse
+
 import numpy as np
 import cv2
 import os
@@ -65,14 +67,26 @@ class moving_dot(base_synthetic_input): # the class name should be the same as t
         :param preview: set true to show the pix array as cv frame
         """
         super().__init__(width, height, avi_path, preview, arg_list)
-        self.num_dots = 5  # number of dots, spaced around center
-        self.contrast: float = 10  # compare this with pos_thres and neg_thres and sigma_thr, e.g. use 1.2 for dot to be 20% brighter than backgreound
-        self.bg: int = 5  # background gray level in range 0-255
-        self.dt = 500e-6  # frame interval sec
-        self.radius = 100  # of circular motion of dot
-        self.dot_sigma: float = 1  # gaussian sigma of dot in pixels
+        parser=argparse.ArgumentParser(arg_list)
+        parser.add_argument('--num_particles',type=int,default=5)
+        parser.add_argument('--contrast',type=float,default=10)
+        parser.add_argument('--bg',type=float,default=5)
+        parser.add_argument('--radius',type=float,default=100)
+        parser.add_argument('--cycles',type=float,default=4)
+        parser.add_argument('--dt',type=float,default=100e-6)
+        args = parser.parse_args(arg_list)
+
+        self.dt = args.dt  # frame interval sec
+
+        self.num_dots = args.num_particles  # number of dots, spaced around center
+        self.contrast: float = args.contrast  # compare this with pos_thres and neg_thres and sigma_thr, e.g. use 1.2 for dot to be 20% brighter than backgreound
+        self.bg: int = args.bg # background gray level in range 0-255
+        self.dt = args.dt # frame interval sec
+        self.cycles = args.cycles
+        self.radius = args.radius  # of circular motion of dot
+
         self.speed_pps = 1000  # final speed, pix/s
-        self.cycles = 4
+        self.dot_sigma: float = 1  # gaussian sigma of dot in pixels
         # computed values below here
         # self.t_total = 4 * np.pi * self.radius * self.cycles / self.speed_pps
         self.circum = 2 * np.pi * self.radius

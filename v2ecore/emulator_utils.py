@@ -82,7 +82,7 @@ def low_pass_filter(
     # make the update proportional to the local intensity
     # the more intensity, the shorter the time constant
     eps = inten01*(delta_time/tau)
-    if eps>0.3:
+    if torch.max(eps)>0.3:
         logger.warning(f'IIR lowpass filter update has large update eps={eps:.2f} from delta_time/tau={delta_time:.3g}/{tau:.3g}')
     eps = torch.clamp(eps, max=1)  # keep filter stable
 
@@ -178,33 +178,28 @@ def compute_photoreceptor_noise_voltage(rate_hz, f3db, pos_thr, neg_thr) -> floa
     Returns
     -----------
     float
-         Noise voltage Gaussian RMS value
+         Noise signal Gaussian RMS value in log_e units, to be added as Gaussian source directly to log photoreceptor output signal
     """
-
-    # Excel 6th order polynomial fit to Rui's simulation results of noise rate Rn in Hz per f3db bandwidth as a function of noise voltage Vn compared to threshold voltage thr
-    # x = log10(thr/Vn)
-    # y = log10(Rn/f3db)
-    # y = -1.4883*x^^6 - 6.1187*x^^5 - 7.5137*x^^4 - 2.2628*x^^3 + 0.6095*x^^2 - 1.9891*x + 3.7154
 
     # y = log10(thr/Vn)
     # x = log10(Rn/f3db)
-    # y = -0.0026x3 - 0.0127x2 - 0.0486x + 0.6512
     # see the plot Fig. 3 from Graca, Rui, and Tobi Delbruck. 2021. “Unraveling the Paradox of Intensity-Dependent DVS Pixel Noise.” arXiv [eess.SY]. arXiv. http://arxiv.org/abs/2109.08640.
+    # the fit is computed in media/noise_event_rate_simulation.xlsx spreadsheet
     thr= (pos_thr + neg_thr) / 2
     rate_per_bw=2*rate_hz/f3db # simulation data are on ON event rates, so we double the desired rate here
     if rate_per_bw>0.5:
         logger.warning(f'shot noise rate per hz of bandwidth is larger than 0.1 (rate_hz={rate_hz} Hz, 3dB bandwidth={f3db} Hz)')
     x=math.log10(rate_per_bw)
-    if x<-4.0:
+    if x<-5.0:
         logger.warning(f'desired noise rate of {rate_hz}Hz is too low to accurately compute a threshold value')
-    elif x>3.0:
+    elif x>0.0:
         logger.warning(f'desired noise rate of {rate_hz}Hz is too large to accurately compute a threshold value')
-    y= -0.0026*x**3 - 0.0127*x**2 - 0.0486*x + 0.6512
+    y = -0.0026*x**3 - 0.036*x**2 - 0.1949*x + 0.321
 
-    vn_per_thr=10**y
-    vn=vn_per_thr*thr
+    thr_per_vn=10**y # to get thr/vn
+    vn=thr/thr_per_vn # compute necessary vn to give us this noise rate per pixel at this pixel bandwidth
     logger.info(
-        f'Computed photoreceptor_noise_vrms={vn:.3f} for shot_noise_rate_hz={rate_hz}, cutoff_hz={f3db} Hz and average on/off threshold={thr}')
+        f'Computed photoreceptor_noise_rms={vn:.3f} in ln units for shot_noise_rate_hz={rate_hz} Hz, cutoff_hz={f3db} Hz (Rn/f3dB={rate_per_bw:.3g} Hz) and average on/off threshold={thr} ln units')
 
     return vn
 

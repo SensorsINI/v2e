@@ -552,7 +552,7 @@ class EventEmulator(object):
         self.log_new_frame = lin_log(self.new_frame) if not self.log_input else self.new_frame
 
         # add photoreceptor noise if we are using photoreceptor noise to create shot noise
-        if self.photoreceptor_noise:
+        if self.photoreceptor_noise and not self.base_log_frame is None: # only add noise after the initial values are memorized and we can properly lowpass filter the noise
             self.log_new_frame+=self.photoreceptor_noise_vrms*torch.randn(self.log_new_frame.shape, dtype=torch.float32,
                 device=self.device)
 
@@ -644,8 +644,8 @@ class EventEmulator(object):
         if max_num_events_any_pixel > 1000:
             logger.warning(f'num_iter={max_num_events_any_pixel}>1000 events')
 
-        if max_num_events_any_pixel == 0:
-            logger.warning('no events generated for frame, generating any noise for this frame with 1 iteration')
+        if max_num_events_any_pixel == 0 and self.shot_noise_rate_hz>0 and not self.photoreceptor_noise:
+            logger.warning('no events generated for frame, generating any sampled temporal noise for this frame with 1 iteration')
             max_num_events_any_pixel = 1
         # record final events update
         final_pos_evts_frame = torch.zeros(
