@@ -42,7 +42,7 @@ class EventEmulator(object):
     lg=(0,l255) # display as log image with max ln(255)
     slg=(-l255/8,l255/8) # display as signed log image with 1/8 of full scale for better visibility of faint contrast
     MODEL_STATES = {'new_frame':gr, 'log_new_frame':lg,
-                    'lp_log_frame1':lg, 'cs_surround_frame':lg,
+                    'lp_log_frame':lg, 'photoreceptor_noise_arr':slg, 'cs_surround_frame':lg,
                     'c_minus_s_frame':slg, 'base_log_frame':slg, 'diff_frame':slg}
 
     MAX_CHANGE_TO_TERMINATE_EULER_SURROUND_STEPPING = 1e-5
@@ -99,8 +99,7 @@ class EventEmulator(object):
         dvs_aedat2, dvs_h5, dvs_text: str
             names of output data files or None
         show_dvs_model_state: List[str],
-            None or 'new_frame' 'baseLogFrame','lpLogFrame0','lpLogFrame1',
-            'diff_frame' etc
+            None or 'new_frame','diff_frame' etc; see EventEmulator.MODEL_STATES
         output_folder: str
             Path to optional model state videos
         output_width: int,
@@ -144,7 +143,9 @@ class EventEmulator(object):
         self.refractory_period_s = refractory_period_s
         self.shot_noise_rate_hz = shot_noise_rate_hz
         self.photoreceptor_noise=photoreceptor_noise
-        if not photoreceptor_noise is None:
+        self.photoreceptor_noise_vrms:Optional[float]=None
+        self.photoreceptor_noise_arr:Optional[np.ndarray]=None # separate noise source that is lowpass filtered to provide intensity-independent noise to add to intensity-dependent filtered photoreceptor output
+        if photoreceptor_noise:
             if shot_noise_rate_hz == 0:
                 logger.warning(
                     '--photoreceptor_noise is specified but --shot_noise_rate_hz is 0; set a finite rate of shot noise events per pixel')
@@ -153,9 +154,6 @@ class EventEmulator(object):
                 logger.warning(
                     '--photoreceptor_noise is specified but --cutoff_hz is zero; set a finite photoreceptor cutoff frequency')
                 v2e_quit(1)
-
-        self.photoreceptor_noise_vrms=None
-        if self.photoreceptor_noise:
             self.photoreceptor_noise_vrms = compute_photoreceptor_noise_voltage(rate_hz=self.shot_noise_rate_hz, f3db=self.cutoff_hz, pos_thr=self.pos_thres_nominal, neg_thr=self.neg_thres_nominal)
 
         self.leak_jitter_fraction = leak_jitter_fraction
@@ -455,8 +453,8 @@ class EventEmulator(object):
         # add names of new states to potentially show with --show_model_states all
         self.new_frame: Optional[np.ndarray] = None
         self.log_new_frame: Optional[np.ndarray] = None
-        self.lp_log_frame0: Optional[np.ndarray] = None  # lowpass stage 0
-        self.lp_log_frame1: Optional[np.ndarray] = None  # stage 1
+        self.lp_log_frame: Optional[np.ndarray] = None  # lowpass stage 0
+        self.lp_log_frame: Optional[np.ndarray] = None  # stage 1
         self.cs_surround_frame: Optional[np.ndarray] = None
         self.c_minus_s_frame: Optional[np.ndarray] = None
         self.base_log_frame: Optional[np.ndarray] = None
@@ -551,10 +549,6 @@ class EventEmulator(object):
         # lin-log mapping, if input is not already float32 log input
         self.log_new_frame = lin_log(self.new_frame) if not self.log_input else self.new_frame
 
-        # add photoreceptor noise if we are using photoreceptor noise to create shot noise
-        if self.photoreceptor_noise and not self.base_log_frame is None: # only add noise after the initial values are memorized and we can properly lowpass filter the noise
-            self.log_new_frame+=self.photoreceptor_noise_vrms*torch.randn(self.log_new_frame.shape, dtype=torch.float32,
-                device=self.device)
 
         inten01 = None  # define for later
         if self.cutoff_hz > 0 or self.shot_noise_rate_hz > 0:  # will use later
@@ -570,20 +564,22 @@ class EventEmulator(object):
         # Time constant of the filter is proportional to
         # the intensity value (with offset to deal with DN=0)
         if self.base_log_frame is None:
-            # initialize first stage of 2nd order IIR to first input
-            self.lp_log_frame0 = self.log_new_frame
-            # 2nd stage is initialized to same,
-            # so diff will be zero for first frame
-            self.lp_log_frame1 = self.log_new_frame
+            # initialize 1st order IIR to first input
+            self.lp_log_frame = self.log_new_frame
+            self.photoreceptor_noise_arr=torch.zeros_like(self.lp_log_frame)
 
 
-        self.lp_log_frame0, self.lp_log_frame1 = low_pass_filter(
+        self.lp_log_frame = low_pass_filter(
             log_new_frame=self.log_new_frame,
-            lp_log_frame0=self.lp_log_frame0,
-            lp_log_frame1=self.lp_log_frame1,
+            lp_log_frame=self.lp_log_frame,
             inten01=inten01,
             delta_time=delta_time,
             cutoff_hz=self.cutoff_hz)
+
+        # add photoreceptor noise if we are using photoreceptor noise to create shot noise
+        if self.photoreceptor_noise and not self.base_log_frame is None:  # only add noise after the initial values are memorized and we can properly lowpass filter the noise
+            noise = self.photoreceptor_noise_vrms * torch.randn(self.log_new_frame.shape, dtype=torch.float32,  device=self.device)
+            self.photoreceptor_noise_arr=low_pass_filter(noise,self.photoreceptor_noise_arr,None,delta_time,self.cutoff_hz)
 
         # surround computations by time stepping the diffuser
         if self.csdvs_enabled:
@@ -592,9 +588,9 @@ class EventEmulator(object):
         if self.base_log_frame is None:
             self._init(new_frame)
             if not self.csdvs_enabled:
-                self.base_log_frame = self.lp_log_frame1
+                self.base_log_frame = self.lp_log_frame
             else:
-                self.base_log_frame = self.lp_log_frame1 - self.cs_surround_frame  # init base log frame (input to diff) to DC value, TODO check might not be correct to avoid transient
+                self.base_log_frame = self.lp_log_frame - self.cs_surround_frame  # init base log frame (input to diff) to DC value, TODO check might not be correct to avoid transient
 
             return None  # on first input frame we just setup the state of all internal nodes of pixels
 
@@ -618,9 +614,9 @@ class EventEmulator(object):
         # from the difference between new input
         # (from lowpass of lin-log input) and the memorized value
         if not self.csdvs_enabled:
-            self.diff_frame = self.lp_log_frame1 - self.base_log_frame
+            self.diff_frame = self.lp_log_frame +self.photoreceptor_noise_arr - self.base_log_frame
         else:
-            self.c_minus_s_frame = self.lp_log_frame1 - self.cs_surround_frame
+            self.c_minus_s_frame = self.lp_log_frame +self.photoreceptor_noise_arr - self.cs_surround_frame
             self.diff_frame = self.c_minus_s_frame - self.base_log_frame
 
         if not self.show_dvs_model_state is None:
@@ -826,7 +822,7 @@ class EventEmulator(object):
 
     def _update_csdvs(self, delta_time):
         if self.cs_surround_frame is None:
-            self.cs_surround_frame = self.lp_log_frame1.clone().detach()  # detach makes true clone decoupled from torch computation tree
+            self.cs_surround_frame = self.lp_log_frame.clone().detach()  # detach makes true clone decoupled from torch computation tree
         else:
             # we still need to simulate dynamics even if "instantaneous", unfortunately it will be really slow with Euler stepping and
             # no gear-shifting
@@ -864,7 +860,7 @@ class EventEmulator(object):
                     f'CSDVS update alpha (of IIR update) is too large; simulation will be inaccurate: '
                     f'alpha_p={alpha_p:.3f} alpha_h={alpha_h:.3f}')
                 self.cs_alpha_warning_printed = True
-            p_ten = torch.unsqueeze(torch.unsqueeze(self.lp_log_frame1, 0), 0)
+            p_ten = torch.unsqueeze(torch.unsqueeze(self.lp_log_frame, 0), 0)
             h_ten = torch.unsqueeze(torch.unsqueeze(self.cs_surround_frame, 0), 0)
             padding = torch.nn.ReplicationPad2d(1)
             max_change = 2 * EventEmulator.MAX_CHANGE_TO_TERMINATE_EULER_SURROUND_STEPPING

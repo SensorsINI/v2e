@@ -1,7 +1,7 @@
 """Collections of emulator utilities.
 
-Author: Yuhuang Hu
-Email : yuhuang.hu@ini.uzh.ch
+Author: Yuhuang Hu, Tobi Delbruck
+Email : yuhuang.hu@ini.uzh.ch, tobi@ini.uzh.ch
 """
 import logging
 import math
@@ -52,8 +52,7 @@ def rescale_intensity_frame(new_frame):
 
 def low_pass_filter(
         log_new_frame,
-        lp_log_frame0,
-        lp_log_frame1,
+        lp_log_frame,
         inten01,
         delta_time,
         cutoff_hz=0):
@@ -61,19 +60,16 @@ def low_pass_filter(
 
     # Arguments
         log_new_frame: new frame in lin-log representation.
-        lp_log_frame0:
-        lp_log_frame1:
-        inten01:
+        lp_log_frame:
+        inten01: the scaling of filter time constant array, or None to not scale
         delta_time:
         cutoff_hz:
 
     # Returns
-        new_lp_log_frame0
-        new_lp_log_frame1
-
+        new_lp_log_frame
     """
     if cutoff_hz <= 0:
-        # unchange
+        # unchanged
         return log_new_frame, log_new_frame
 
     # else low pass
@@ -81,22 +77,25 @@ def low_pass_filter(
 
     # make the update proportional to the local intensity
     # the more intensity, the shorter the time constant
-    eps = inten01*(delta_time/tau)
-    if torch.max(eps)>0.3:
-        logger.warning(f'IIR lowpass filter update has large update eps={eps:.2f} from delta_time/tau={delta_time:.3g}/{tau:.3g}')
-    eps = torch.clamp(eps, max=1)  # keep filter stable
+    if inten01 is not None:
+        eps = inten01*(delta_time/tau)
+        if torch.max(eps)>0.3:
+            logger.warning(f'IIR lowpass filter update has large update eps={eps:.2f} from delta_time/tau={delta_time:.3g}/{tau:.3g}')
+        eps = torch.clamp(eps, max=1)  # keep filter stable
+    else:
+        eps=delta_time/tau
 
     # first internal state is updated
-    new_lp_log_frame0 = (1-eps)*lp_log_frame0+eps*log_new_frame
+    new_lp_log_frame = (1-eps)*lp_log_frame+eps*log_new_frame
 
     # then 2nd internal state (output) is updated from first
     # Note that observations show that one pole is nearly always dominant,
     # so the 2nd stage is just copy of first stage
-    new_lp_log_frame1 = lp_log_frame0
+
     # (1-eps)*self.lpLogFrame1+eps*self.lpLogFrame0 # was 2nd-order,
     # now 1st order.
 
-    return new_lp_log_frame0, new_lp_log_frame1
+    return new_lp_log_frame
 
 
 def subtract_leak_current(base_log_frame,
@@ -198,10 +197,33 @@ def compute_photoreceptor_noise_voltage(rate_hz, f3db, pos_thr, neg_thr) -> floa
 
     thr_per_vn=10**y # to get thr/vn
     vn=thr/thr_per_vn # compute necessary vn to give us this noise rate per pixel at this pixel bandwidth
-    logger.info(
-        f'Computed photoreceptor_noise_rms={vn:.3f} in ln units for shot_noise_rate_hz={rate_hz} Hz, cutoff_hz={f3db} Hz (Rn/f3dB={rate_per_bw:.3g} Hz) and average on/off threshold={thr} ln units')
+    # now we need to find the scaling factor from white noise to get the correct noise vn after RC lowpass.
+    # to get this NEB factor, we generate white samples here, lowpass filter them, compute the variance, and scale the amplitude to give us vn
+    nsamp=10000
+    import numpy as np
+    tau=1/(f3db*2*math.pi)
+    dt=tau/100
+    t=np.arange(0,1000*tau,dt)
+    rin = np.random.default_rng().standard_normal(t.shape)
+    rout=np.zeros_like(rin)
+    # RC lowpass the noise
+    eps=dt/tau
+    rout[0]=0 # init value is mean 0
+    for i in range(1,len(rin)):
+        rin[i]=rin[i-1]*(1-eps)+rin[i]*eps
+    std=np.std(rin) # compute the amplitude of this noise
+    # import matplotlib.pyplot as plt
+    # plt.plot(t,rin)
+    # plt.xlabel('time (s)')
+    # plt.ylabel('filtered noise')
+    # plt.show()
 
-    return vn
+    vnscaled=vn/std # divide the computed vn by this standard to get the necessary vn to add before RC lowpass filtering
+
+    logger.info(
+        f'Computed photoreceptor_noise_rms={vn:.3f}, scaled to {vnscaled:.3f} before 1st-order lowpass, in ln units for shot_noise_rate_hz={rate_hz} Hz, cutoff_hz={f3db} Hz (Rn/f3dB={rate_per_bw:.3g} Hz) and average on/off threshold={thr} ln units')
+
+    return vnscaled
 
 
 def generate_shot_noise(
