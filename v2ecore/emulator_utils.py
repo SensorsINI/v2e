@@ -5,6 +5,9 @@ Email : yuhuang.hu@ini.uzh.ch, tobi@ini.uzh.ch
 """
 import logging
 import math
+import sys
+
+import numpy as np
 import torch
 import torch.nn.functional as F
 
@@ -155,7 +158,7 @@ def compute_event_map(diff_frame, pos_thres, neg_thres):
     #  return pos_evts_cord_post, neg_evts_cord_post, max_events
 
 
-def compute_photoreceptor_noise_voltage(rate_hz, f3db, pos_thr, neg_thr) -> float:
+def compute_photoreceptor_noise_voltage(shot_noise_rate_hz, f3db, sample_rate_hz, pos_thr, neg_thr) -> float:
     """
      Computes the necessary photoreceptor noise voltage to result in obseved shot noise rate at low light intensity.
      This computation relies on the known f3dB photoreceptor lowpass filter cutoff frequency and the known (nominal) event threshold.
@@ -165,10 +168,12 @@ def compute_photoreceptor_noise_voltage(rate_hz, f3db, pos_thr, neg_thr) -> floa
 
     Parameters
     -----------
-     rate_hz: float
+     shot_noise_rate_hz: float
         the desired pixel shot noise rate in hz
      f3db: float
-        the cutoff frequency in Hz
+        the 1st-order IIR RC lowpass filter cutoff frequency in Hz
+     sample_rate_hz: float
+        the sample rate (up-sampled frame rate) before IIR lowpassing the noise
      pos_thr:float
         on threshold in ln units
      neg_thr:float
@@ -185,46 +190,59 @@ def compute_photoreceptor_noise_voltage(rate_hz, f3db, pos_thr, neg_thr) -> floa
     # see the plot Fig. 3 from Graca, Rui, and Tobi Delbruck. 2021. “Unraveling the Paradox of Intensity-Dependent DVS Pixel Noise.” arXiv [eess.SY]. arXiv. http://arxiv.org/abs/2109.08640.
     # the fit is computed in media/noise_event_rate_simulation.xlsx spreadsheet
     thr= (pos_thr + neg_thr) / 2
-    rate_per_bw=2*rate_hz/f3db # simulation data are on ON event rates, so we double the desired rate here
+    rate_per_bw= (shot_noise_rate_hz / f3db) / 2 # simulation data are on ON event rates, divide by 2 here to end up with correct total rate
     if rate_per_bw>0.5:
-        logger.warning(f'shot noise rate per hz of bandwidth is larger than 0.1 (rate_hz={rate_hz} Hz, 3dB bandwidth={f3db} Hz)')
+        logger.warning(f'shot noise rate per hz of bandwidth is larger than 0.1 (rate_hz={shot_noise_rate_hz} Hz, 3dB bandwidth={f3db} Hz)')
     x=math.log10(rate_per_bw)
     if x<-5.0:
-        logger.warning(f'desired noise rate of {rate_hz}Hz is too low to accurately compute a threshold value')
+        logger.warning(f'desired noise rate of {shot_noise_rate_hz}Hz is too low to accurately compute a threshold value')
     elif x>0.0:
-        logger.warning(f'desired noise rate of {rate_hz}Hz is too large to accurately compute a threshold value')
+        logger.warning(f'desired noise rate of {shot_noise_rate_hz}Hz is too large to accurately compute a threshold value')
     y = -0.0026*x**3 - 0.036*x**2 - 0.1949*x + 0.321
 
     thr_per_vn=10**y # to get thr/vn
     vn=thr/thr_per_vn # compute necessary vn to give us this noise rate per pixel at this pixel bandwidth
+    if not compute_photoreceptor_noise_voltage.last_sample_rate is None:
+        diff=np.abs(sample_rate_hz/compute_photoreceptor_noise_voltage.last_sample_rate-1)
+        if diff<0.1:
+            return compute_photoreceptor_noise_voltage.last_vn # return cached value
+
     # now we need to find the scaling factor from white noise to get the correct noise vn after RC lowpass.
-    # to get this NEB factor, we generate white samples here, lowpass filter them, compute the variance, and scale the amplitude to give us vn
-    nsamp=10000
-    import numpy as np
+    # # to get this NEB factor, we generate white samples here, lowpass filter them, compute the variance, and scale the amplitude to give us vn
+    compute_photoreceptor_noise_voltage.last_sample_rate=sample_rate_hz
     tau=1/(f3db*2*math.pi)
-    dt=tau/100
-    t=np.arange(0,1000*tau,dt)
+    dt=1/sample_rate_hz
+    t=np.arange(0,100*tau,dt)
     rin = np.random.default_rng().standard_normal(t.shape)
     rout=np.zeros_like(rin)
     # RC lowpass the noise
     eps=dt/tau
     rout[0]=0 # init value is mean 0
     for i in range(1,len(rin)):
-        rin[i]=rin[i-1]*(1-eps)+rin[i]*eps
-    std=np.std(rin) # compute the amplitude of this noise
+        rout[i]=rout[i-1]*(1-eps)+rin[i]*eps
+    std=np.std(rout) # compute the amplitude of this noise
+    vnscaled=vn/std # divide the computed vn to get the necessary vn to add before RC lowpass filtering
+    compute_photoreceptor_noise_voltage.last_vn=vnscaled
+    # rout*=vnscaled
+    # stdout=np.std(rout)
     # import matplotlib.pyplot as plt
-    # plt.plot(t,rin)
+    # plt.plot(t,rin,t,rout)
     # plt.xlabel('time (s)')
     # plt.ylabel('filtered noise')
     # plt.show()
-
-    vnscaled=vn/std # divide the computed vn by this standard to get the necessary vn to add before RC lowpass filtering
-
-    logger.info(
-        f'Computed photoreceptor_noise_rms={vn:.3f}, scaled to {vnscaled:.3f} before 1st-order lowpass, in ln units for shot_noise_rate_hz={rate_hz} Hz, cutoff_hz={f3db} Hz (Rn/f3dB={rate_per_bw:.3g} Hz) and average on/off threshold={thr} ln units')
-
+    if not compute_photoreceptor_noise_voltage.vrms_computation_printed:
+        logger.info(
+        f'Computed photoreceptor_noise_rms={vn:.3f}, scaled to {vnscaled:.3f} before 1st-order lowpass with sample rate {sample_rate_hz:.3} Hz, '
+        f'in ln units for shot_noise_rate_hz={shot_noise_rate_hz} Hz, cutoff_hz={f3db} Hz (Rn/f3dB={rate_per_bw:.3g} Hz)'
+        f' and average on/off threshold={thr} ln units.'
+        # f' The sample lowpass filtered has RMS amplitude {stdout:.3f}.'
+        )
+        compute_photoreceptor_noise_voltage.vrms_computation_printed=True
     return vnscaled
 
+compute_photoreceptor_noise_voltage.vrms_computation_printed=False
+compute_photoreceptor_noise_voltage.last_sample_rate=None
+compute_photoreceptor_noise_voltage.last_vn=None
 
 def generate_shot_noise(
         shot_noise_rate_hz,

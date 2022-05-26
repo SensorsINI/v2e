@@ -154,7 +154,7 @@ class EventEmulator(object):
                 logger.warning(
                     '--photoreceptor_noise is specified but --cutoff_hz is zero; set a finite photoreceptor cutoff frequency')
                 v2e_quit(1)
-            self.photoreceptor_noise_vrms = compute_photoreceptor_noise_voltage(rate_hz=self.shot_noise_rate_hz, f3db=self.cutoff_hz, pos_thr=self.pos_thres_nominal, neg_thr=self.neg_thres_nominal)
+            self.photoreceptor_noise_samples=[]
 
         self.leak_jitter_fraction = leak_jitter_fraction
         self.noise_rate_cov_decades = noise_rate_cov_decades
@@ -578,8 +578,12 @@ class EventEmulator(object):
 
         # add photoreceptor noise if we are using photoreceptor noise to create shot noise
         if self.photoreceptor_noise and not self.base_log_frame is None:  # only add noise after the initial values are memorized and we can properly lowpass filter the noise
+            self.photoreceptor_noise_vrms = compute_photoreceptor_noise_voltage(
+                shot_noise_rate_hz=self.shot_noise_rate_hz, f3db=self.cutoff_hz, sample_rate_hz=1/delta_time, pos_thr=self.pos_thres_nominal, neg_thr=self.neg_thres_nominal)
             noise = self.photoreceptor_noise_vrms * torch.randn(self.log_new_frame.shape, dtype=torch.float32,  device=self.device)
             self.photoreceptor_noise_arr=low_pass_filter(noise,self.photoreceptor_noise_arr,None,delta_time,self.cutoff_hz)
+            self.photoreceptor_noise_samples.append(self.photoreceptor_noise_arr[0,0].cpu().item())
+            std=np.std(self.photoreceptor_noise_samples)
 
         # surround computations by time stepping the diffuser
         if self.csdvs_enabled:
