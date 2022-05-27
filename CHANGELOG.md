@@ -1,18 +1,23 @@
 # v1.6.0
 
 ##  New features
-  - **HDR (high dynamic range)**: The **--hdr option** treats inputs as logarithmic gray scale. See scripts/particles.py for example that uses it
-  - **More accurate shot noisee modeling**: The **--photoreceptor_noise** option simulates shot noise events by injecting a 1st-order IIR lowpass (RC) filtered white noise source right after photoreceptor lowpass filtering (the noise is summed here to avoid intensity-dependent lowpass filtering of the noise). The result is more realistic statistics of shot noise events.
+  - **HDR (high dynamic range)**: The **--hdr option** treats inputs as logarithmic gray scale. See  [scripts/particles.py](https://github.com/SensorsINI/v2e/blob/master/scripts/particles.py) for script that that uses the --hdr argument to generate moving particles with very high brightness compared to background. At line 77, see
+```python
+       if self.parent_args.hdr:
+            self.bg=np.log(self.bg)
+            self.fg=np.log(self.fg)
+```
+  - **More accurate shot noise modeling**: The **--photoreceptor_noise** option simulates shot noise events by injecting a 1st-order IIR lowpass (RC) filtered white noise source right after photoreceptor lowpass filtering (the noise is summed here to avoid intensity-dependent lowpass filtering of the noise). The result is more realistic statistics of shot noise events.
 ##    Bug fixes
-  - fixed DDD conversion script to work properly.
-  - improved argument usage descriptions
-  - fixed order of x,y events in text output
+  - fixed DDD conversion script [ddd/ddd_extract_data.py](https://github.com/SensorsINI/v2e/blob/master/dataset_scripts/ddd/ddd_extract_data.py#L12-L12)  to work properly.
+  - improved argument usage descriptions.
+  - fixed order of x,y events in AEDAT text output in [v2ecore/output/ae_text_output.py](https://github.com/SensorsINI/v2e/blob/master/dataset_scripts/ddd/ddd_extract_data.py#L12-L12).
   - fixed several synthetic input scripts to work and include option arguments
   - fixed logging to log the script extra options
 
 # v1.5.0
 ##    New Features
-  - v2e can display and save as AVI videos all the internal DVS model states via the _--show_dvs_model_state_ and _--save_dvs_model_state_ options.
+  - v2e can display and save as AVI videos all the internal DVS model states via the **_--show_dvs_model_state_** and **_--save_dvs_model_state_** options.
   - v2e can model the **CSDVS** (center-surround DVS) proposed in Delbruck, Tobi, Chenghan Li, Rui Graca, and Brian Mcreynolds. 2022. “_Utility and Feasibility of a Center Surround Event Camera_.” arXiv [cs.CV]. arXiv. http://arxiv.org/abs/2202.13076.
 ##    Bug fixes
 - More improvements to user experience with improved CUDA supported pytorch installation instructions and warnings printed if CUDA is not available.
@@ -24,13 +29,13 @@
 ##    New Features
   - Try [opening v2e in google colab](https://colab.research.google.com/drive/1czx-GJnx-UkhFVBbfoACLVZs8cYlcr_M?usp=sharing).
   - There are improved noise models of leak and shot noise.
-    Both now model frozen log normal rate distributions; see the _--noise_rate_cov_decades_ option.
-    The leak noise events have timing jitter that matches observed jitter; see _--leak_jitter_fraction_ option.
-  - v2e models finite refractory period; see the _--refractory_period_ option.
+    Both now model frozen log normal rate distributions; see the **_--noise_rate_cov_decades_** option.
+    The leak noise events have timing jitter that matches observed jitter; see **_--leak_jitter_fraction_** option.
+  - v2e models finite refractory period; see the **_--refractory_period_** option.
   - _setup.py_ includes dependencies and now installs _v2e_ as a script to your conda environment to run from command line.
   -  HDF output will also output the frames, to allow modeling of DAVIS cameras with APS+DVS output.
   - Added ability to generate input frames from python class.
-    See [base_synthetic_input.py](https://github.com/SensorsINI/v2e/blob/master/v2ecore/base_synthetic_input.py) and command line argument --synthetic_input=<module_name>.
+    See [base_synthetic_input.py](https://github.com/SensorsINI/v2e/blob/master/v2ecore/base_synthetic_input.py) and command line argument **--synthetic_input**=<module_name>.
   - Synthetic input can recieve command line arguments; see [particle.py](https://github.com/SensorsINI/v2e/blob/master/scripts/particles.py).
   - Desktop notification is  generated for long running conversion completion.
   - Ability to crop input frames added; see --crop_input option.
