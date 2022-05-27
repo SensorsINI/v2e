@@ -240,8 +240,9 @@ def compute_photoreceptor_noise_voltage(shot_noise_rate_hz, f3db, sample_rate_hz
     rout=np.zeros_like(rin)
     # RC lowpass the noise
     eps=dt/tau
-    if eps>.1:
-        logger.warning(f'\neps={eps:.3f} for IIR lowpass is >0.2, either reduce timestep (currently {dt:.3f}s) (using higher frame rate) or decrease cutuff_hz (currently {f3db:.3f} Hz)'
+    eps_limit=.1
+    if eps>eps_limit:
+        logger.warning(f'\neps={eps:.3f} for IIR lowpass is >{eps_limit}, either reduce timestep (currently {dt:.3f}s) (using higher frame rate) or decrease cutuff_hz (currently {f3db:.3f} Hz)'
                        f'\n\tExpect the generated shot noise rate to be significantly lower than the desired rate.'
                        f'\n\tConsider not using --photoreceptor_noise option if you only want simple Poisson shot noise without temporal correlation of lowpass filtering and ON/OFF events.')
     rout[0]=0 # init value is mean 0
