@@ -162,7 +162,7 @@ def v2e_args(parser):
              "see https://ieeexplore.ieee.org/document/4444573."
              "CAUTION: See interaction with timestamp_resolution "
              "and auto_timestamp_resolution; "
-             "check output logger warnings. The input sample rate (frame rate) must be fast enough to allow this IIR lowpass filtering."
+             "check output logger warnings. The input sample rate (frame rate) must be fast enough to for accurate IIR lowpass filtering."
     )
     modelGroup.add_argument(
         "--leak_rate_hz", type=float, default=0.01,

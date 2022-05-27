@@ -44,14 +44,21 @@ from typing import Optional, Any
 
 logging.basicConfig()
 root = logging.getLogger()
-root.setLevel(logging.INFO)  # todo move to info for production
+LOGGING_LEVEL=logging.INFO
+root.setLevel(LOGGING_LEVEL)  # todo move to info for production
 # https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output/7995762#7995762
 logging.addLevelName(
+    logging.DEBUG, "\033[1;36m%s\033[1;0m" % logging.getLevelName(
+        logging.DEBUG)) # cyan foreground
+logging.addLevelName(
+    logging.INFO, "\033[1;34m%s\033[1;0m" % logging.getLevelName(
+        logging.INFO)) # blue foreground
+logging.addLevelName(
     logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(
-        logging.WARNING))
+        logging.WARNING)) # red foreground
 logging.addLevelName(
     logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(
-        logging.ERROR))
+        logging.ERROR)) # red background
 logger = logging.getLogger(__name__)
 
 # torch device
@@ -67,9 +74,9 @@ try:
     #  from scripts.regsetup import description
     from gooey import Gooey  # pip install Gooey
 except Exception as e:
-    logger.warning(f"{e}: Gooey GUI builder not available, "
+    logger.info(f"{e}: Gooey GUI builder not available, "
                    f"will use command line arguments.\n"
-                   f"Install with 'pip install Gooey'. See README")
+                   f"Install with 'pip install Gooey if you want a no-arg GUI to invoke v2e'. See README")
 
 
 def get_args():
@@ -146,6 +153,8 @@ def main():
         args.dvs640, args.dvs1024,
         logger)
 
+    num_pixels=output_width*output_height
+
     # setup synthetic input classes and method
     synthetic_input_module = None
     synthetic_input_class = None
@@ -192,8 +201,8 @@ def main():
     # Writing the info file
     infofile = write_args_info(args, output_folder,other_args,command_line)
 
-    fh = logging.FileHandler(infofile)
-    fh.setLevel(logging.INFO)
+    fh = logging.FileHandler(infofile,mode='a')
+    fh.setLevel(LOGGING_LEVEL)
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
@@ -813,12 +822,17 @@ def main():
                 .format(eng(emulator.num_events_total),
                         eng(emulator.num_events_on),
                         eng(emulator.num_events_off)))
+    total_time = emulator.t_previous
+    rate_total= emulator.num_events_total / total_time
+    rate_on_total= emulator.num_events_on / total_time
+    rate_off_total= emulator.num_events_off / total_time
+    rate_per_pixel=rate_total/num_pixels
+    rate_on_per_pixel=rate_on_total/num_pixels
+    rate_off_per_pixel=rate_off_total/num_pixels
     logger.info(
-        'avg event rate {}Hz ({}Hz on, {}Hz off)'
-        .format(
-            eng(emulator.num_events_total / emulator.t_previous),
-            eng(emulator.num_events_on / emulator.t_previous),
-            eng(emulator.num_events_off / emulator.t_previous)))
+        f'Avg event rate for N={num_pixels} px and total time ={total_time:.3f} s'
+        f'\n\tTotal: {eng(rate_total)}Hz ({eng(rate_on_total)}Hz on, {eng(rate_off_total)}Hz off)'
+        f'\n\tPer pixel:  {eng(rate_per_pixel)}Hz ({eng(rate_on_per_pixel)}Hz on, {eng(rate_off_per_pixel)}Hz off)')
     if totalTime>60:
         try:
             from plyer import notification

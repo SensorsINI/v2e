@@ -143,32 +143,33 @@ class moving_dot(base_synthetic_input): # the class name should be the same as t
             return None, self.times[-1]
         time = self.times[self.frame_number]
         pix_arr: np.ndarray = self.bg * np.ones((self.h, self.w), dtype=np.uint8)
-        # radius decreases with time so that dot never overlaps previous path
-        cycles= time/self.period
-        radius=self.radius-cycles*self.d*1.5 # after 1 cycle, radius of circle is decreased by 2*dot radius
-        for i in range(self.num_dots):
-            # angle just rotates around
-            theta = self.theta[self.frame_number] + (i / self.num_dots) * 2 * np.pi
+        if self.contrast!=1: # only fill dots if they are visible
+            # radius decreases with time so that dot never overlaps previous path
+            cycles= time/self.period
+            radius=self.radius-cycles*self.d*1.5 # after 1 cycle, radius of circle is decreased by 2*dot radius
+            for i in range(self.num_dots):
+                # angle just rotates around
+                theta = self.theta[self.frame_number] + (i / self.num_dots) * 2 * np.pi
 
-            # actual center of dot
-            x = self.w / 2 + radius * np.cos(theta)
-            y = self.h / 2 + radius * np.sin(theta)
-            # nearest pixel
-            x0, y0 = round(x), round(y)
-            # range of indexes around x0,y0
-            # do not start with gray frame: first frame has the dots to set average DC level of starting pixels
-            if True: # time > 0:  # make sure there is one blank frame to start with, to set baseLogFrame
-                # d2=self.d*2+1
-                # # make array with offsets as ints
-                # v=np.zeros(d2,d2)
-                # r=range(-self.d,self.d)
-                # ds=np.zeros_like(d2)
-                # for i in range(d2):
-                #     ds[i,:]=r
-                # for i in range(d2):
-                #     ds[:,i]+=r
-                # thisx=
-                fill_dot(pix_arr, x, x0, y, y0, self.d, self.fg, self.bg, self.dot_sigma)
+                # actual center of dot
+                x = self.w / 2 + radius * np.cos(theta)
+                y = self.h / 2 + radius * np.sin(theta)
+                # nearest pixel
+                x0, y0 = round(x), round(y)
+                # range of indexes around x0,y0
+                # do not start with gray frame: first frame has the dots to set average DC level of starting pixels
+                if True: # time > 0:  # make sure there is one blank frame to start with, to set baseLogFrame
+                    # d2=self.d*2+1
+                    # # make array with offsets as ints
+                    # v=np.zeros(d2,d2)
+                    # r=range(-self.d,self.d)
+                    # ds=np.zeros_like(d2)
+                    # for i in range(d2):
+                    #     ds[i,:]=r
+                    # for i in range(d2):
+                    #     ds[:,i]+=r
+                    # thisx=
+                    fill_dot(pix_arr, x, x0, y, y0, self.d, self.fg, self.bg, self.dot_sigma)
         if self.preview:
             cv2.imshow(self.cv2name, pix_arr)
         if self.avi_path is not None:
