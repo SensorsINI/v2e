@@ -1,3 +1,15 @@
+# v1.6.0
+
+##  New features
+  - **HDR (high dynamic range)**: The **--hdr option** treats inputs as logarithmic gray scale. See scripts/particles.py for example that uses it
+  - **More accurate shot noisee modeling**: The **--photoreceptor_noise** option simulates shot noise events by injecting a 1st-order IIR lowpass (RC) filtered white noise source right after photoreceptor lowpass filtering (the noise is summed here to avoid intensity-dependent lowpass filtering of the noise). The result is more realistic statistics of shot noise events.
+##    Bug fixes
+  - fixed DDD conversion script to work properly.
+  - improved argument usage descriptions
+  - fixed order of x,y events in text output
+  - fixed several synthetic input scripts to work and include option arguments
+  - fixed logging to log the script extra options
+
 # v1.5.0
 ##    New Features
   - v2e can display and save as AVI videos all the internal DVS model states via the _--show_dvs_model_state_ and _--save_dvs_model_state_ options.
