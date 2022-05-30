@@ -4,12 +4,12 @@
 # parame for CSDVS
 lambda=10
 tau=.5
-dt=.001
+dt=.0001
 seq=spots
 contrast=2
 
-#v2e --output_folder=output/$seq-dvs --pos_thr=0.2 --neg_thr=0.2 --sigma_thr=0.02 --cutoff_hz=100 --leak_rate_hz=0 --shot_noise_rate_hz=0  --vid_orig=inten --dvs_vid=dvs --unique_output --dvs_aedat2=dvs --output_width=346 --output_height=260 --batch=1 --disable_slomo --synthetic_input=scripts.spots --dt=$dt --freq=20 --contrast=$contrast --dvs_exposure=source --shot_noise_rate_hz=1 --show_dvs_model_state all --save_dvs_model_state
-#v2e --output_folder=output/$seq-csdvs-l$lambda-t$tau --cs_lambda_pixels=$lambda --cs_tau_p_ms=$tau  --pos_thr=0.2 --neg_thr=0.2 --sigma_thr=0.02 --cutoff_hz=100 --leak_rate_hz=0 --shot_noise_rate_hz=0  --vid_orig=inten --dvs_vid=csdvs --unique_output --dvs_aedat2=csdvs --output_width=346 --output_height=260 --batch=1 --disable_slomo --synthetic_input=scripts.spots --dt=$dt --freq=20 --contrast=$contrast --dvs_exposure=source --shot_noise_rate_hz=1 --show_dvs_model_state all --save_dvs_model_state
+v2e --output_folder=output/$seq-dvs --pos_thr=0.2 --neg_thr=0.2 --sigma_thr=0.02 --cutoff_hz=100 --leak_rate_hz=0 --shot_noise_rate_hz=0  --vid_orig=inten --dvs_vid=dvs --unique_output --dvs_aedat2=dvs --output_width=346 --output_height=260 --batch=1 --disable_slomo --synthetic_input=scripts.spots --dt=$dt --freq=20 --contrast=$contrast --dvs_exposure=source --shot_noise_rate_hz=1 --show_dvs_model_state all --save_dvs_model_state
+v2e --output_folder=output/$seq-csdvs-l$lambda-t$tau --cs_lambda_pixels=$lambda --cs_tau_p_ms=$tau  --pos_thr=0.2 --neg_thr=0.2 --sigma_thr=0.02 --cutoff_hz=100 --leak_rate_hz=0 --shot_noise_rate_hz=0  --vid_orig=inten --dvs_vid=csdvs --unique_output --dvs_aedat2=csdvs --output_width=346 --output_height=260 --batch=1 --disable_slomo --synthetic_input=scripts.spots --dt=$dt --freq=20 --contrast=$contrast --dvs_exposure=source --shot_noise_rate_hz=1 --show_dvs_model_state all --save_dvs_model_state
 
 # cloudy sky
 seq=cloudy-sky
@@ -27,11 +27,16 @@ start=2
 stop=12
 input=input/flicker.mp4
 lambda=10
-tau=2
+tau=.5
 slomo=33
-#
-#v2e --timestamp_resolution=.001 --auto_timestamp=False --output_folder=output/$seq-dvs --start=$start --stop=$stop --input_slowmotion_factor=$slomo --input=$input --vid_orig=$seq-input   --pos_thr=0.2 --neg_thr=0.2 --sigma_thr=0.02 --cutoff_hz=100 --leak_rate_hz=0 --dvs_vid=dvs --unique_output --dvs_aedat2=dvs --dvs346  --dvs_exposure source
-#v2e --cs_lambda_pixels=$lambda --cs_tau_p_ms=$tau --timestamp_resolution=.001 --auto_timestamp=False  --output_folder=output/$seq-csdvs --start=$start --stop=$stop --input_slowmotion_factor=$slomo --input=$input  --vid_orig=$seq-input --pos_thr=0.2 --neg_thr=0.2 --sigma_thr=0.02 --cutoff_hz=100 --leak_rate_hz=0 --dvs_vid=csdvs --unique_output --dvs_aedat2=dvs --dvs346 --dvs_exposure=source
+dt=3e-4
+thr=.2
+sig_thr=0.02
+cutoff=100
+refr=1e-3
+
+#v2e --timestamp_resolution=$dt --auto_timestamp=False --output_folder=output/$seq-dvs --start=$start --stop=$stop --input_slowmotion_factor=$slomo --input=$input --vid_orig=$seq-input   --pos_thr=$thr --neg_thr=$thr --sigma_thr=$sig_thr --leak_rate_hz=0 --dvs_vid=dvs --unique_output --dvs_aedat2=dvs --dvs346  --dvs_exposure source --cutoff_hz=$cutoff --refractory_period=$refr
+#v2e --cs_lambda_pixels=$lambda --cs_tau_p_ms=$tau --timestamp_resolution=$dt --auto_timestamp=False  --output_folder=output/$seq-csdvs --start=$start --stop=$stop --input_slowmotion_factor=$slomo --input=$input  --vid_orig=$seq-input ---pos_thr=$thr --neg_thr=$thr --sigma_thr=$sig_thr --leak_rate_hz=0 --dvs_vid=csdvs --unique_output --dvs_aedat2=dvs --dvs346 --dvs_exposure=source --cutoff_hz=$cutoff --refractory_period=$refr
 
 
 # csdvs-flashing-leds
@@ -46,5 +51,5 @@ thr=0.05
 cutoff=300
 refr=.1e-3
 #
-v2e --timestamp_resolution=.001 --auto_timestamp=False --output_folder=output/$seq-dvs --start=$start --stop=$stop --input_slowmotion_factor=$slomo --input=$input --vid_orig=$seq-input   --pos_thr=$thr --neg_thr=$thr --sigma_thr=0.005 --cutoff_hz=$cutoff --refractory_period=$refr --leak_rate_hz=0 --dvs_vid=dvs --unique_output --dvs_aedat2=dvs --dvs346
-v2e --cs_lambda_pixels=$lambda --cs_tau_p_ms=$tau --disable_slomo --output_folder=output/$seq-csdvs --start=$start --stop=$stop --input_slowmotion_factor=$slomo --input=$input  --vid_orig=$seq-input --pos_thr=$thr --neg_thr=$thr --sigma_thr=0.005 --cutoff_hz=$cutoff --refractory_period=$refr --leak_rate_hz=0 --dvs_vid=csdvs --unique_output --dvs_aedat2=csdvs --dvs346 --dvs_exposure=source  --show_dvs_model_state all --save_dvs_model_state
+#v2e --timestamp_resolution=.001 --auto_timestamp=False --output_folder=output/$seq-dvs --start=$start --stop=$stop --input_slowmotion_factor=$slomo --input=$input --vid_orig=$seq-input   --pos_thr=$thr --neg_thr=$thr --sigma_thr=0.005 --cutoff_hz=$cutoff --refractory_period=$refr --leak_rate_hz=0 --dvs_vid=dvs --unique_output --dvs_aedat2=dvs --dvs346
+#v2e --cs_lambda_pixels=$lambda --cs_tau_p_ms=$tau --disable_slomo --output_folder=output/$seq-csdvs --start=$start --stop=$stop --input_slowmotion_factor=$slomo --input=$input  --vid_orig=$seq-input --pos_thr=$thr --neg_thr=$thr --sigma_thr=0.005 --cutoff_hz=$cutoff --refractory_period=$refr --leak_rate_hz=0 --dvs_vid=csdvs --unique_output --dvs_aedat2=csdvs --dvs346 --dvs_exposure=source  --show_dvs_model_state all --save_dvs_model_state

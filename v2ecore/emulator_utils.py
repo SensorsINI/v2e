@@ -82,8 +82,9 @@ def low_pass_filter(
     # the more intensity, the shorter the time constant
     if inten01 is not None:
         eps = inten01*(delta_time/tau)
-        if torch.max(eps)>0.3:
-            logger.warning(f'IIR lowpass filter update has large update eps={eps:.2f} from delta_time/tau={delta_time:.3g}/{tau:.3g}')
+        max_eps = torch.max(eps)
+        if max_eps >0.3:
+            logger.warning(f'IIR lowpass filter update has large maximum update eps={max_eps:.2f} from delta_time/tau={delta_time:.3g}/{tau:.3g}')
         eps = torch.clamp(eps, max=1)  # keep filter stable
     else:
         eps=delta_time/tau

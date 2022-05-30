@@ -1,13 +1,13 @@
 # v1.6.0
 
 ##  New features
-  - **HDR (high dynamic range)**: The **--hdr option** treats inputs as logarithmic gray scale. See  [scripts/particles.py](https://github.com/SensorsINI/v2e/blob/master/scripts/particles.py) for script that that uses the --hdr argument to generate moving particles with very high brightness compared to background. At line 77, see
+  - **HDR (high dynamic range)**: The **_--hdr option_** treats inputs as logarithmic gray scale. See  [scripts/particles.py](https://github.com/SensorsINI/v2e/blob/master/scripts/particles.py) for script that that uses the --hdr argument to generate moving particles with very high brightness compared to background. At line 77, see
 ```python
        if self.parent_args.hdr:
             self.bg=np.log(self.bg)
             self.fg=np.log(self.fg)
 ```
-  - **More accurate shot noise modeling**: The **--photoreceptor_noise** option simulates shot noise events by injecting a 1st-order IIR lowpass (RC) filtered white noise source right after photoreceptor lowpass filtering (the noise is summed here to avoid intensity-dependent lowpass filtering of the noise). The result is more realistic statistics of shot noise events.
+  - **More accurate shot noise modeling**: The **-_-photoreceptor_noise_** option simulates shot noise events by injecting a 1st-order IIR lowpass (RC) filtered white noise source right after photoreceptor lowpass filtering (the noise is summed here to avoid intensity-dependent lowpass filtering of the noise). The result is more realistic statistics of shot noise events.
 ##    Bug fixes
   - fixed DDD conversion script [ddd/ddd_extract_data.py](https://github.com/SensorsINI/v2e/blob/master/dataset_scripts/ddd/ddd_extract_data.py#L12-L12)  to work properly.
   - improved argument usage descriptions.
