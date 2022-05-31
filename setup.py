@@ -8,6 +8,7 @@ Development Status :: 4 - Beta
 Intended Audience :: Science/Research
 Natural Language :: English
 Operating System :: OS Independent
+Programming Language :: Python :: 3.7
 Programming Language :: Python :: 3.8
 Programming Language :: Python :: 3.9
 Topic :: Utilities
@@ -27,7 +28,7 @@ setup(
     author="Tobi Delbruck, Yuhuang Hu, Zhe He",
     author_email="yuhuang.hu@ini.uzh.ch, tobi@ini.uzh.ch",
 
-    python_requires=">={}".format("3.8"),
+    python_requires=">={}".format("3.7"),
 
     #  packages=find_packages(include=['v2ecore', 'v2e.*']),
     packages=find_packages(),
@@ -38,15 +39,16 @@ setup(
         'engineering-notation', # not available on conda
         'tqdm',
         'opencv-python', # just opencv for conda
-        'h5py',
+        'h5py', # ddd20 recordings
         'torch', # pytorch for conda
         'torchvision',
         'numba',
         #  'Gooey',
-        'matplotlib',
+        'matplotlib', # used for some optional statistics plotting
         'plyer',
         'screeninfo', # to get monitor sizes for cv2 window placement
-        'easygui'
+        'easygui', # eacy open a file from no arg invocation
+        'scikit-image' # for some synthetic_input scripts
     ],
 
     scripts=['v2e.py', 'dataset_scripts/ddd/ddd_extract_data.py'],

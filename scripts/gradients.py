@@ -27,7 +27,7 @@ class gradients(base_synthetic_input):  # the class name should be the same as t
     BUMP_WIDTH=.5 # width of the triangular bump as fraction of width of array
 
     def __init__(self, width: int = 346, height: int = 260, avi_path: Optional[str] = None, preview=False,
-                 arg_list=None) -> None:
+                 arg_list=None, parent_args=None) -> None:
         """ Constructs moving-dot class to make frames for v2e
 
         :param width: width of frames in pixels
