@@ -73,7 +73,7 @@ def low_pass_filter(
     """
     if cutoff_hz <= 0:
         # unchanged
-        return log_new_frame, log_new_frame
+        return log_new_frame
 
     # else low pass
     tau = 1/(math.pi*2*cutoff_hz)

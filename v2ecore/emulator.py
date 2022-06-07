@@ -583,7 +583,7 @@ class EventEmulator(object):
             noise = self.photoreceptor_noise_vrms * torch.randn(self.log_new_frame.shape, dtype=torch.float32,  device=self.device)
             self.photoreceptor_noise_arr=low_pass_filter(noise,self.photoreceptor_noise_arr,None,delta_time,self.cutoff_hz)
             self.photoreceptor_noise_samples.append(self.photoreceptor_noise_arr[0,0].cpu().item())
-            std=np.std(self.photoreceptor_noise_samples)
+            # std=np.std(self.photoreceptor_noise_samples)
 
         # surround computations by time stepping the diffuser
         if self.csdvs_enabled:
