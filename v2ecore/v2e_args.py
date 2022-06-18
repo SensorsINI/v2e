@@ -409,6 +409,11 @@ def v2e_args(parser):
                                                                     'i.e. until the maximum change between timesteps '
                                                                     'is smaller than a threshold value')
 
+    # SCIDVS pixel study
+    scidvs_group = parser.add_argument_group('SCIDVS pixel')
+    scidvs_group.add_argument('--scidvs', action='store_true',help='Simulate proposed SCIDVS pixel with nonlinear adapatation and high gain')
+
+
     # # perform basic checks, however this fails if script adds
     # # more arguments later
     # args = parser.parse_args()

@@ -494,6 +494,10 @@ def main():
     if hdr:
         logger.info('Treating input as HDR logarithmic video')
 
+    scidvs:bool=args.scidvs
+    if scidvs:
+        logger.info('Simulating SCIDVS pixel')
+
     emulator = EventEmulator(
         pos_thres=pos_thres, neg_thres=neg_thres,
         sigma_thres=sigma_thres, cutoff_hz=cutoff_hz,
@@ -508,7 +512,8 @@ def main():
         output_width=output_width, output_height=output_height,
         device=torch_device,
         cs_lambda_pixels=args.cs_lambda_pixels, cs_tau_p_ms=args.cs_tau_p_ms,
-        hdr=hdr
+        hdr=hdr,
+        scidvs=scidvs
     )
 
     if args.dvs_params is not None:
