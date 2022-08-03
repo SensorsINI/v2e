@@ -776,7 +776,7 @@ def main():
 
                 # parepare extra steps for data storage
                 # right before event emulation
-                if args.davis_output:
+                if args.ddd_output:
                     emulator.prepare_storage(nFrames, interpTimes)
 
                 # generate events from frames and accumulate events to DVS frames for output DVS video

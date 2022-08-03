@@ -123,16 +123,6 @@ def v2e_args(parser):
 
     # DVS model parameters
     modelGroup = parser.add_argument_group('DVS model')
-    modelGroup.add_argument(
-        "--output_height", type=int, default=None,
-        help="Height of output DVS data in pixels. "
-             "If None, same as input video. "
-             "Use --output_height=260 for Davis346.")
-    modelGroup.add_argument(
-        "--output_width", type=int, default=None,
-        help="Width of output DVS data in pixels. "
-             "If None, same as input video. "
-             "Use --output_width=346 for Davis346.")
 
     modelGroup.add_argument(
         "--dvs_params", type=str, default=None,
@@ -208,18 +198,29 @@ def v2e_args(parser):
         help="save the model states that are shown (cf --show_dvs_model_state) to avi files")
 
     # common camera types
-    camGroup = modelGroup.add_argument_group(
-        'DVS camera sizes (overrides --output_width and --output_height')
+    camGroup = parser.add_argument_group(
+        'DVS camera sizes (selecting --dvs346, --dvs640, etc. overrides --output_width and --output_height')
+    camGroup.add_argument(
+        "--output_height", type=int, default=None,
+        help="Height of output DVS data in pixels. "
+             "If None, same as input video. "
+             "Use --output_height=260 for Davis346.")
+    camGroup.add_argument(
+        "--output_width", type=int, default=None,
+        help="Width of output DVS data in pixels. "
+             "If None, same as input video. "
+             "Use --output_width=346 for Davis346.")
+
     camAction = camGroup.add_mutually_exclusive_group()
     camAction.add_argument(
         '--dvs128', action='store_true',
         help='Set size for 128x128 DVS (DVS128)')
     camAction.add_argument(
         '--dvs240', action='store_true',
-        help='Set size for 240x180 DVS (Davis240)')
+        help='Set size for 240x180 DVS (DAVIS240)')
     camAction.add_argument(
         '--dvs346', action='store_true',
-        help='Set size for 346x260 DVS (Davis346)')
+        help='Set size for 346x260 DVS (DAVIS346)')
     camAction.add_argument(
         '--dvs640', action='store_true',
         help='Set size for 640x480 DVS')
@@ -373,12 +374,12 @@ def v2e_args(parser):
     # DVS output as events
     dvsEventOutputGroup = parser.add_argument_group('Output: DVS events')
     dvsEventOutputGroup.add_argument(
-        "--davis_output", action="store_true",
+        "--ddd_output", action="store_true",
         help="Save frames, frame timestamp and corresponding event index"
-             "in HDF5. Default is False.")
+             " in HDF5 format used for DDD17 and DDD20 datasets. Default is False.")
     dvsEventOutputGroup.add_argument(
         "--dvs_h5", type=output_file_check, default=None,
-        help="Output DVS events as hdf5 event database. ")
+        help="Output DVS events as hdf5 event database.")
     dvsEventOutputGroup.add_argument(
         "--dvs_aedat2", type=output_file_check, default='v2e-dvs-events.aedat',
         help="Output DVS events as DAVIS346 camera AEDAT-2.0 event file "
