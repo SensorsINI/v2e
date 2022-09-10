@@ -12,6 +12,8 @@ See [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6U
 
 Vote for [new v2e features](https://docs.google.com/forms/d/e/1FAIpQLSdJoIH3wBkPANWTng56VeXiItkh_fl5Lz3QwZIpQ6ut1AMFCw/viewform?usp=sf_link).
 
+v2e development was supported by the Swiss National Competence Center for Robotics [(NCCR Robotics)](https://nccr-robotics.ch/).
+
 ## News
 
 See [changelog](https://github.com/SensorsINI/v2e/blob/master/CHANGELOG.md) for latest news
