@@ -103,6 +103,19 @@ class AEDat2Output:
             self.file.write(bytes)
 
     def appendEvents(self, events: np.ndarray):
+        """Append events to AEDAT-2.0 output
+
+          Parameters
+          ----------
+          events: np.ndarray if any events, else None
+              [N, 4], each row contains [timestamp, x coordinate, y coordinate, sign of event (+1 ON, -1 OFF)].
+              NOTE x,y, NOT y,x.
+
+          Returns
+          -------
+          None
+          """
+
         if self.file is None:
             return
 

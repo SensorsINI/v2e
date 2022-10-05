@@ -174,10 +174,10 @@ class EventRenderer(object):
         Parameters
         ----------
         event_arr:np.ndarray
-            [n,4] consisting of n events each with [ts,y,x,pol],
+            [n,4] consisting of n events each with [ts,x,y,pol],
             ts are in float seconds
         height: height of output video in pixels;
-            events are hisogramed to this width in pixels.
+            events are histogramed to this width in pixels.
             I.e. if input has 100 pixels and height is 30 pixels,
             roughly 3 pixels will be collected to one output pixel
         width: width of output video in pixels

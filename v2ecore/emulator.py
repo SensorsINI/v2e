@@ -564,9 +564,8 @@ class EventEmulator(object):
         Returns
         -------
         events: np.ndarray if any events, else None
-            [N, 4], each row contains [timestamp, y coordinate,
-            x coordinate, sign of event].
-            NOTE y then x, not x,y.
+            [N, 4], each row contains [timestamp, x coordinate, y coordinate, sign of event (+1 ON, -1 OFF)].
+            NOTE x,y, NOT y,x.
         """
 
         # base_frame: the change detector input,
@@ -730,7 +729,7 @@ class EventEmulator(object):
         #  self.base_log_frame -= neg_evts_frame*self.neg_thres
 
         # all events
-        events = []
+        events = [] # # ndarray shape (N,4) where N is the number of events are rows are [t,x,y,p]
 
         # event timestamps at each iteration
         # intermediate timestamps are linearly spaced
@@ -858,7 +857,7 @@ class EventEmulator(object):
         self.base_log_frame -= final_neg_evts_frame * self.neg_thres
 
         if len(events) > 0:
-            events = torch.vstack(events).cpu().data.numpy()
+            events = torch.vstack(events).cpu().data.numpy() # # ndarray shape (N,4) where N is the number of events are rows are [t,x,y,p]
             if self.dvs_h5 is not None:
                 # convert data to uint32 (microsecs) format
                 temp_events = np.array(events, dtype=np.float32)
@@ -887,7 +886,7 @@ class EventEmulator(object):
         # assign new time
         self.t_previous = t_frame
         if len(events) > 0:
-            return events
+            return events # ndarray shape (N,4) where N is the number of events are rows are [t,x,y,p]. Confirmed by Tobi Oct 2023
         else:
             return None
 
