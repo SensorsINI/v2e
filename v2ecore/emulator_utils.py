@@ -126,10 +126,16 @@ def subtract_leak_current(base_log_frame,
 
 
 def compute_event_map(diff_frame, pos_thres, neg_thres):
-    """Compute event map.
+    """
+        Compute event maps, i.e. 2d arrays of [width,height] containing quantized number of ON and OFF events.
 
-    Prepare positive and negative event frames that later will be used
-    for generating events.
+    Args:
+        diff_frame:  the input difference frame between stored log intensity and current frame log intensity [width, height]
+        pos_thres:  ON threshold values [width, height]
+        neg_thres:  OFF threshold values [width, height]
+
+    Returns:
+        pos_evts_frame, neg_evts_frame;  ndarrays of integer ON and OFF event counts
     """
     # extract positive and negative differences
     pos_frame = F.relu(diff_frame)

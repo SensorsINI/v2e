@@ -498,14 +498,14 @@ class EventEmulator(object):
         self.num_events_off = 0
 
         # add names of new states to potentially show with --show_model_states all
-        self.new_frame: Optional[np.ndarray] = None
-        self.log_new_frame: Optional[np.ndarray] = None
+        self.new_frame: Optional[np.ndarray] = None # new frame that comes in [height, width]
+        self.log_new_frame: Optional[np.ndarray] = None #  [height, width]
         self.lp_log_frame: Optional[np.ndarray] = None  # lowpass stage 0
         self.lp_log_frame: Optional[np.ndarray] = None  # stage 1
         self.cs_surround_frame: Optional[np.ndarray] = None
         self.c_minus_s_frame: Optional[np.ndarray] = None
         self.base_log_frame: Optional[np.ndarray] = None
-        self.diff_frame: Optional[np.ndarray] = None
+        self.diff_frame: Optional[np.ndarray] = None  # [height, width]
         self.scidvs_highpass: Optional[np.ndarray] = None
         self.scidvs_previous_photo: Optional[np.ndarray] = None
         self.scidvs_tau_arr: Optional[np.ndarray] = None
@@ -809,14 +809,22 @@ class EventEmulator(object):
                 self.timestamp_mem = torch.where(
                     neg_cord, ts[i], self.timestamp_mem)
 
-            # update the base log frame, along with the shot noise
+            # update event count frames with the shot noise
             final_pos_evts_frame += pos_cord
             final_neg_evts_frame += neg_cord
 
             # generate events
             # make a list of coordinates x,y addresses of events
+            # torch.nonzero(as_tuple=True)
+            # Returns a tuple of 1-D tensors, one for each dimension in input,
+            # each containing the indices (in that dimension) of all non-zero elements of input .
+
+            # pos_event_xy and neg_event_xy each return two 1-d tensors each with same length of the number of events
+            #   Tensor 0 is list of y addresses (first dimension in pos_cord input)
+            #   Tensor 1 is list of x addresses
             pos_event_xy = pos_cord.nonzero(as_tuple=True)
             neg_event_xy = neg_cord.nonzero(as_tuple=True)
+
 
             # update event stats
             num_pos_events = pos_event_xy[0].shape[0]
@@ -828,14 +836,16 @@ class EventEmulator(object):
             self.num_events_total += num_events
 
             if num_events > 0:
-                events_curr_iter = torch.ones(
+                # events_curr_iter is 2d array [N,4] with 2nd dimension [t,x,y,p]
+                events_curr_iter = torch.ones( # set all elements 1 so that polarities start out positive ON events
                     (num_events, 4), dtype=torch.float32,
                     device=self.device)
-                events_curr_iter[:, 0] *= ts[i]
+                events_curr_iter[:, 0] *= ts[i] # put all timestamps into events
 
                 # pos_event cords
-                events_curr_iter[:num_pos_events, 1] = pos_event_xy[1]
-                events_curr_iter[:num_pos_events, 2] = pos_event_xy[0]
+                # events_curr_iter is 2d array [N,4] with 2nd dimension [t,x,y,p]. N is the number of events from this frame
+                events_curr_iter[:num_pos_events, 1] = pos_event_xy[1] # tensor 1 of pos_event_xy is x addresses
+                events_curr_iter[:num_pos_events, 2] = pos_event_xy[0] # tensor 0 of pos_event_xy is y addresses
 
                 # neg event cords
                 events_curr_iter[num_pos_events:, 1] = neg_event_xy[1]
