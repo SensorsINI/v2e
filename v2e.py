@@ -194,6 +194,11 @@ def main():
             logger.error(f'{synthetic_input} method incorrect?: {e}')
             v2e_quit(1)
 
+    # check to make sure there are no other arguments that might be bogus misspelled arguments in case
+    # we don't have synthetic input class to pass these to
+    if synthetic_input_instance is None and not other_args is None:
+        logger.error(f'There is no synthetic input class specified but there are extra arguments {other_args} that are probably incorrect')
+        v2e_quit(1)
 
 
 
