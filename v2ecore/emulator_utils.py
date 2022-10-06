@@ -14,6 +14,7 @@ import torch.nn.functional as F
 logger = logging.getLogger(__name__)
 
 
+
 def lin_log(x, threshold=20):
     """
     linear mapping + logarithmic mapping.
@@ -84,7 +85,13 @@ def low_pass_filter(
         eps = inten01*(delta_time/tau)
         max_eps = torch.max(eps)
         if max_eps >0.3:
-            logger.warning(f'IIR lowpass filter update has large maximum update eps={max_eps:.2f} from delta_time/tau={delta_time:.3g}/{tau:.3g}')
+            IIR_MAX_WARNINGS = 10
+            if low_pass_filter.iir_warning_count<IIR_MAX_WARNINGS:
+                logger.warning(f'IIR lowpass filter update has large maximum update eps={max_eps:.2f} from delta_time/tau={delta_time:.3g}/{tau:.3g}')
+                low_pass_filter.iir_warning_count+=1
+                if low_pass_filter.iir_warning_count==IIR_MAX_WARNINGS:
+                    logger.warning(f'Supressing further warnings about inaccurate IIR lowpass filtering; check timestamp resolution and DVS photoreceptor cutoff frequency')
+
         eps = torch.clamp(eps, max=1)  # keep filter stable
     else:
         eps=delta_time/tau
@@ -100,6 +107,8 @@ def low_pass_filter(
     # now 1st order.
 
     return new_lp_log_frame
+
+low_pass_filter.iir_warning_count=0
 
 
 def subtract_leak_current(base_log_frame,
