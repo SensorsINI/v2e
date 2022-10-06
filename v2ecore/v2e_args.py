@@ -276,14 +276,15 @@ def v2e_args(parser):
              "In addition, the user has to set the frame rate manually.")
     inGroup.add_argument(
         "--input_frame_rate", type=float,
-        help="Manually define the video frame rate when the video is "
-             "presented as a list of image files."
-             "When the input video is a video file, this "
-             "option will be ignored.")
+        help="Either override the video file metadata frame rate or manually define the video frame rate when the video is "
+             "presented as a list of image files. Overrides the stored (metadata) frame rate of input video. "
+             "This option overrides the --input_slowmotion_factor argument in case "
+             "the input is from a video file."
+             )
     # note R| for SmartFormatter
     inGroup.add_argument(
         "--input_slowmotion_factor", type=float, default=1.0,
-        help="R|Sets the known slow-motion factor of the input video, "
+        help="R|(See --input_frame_rate argument too.) Sets the known slow-motion factor of the input video, "
              "\ni.e. how much the video is slowed down, i.e., "
              "\nthe ratio of shooting frame rate to playback frame rate. "
              "\ninput_slowmotion_factor<1 for sped-up video and "
@@ -298,6 +299,7 @@ def v2e_args(parser):
              "\n1ms that is in AVI file "
              "\nwith default 30 FPS playback spec, "
              "\nthen use ((1/30)s)*(1000Hz)=33.33333.")
+
     inGroup.add_argument(
         "--start_time", type=float, default=None,
         help="Start at this time in seconds in video. "

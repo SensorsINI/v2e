@@ -252,6 +252,7 @@ def main():
         v2e_quit(1)
 
     input_slowmotion_factor: float = args.input_slowmotion_factor
+    input_frame_rate:Optional[float] =args.input_frame_rate
     timestamp_resolution: float = args.timestamp_resolution
     auto_timestamp_resolution: bool = args.auto_timestamp_resolution
     disable_slomo: bool = args.disable_slomo
@@ -321,7 +322,7 @@ def main():
         logger.info("opening video input file " + input_file)
 
         if os.path.isdir(input_file):
-            if args.input_frame_rate is None:
+            if input_frame_rate is None:
                 logger.error(
                     "When the video is presented as a folder, "
                     "The user must set --input_frame_rate manually")
@@ -335,7 +336,7 @@ def main():
             cap = cv2.VideoCapture(input_file)
             srcFps = cap.get(cv2.CAP_PROP_FPS)
             srcNumFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            if args.input_frame_rate is not None:
+            if input_frame_rate is not None:
                 logger.info(f'Input video frame rate {srcFps}Hz is overridden by command line argument --input_frame_rate={args.input_frame_rate}')
                 srcFps=args.input_frame_rate
 
