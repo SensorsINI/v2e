@@ -1,3 +1,14 @@
+# v1.6.2
+
+
+## Bug fixes
+
+ - Fix x,y output order in ae_text_output
+ - Add warnings about extraneous extra arguments if there is no synthetic input class to pass them to
+ - Document the order of fields in event generation in emulator.py
+ - Fixed usage command to correctly show DVS output size options and to warn users about missing output size
+ - Fixed docstrings for methods to correct x,y order of event fields
+
 # v1.6.0
 
 ##  New features
