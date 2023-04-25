@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
 import logging
 import os
 import sys
@@ -10,7 +14,6 @@ import easygui
 from tkinter import filedialog
 from numba import njit
 from engineering_notation import EngNumber as eng
-from pathlib import Path
 
 # adjust for different sensor than DAVIS346
 DVS_WIDTH, DVS_HEIGHT = 346, 260
@@ -23,75 +26,93 @@ OUTPUT_VIDEO_CODEC_FOURCC = "XVID"
 logger = logging.getLogger(__name__)
 
 
-class ImageFolderReader(object):
-    def __init__(self, image_folder_path, frame_rate):
-        """ImageFolderReader.
+class ImageFolderReader:
+    """Reads a video from a folder.
 
-        This class implements functions that are similar to
-        VideoCapture in OpenCV.
+    This class implements functions that are similar to
+    VideoCapture in OpenCV.
 
-        This class is used when the frames are available as
-        a sequence of image files in a folder.
+    This class is used when the frames are available as
+    a sequence of image files in a folder.
 
-        NOTE: the folder should contain only image files and
-        the files have to be ordered!!!
+    NOTE: the folder should contain only image files and
+    the files have to be ordered!!!
 
-        All images are assumed to have the same dimension.
-        """
-        self.image_folder_path = image_folder_path
+    All images are assumed to have the same dimension.
 
-        self.image_file_list = sorted(
-            glob.glob("{}".format(self.image_folder_path) + "/*.*")
+    Args:
+        image_folder_path: The path to the image folder.
+        frame_rate: The video frame rate.
+    """
+
+    def __init__(self, image_folder_path: str | Path, *, frame_rate: int) -> None:
+        self.image_folder_path = (
+            image_folder_path
+            if isinstance(image_folder_path, Path)
+            else Path(image_folder_path)
         )
 
+        self.image_folder_list = sorted(self.image_folder_path.glob("*.*"))
+
+        if not isinstance(frame_rate, int):
+            raise TypeError(
+                f"`frame_rate` must be an integer, got {type(frame_rate)} instead"
+            )
         self.frame_rate = frame_rate
 
         self.current_frame_idx = 0
 
         self.num_frames = len(self.image_file_list)
 
-        frame = cv2.imread(self.image_file_list[0])
+        frame = cv2.imread(str(self.image_file_list[0]))
         if frame is None:
             logger.error(
-                f'could not read a frame from file "{self.image_file_list[0]}" in folder "{self.image_folder_path}"'
+                f"Could not read a frame from file '{self.image_file_list[0]}' in "
+                f"folder '{self.image_folder_path}'"
             )
             raise FileNotFoundError(
-                f"could not read a frame named {self.image_file_list[0]} from folder {self.image_folder_path}"
+                f"Could not read a frame named '{self.image_file_list[0]}' from "
+                "folder '{self.image_folder_path}'"
             )
         self.frame_height, self.frame_width = frame.shape[0], frame.shape[1]
         self.frame_channels = 1 if frame.ndim < 3 else frame.shape[2]
 
-    def read(self, skip=False):
-        """
-        Reads the next frame
+    def read(self, skip: bool = False) -> tuple[bool, np.ndarray | None]:
+        """Reads the next frame.
 
-        :param skip: skip the frame
+        Args:
+            skip: skip the frame
 
-        :returns: always True
+        Returns:
+            Matches OpenCV's VideoCapture.read() API.
+            The first return is True, and the second return is the frame.
+            If the frame is skipped, then it returns None.
         """
-        if not skip:
-            frame = cv2.imread(self.image_file_list[self.current_frame_idx])
-        else:
-            frame = None
+        frame = (
+            None
+            if skip
+            else cv2.imread(str(self.image_file_list[self.current_frame_idx]))
+        )
         self.current_frame_idx += 1
 
         # To match with OpenCV API
         return True, frame
 
-    def release(self):
+    def release(self) -> None:
         """Just to match with OpenCV API."""
         pass
 
-    def __str__(self):
-        s = f"ImageFolderReader reading folder {self.image_folder_path} frame number {self.current_frame_idx}"
+    def __str__(self) -> str:
+        s = f"ImageFolderReader reading folder '{self.image_folder_path}' frame number '{self.current_frame_idx}'"
         try:
             s = s + f" named {self.image_file_list[self.current_frame_idx-1]}"
-        except:
+        except Exception:
             pass
+
         return s
 
 
-def v2e_quit(code=0):
+def v2e_quit(code: int = 0) -> Any:
     try:
         quit(code)  # not defined in pydev console, e.g. running in pycharm
     finally:
@@ -99,9 +120,14 @@ def v2e_quit(code=0):
 
 
 def make_output_folder(
-    output_folder_base, suffix_counter, overwrite, unique_output_folder
+    output_folder_base: Path,
+    suffix_counter: int,
+    overwrite: bool,
+    unique_output_folder: Path,
 ) -> str:
-    """Makes the output folder if it does not exist yet, or makes unique new numbered folder
+    """Makes the output folder if it does not exist yet, or makes unique new numbered
+    folder.
+
     :param output_folder_base: the base name of folder. If it is absolute path, then make folder at absolute location, otherwise relative to startup folder
     :param suffix_counter: a counter value to append
     :param overwrite: to overwrite existing folder
@@ -210,7 +236,7 @@ def set_output_dimension(
 
 
 def check_lowpass(cutoffhz, fs, logger):
-    """checks if cutoffhz is ok given sample rate fs"""
+    """Checks if cutoffhz is ok given sample rate fs."""
     if cutoffhz == 0 or fs == 0:
         logger.info("lowpass filter is disabled, no need for check")
         return
@@ -283,7 +309,7 @@ def _inputFileDialog(types):
     try:
         with open(fn, "w") as f:
             f.write(filename)
-    except:
+    except Exception:
         pass
     return filename
 
@@ -328,8 +354,8 @@ def video_writer(
 
 
 def all_images(data_path):
-    """Return path of all input images. Assume that the ascending order of
-    file names is the same as the order of time sequence.
+    """Return path of all input images. Assume that the ascending order of file names is
+    the same as the order of time sequence.
 
     Parameters
     ----------
@@ -404,8 +430,8 @@ def read_aedat_txt_events(fname: str):
 
 
 def select_events_in_roi(events, x, y):
-    """Select the events inside the region specified by x and y.
-    including the x and y values.
+    """Select the events inside the region specified by x and y. including the x and y
+    values.
 
     Parameters
     ----------
