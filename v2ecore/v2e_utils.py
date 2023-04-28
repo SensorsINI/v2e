@@ -11,12 +11,11 @@ import numpy as np
 import cv2
 import glob
 import easygui
-from tkinter import filedialog
 from numba import njit
 from engineering_notation import EngNumber as eng
 
-# adjust for different sensor than DAVIS346
-DVS_WIDTH, DVS_HEIGHT = 346, 260
+from v2ecore.constants import DVS_HEIGHT
+from v2ecore.constants import DVS_WIDTH
 
 # VIDEO_CODEC_FOURCC='RGBA' # uncompressed, >10MB for a few seconds of video
 

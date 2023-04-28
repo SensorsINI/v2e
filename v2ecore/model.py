@@ -9,8 +9,7 @@ import numpy as np
 
 
 class down(nn.Module):
-    """
-    A class for creating neural network blocks containing layers:
+    """A class for creating neural network blocks containing layers:
 
     Average Pooling --> Convlution + Leaky ReLU --> Convolution + Leaky ReLU
 
@@ -58,9 +57,7 @@ class down(nn.Module):
         )
 
     def forward(self, x):
-        """
-        Returns output tensor after passing input `x` to the neural network
-        block.
+        """Returns output tensor after passing input `x` to the neural network block.
 
         Parameters
         ----------
@@ -83,8 +80,7 @@ class down(nn.Module):
 
 
 class up(nn.Module):
-    """
-    A class for creating neural network blocks containing layers:
+    """A class for creating neural network blocks containing layers:
 
     Bilinear interpolation -->
     Convlution + Leaky ReLU -->
@@ -120,9 +116,7 @@ class up(nn.Module):
         self.conv2 = nn.Conv2d(2 * outChannels, outChannels, 3, stride=1, padding=1)
 
     def forward(self, x, skpCn):
-        """
-        Returns output tensor after passing input `x` to the neural network
-        block.
+        """Returns output tensor after passing input `x` to the neural network block.
 
         Parameters
         ----------
@@ -188,8 +182,7 @@ class UNet(nn.Module):
         self.conv3 = nn.Conv2d(32, outChannels, 3, stride=1, padding=1)
 
     def forward(self, x):
-        """
-        Returns output tensor after passing input `x` to the neural network.
+        """Returns output tensor after passing input `x` to the neural network.
 
         Parameters
         ----------
@@ -219,8 +212,7 @@ class UNet(nn.Module):
 
 
 class backWarp(nn.Module):
-    """
-    A class for creating a backwarping object.
+    """A class for creating a backwarping object.
 
     This is used for backwarping to an image:
 
@@ -298,9 +290,8 @@ t = np.linspace(0.125, 0.875, 7)
 
 
 def getFlowCoeff(indices, device):
-    """
-    Gets flow coefficients used for calculating intermediate optical
-    flows from optical flows between I0 and I1: F_0_1 and F_1_0.
+    """Gets flow coefficients used for calculating intermediate optical flows from
+    optical flows between I0 and I1: F_0_1 and F_1_0.
 
     F_t_0 = C00 x F_0_1 + C01 x F_1_0
     F_t_1 = C10 x F_0_1 + C11 x F_1_0
@@ -339,9 +330,8 @@ def getFlowCoeff(indices, device):
 
 
 def getWarpCoeff(indices, device):
-    """
-    Gets coefficients used for calculating final intermediate
-    frame `It_gen` from backwarped images using flows F_t_0 and F_t_1.
+    """Gets coefficients used for calculating final intermediate frame `It_gen` from
+    backwarped images using flows F_t_0 and F_t_1.
 
     It_gen = (C0 x V_t_0 x g_I_0_F_t_0 + C1 x V_t_1 x g_I_1_F_t_1) / \
         (C0 x V_t_0 + C1 x V_t_1)

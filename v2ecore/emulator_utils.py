@@ -15,8 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def lin_log(x, threshold=20):
-    """
-    linear mapping + logarithmic mapping.
+    """linear mapping + logarithmic mapping.
 
     :param x: float or ndarray
         the input linear value in range 0-255 TODO assumes 8 bit
@@ -47,8 +46,8 @@ def lin_log(x, threshold=20):
 def rescale_intensity_frame(new_frame):
     """Rescale intensity frames.
 
-    make sure we get no zero time constants
-    limit max time constant to ~1/10 of white intensity level
+    make sure we get no zero time constants limit max time constant to ~1/10 of white
+    intensity level
     """
     return (new_frame + 20) / 275.0
 
@@ -135,8 +134,8 @@ def subtract_leak_current(
 
 
 def compute_event_map(diff_frame, pos_thres, neg_thres):
-    """
-        Compute event maps, i.e. 2d arrays of [width,height] containing quantized number of ON and OFF events.
+    """Compute event maps, i.e. 2d arrays of [width,height] containing quantized number
+    of ON and OFF events.
 
     Args:
         diff_frame:  the input difference frame between stored log intensity and current frame log intensity [width, height]
@@ -179,10 +178,11 @@ def compute_event_map(diff_frame, pos_thres, neg_thres):
 def compute_photoreceptor_noise_voltage(
     shot_noise_rate_hz, f3db, sample_rate_hz, pos_thr, neg_thr, sigma_thr
 ) -> float:
-    """
-     Computes the necessary photoreceptor noise voltage to result in obseved shot noise rate at low light intensity.
-     This computation relies on the known f3dB photoreceptor lowpass filter cutoff frequency and the known (nominal) event threshold.
-     emulator.py injects Gaussian distributed noise to the photoreceptor that should in principle generate the desired shot noise events.
+    """Computes the necessary photoreceptor noise voltage to result in obseved shot
+    noise rate at low light intensity. This computation relies on the known f3dB
+    photoreceptor lowpass filter cutoff frequency and the known (nominal) event
+    threshold. emulator.py injects Gaussian distributed noise to the photoreceptor that
+    should in principle generate the desired shot noise events.
 
      See the file media/noise_event_rate_simulation.xlsx for the simulation data and curve fit.
 

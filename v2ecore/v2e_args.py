@@ -5,11 +5,9 @@ from pathlib import Path
 from v2ecore.emulator import EventEmulator
 
 from v2ecore.renderer import ExposureMode
+from v2ecore.constants import NO_SLOWDOWN
 
 logger = logging.getLogger(__name__)
-
-# there is no slow down when slowdown_factor = 1
-NO_SLOWDOWN = 1
 
 
 def expandpath(path):
@@ -23,7 +21,7 @@ def output_file_check(arg):
 
 
 # https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
-def str2bool(v):
+def str2bool(v: str | bool) -> bool:
     if isinstance(v, bool):
         return v
     if v.lower() in ("yes", "true", "t", "y", "1"):
@@ -44,9 +42,9 @@ class SmartFormatter(argparse.HelpFormatter):
 
 
 def tuple_type(strings):
-    """From https://stackoverflow.com/questions/33564246/passing-a-tuple-as-command-line-argument
-    Allows passing tuple as argument and returning a tuple in the args.xxxx
-    """
+    """From https://stackoverflow.com/questions/33564246/passing-a-tuple-as-command-
+    line-argument Allows passing tuple as argument and returning a tuple in the
+    args.xxxx."""
     strings = strings.replace("(", "").replace(")", "")
     mapped_int = map(int, strings.split(","))
     return tuple(mapped_int)

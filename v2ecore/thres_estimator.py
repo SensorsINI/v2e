@@ -9,14 +9,10 @@ import subprocess
 import numpy as np
 import h5py
 
-import matplotlib
-import matplotlib.pyplot as plt
-
 from v2ecore.v2e_utils import select_events_in_roi
 
 
 def evaluate_threshold(cfg, idx, threshold, event_count_diffs, ref_event_count=0):
-
     # v2e commands
     v2e_command = [
         "v2e.py",

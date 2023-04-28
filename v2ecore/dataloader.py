@@ -1,8 +1,8 @@
-"""customized Pytorch dataloader
+"""Customized Pytorch dataloader.
 
-    @author: Zhe He
-    @contact: zhehe@student.ethz.ch
-    @latest update: 2019-May-27th
+@author: Zhe He
+@contact: zhehe@student.ethz.ch
+@latest update: 2019-May-27th
 """
 import torch.utils.data as data
 
@@ -12,9 +12,8 @@ from PIL import Image
 
 
 class Frames(data.Dataset):
+    """Load frames from an N-d array, and transform them into tensor.
 
-    """
-    Load frames from an N-d array, and transform them into tensor.
     @Author:
         - Zhe He
         - zhehe@student.ethz.ch
@@ -33,7 +32,6 @@ class Frames(data.Dataset):
     """
 
     def __init__(self, array, transform=None):
-
         """
         @Parameters:
             array: N-d numpy array.
@@ -46,7 +44,6 @@ class Frames(data.Dataset):
         self.dim = (int(self.origDim[0] / 32) * 32, int(self.origDim[1] / 32) * 32)
 
     def __getitem__(self, index):
-
         """Return an item from the dataset.
 
         @Parameter:
@@ -67,8 +64,8 @@ class Frames(data.Dataset):
         return sample
 
     def __len__(self):
-
         """Return the size of the dataset.
+
         @Return: int.
         """
         # from SuperSloMo github: https://github.com/avinashpaliwal
@@ -83,8 +80,8 @@ class Frames(data.Dataset):
         return self.array.shape[0] - 1
 
     def __repr__(self):
-
         """Return printable representations of the class.
+
         @Return: str.
         """
 
@@ -98,14 +95,10 @@ class Frames(data.Dataset):
 
 
 class FramesDirectory(data.Dataset):
-
-    """
-    Load frames from a directory that has individual frame records,
-    and transform them into tensor.
-    """
+    """Load frames from a directory that has individual frame records, and transform
+    them into tensor."""
 
     def __init__(self, folder_path, ori_dim, parsing="/*.npy", transform=None):
-
         """
         @Parameters:
             array: N-d numpy array.
@@ -120,7 +113,6 @@ class FramesDirectory(data.Dataset):
         self.dim = (int(self.origDim[0] / 32) * 32, int(self.origDim[1] / 32) * 32)
 
     def __getitem__(self, index):
-
         """Return an item from the dataset.
 
         @Parameter:
@@ -144,8 +136,8 @@ class FramesDirectory(data.Dataset):
         return sample
 
     def __len__(self):
-
         """Return the size of the dataset.
+
         @Return: int.
         """
         # from SuperSloMo github: https://github.com/avinashpaliwal
@@ -161,8 +153,8 @@ class FramesDirectory(data.Dataset):
         return len(self.files) - 1
 
     def __repr__(self):
-
         """Return printable representations of the class.
+
         @Return: str.
         """
 

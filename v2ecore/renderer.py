@@ -3,14 +3,9 @@ import cv2
 import os
 import atexit
 import logging
-from tqdm import tqdm
-from typing import List
-from engineering_notation import EngNumber  # only from pip
 from enum import Enum
-from numba import jit, njit
 
-from v2ecore.emulator import EventEmulator
-from v2ecore.v2e_utils import video_writer, read_image, checkAddSuffix, v2e_quit
+from v2ecore.v2e_utils import video_writer, checkAddSuffix, v2e_quit
 from v2ecore.v2e_utils import hist2d_numba_seq
 
 logger = logging.getLogger(__name__)
@@ -24,8 +19,7 @@ class ExposureMode(Enum):
 
 
 class EventRenderer(object):
-    """Class for DVS rendering from events.
-    and by generating DVS from image sequence.
+    """Class for DVS rendering from events. and by generating DVS from image sequence.
 
     It only defines the video and event dataset output path
     and whether to rotate the images.
@@ -135,7 +129,7 @@ class EventRenderer(object):
             cv2.destroyAllWindows()
 
     def _check_outputs_open(self):
-        """checks that output video and event datasets files are open"""
+        """Checks that output video and event datasets files are open."""
 
         if self.video_output_file is not None:
             return

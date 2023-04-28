@@ -1,10 +1,11 @@
 """Super SloMo class for dvs simulator project.
-    @author: Zhe He
-    @contact: hezhehz@live.cn
-    @latest update: 2019-May-27th
 
-    lightly modified based on this implementation: \
-        https://github.com/avinashpaliwal/Super-SloMo
+@author: Zhe He
+@contact: hezhehz@live.cn
+@latest update: 2019-May-27th
+
+lightly modified based on this implementation: \
+    https://github.com/avinashpaliwal/Super-SloMo
 """
 
 import torch
@@ -33,7 +34,8 @@ logger = logging.getLogger(__name__)
 
 
 class SuperSloMo(object):
-    """Super SloMo class
+    """Super SloMo class.
+
     @author: Zhe He
     @contact: hezhehz@live.cn
     @latest update: 2019-May-27th
@@ -51,8 +53,7 @@ class SuperSloMo(object):
         preview=False,
         avi_frame_rate=30,
     ):
-        """
-        init
+        """Init.
 
         Parameters
         ----------
@@ -177,8 +178,7 @@ class SuperSloMo(object):
         return to_tensor, to_image
 
     def __load_data(self, source_frame_path, frame_size):
-        """Return a Dataloader instance, which is constructed with \
-            APS frames.
+        """Return a Dataloader instance, which is constructed with \ APS frames.
 
         Parameters
         ---------
@@ -201,7 +201,7 @@ class SuperSloMo(object):
         return videoFramesloader, frames.dim, frames.origDim
 
     def __model(self, dim):
-        """Initialize the pytorch model
+        """Initialize the pytorch model.
 
         Parameters
         ---------
@@ -244,8 +244,8 @@ class SuperSloMo(object):
         return flow_estimator, warper, interpolator
 
     def interpolate(self, source_frame_path, output_folder, frame_size):
-        """Run interpolation. \
-            Interpolated frames will be saved in folder self.output_folder.
+        """Run interpolation. \ Interpolated frames will be saved in folder
+        self.output_folder.
 
         Parameters
         ----------
@@ -566,8 +566,8 @@ class SuperSloMo(object):
         return interpTimes, avgUpsampling
 
     def __all_images(self, data_path):
-        """Return path of all input images. Assume that the ascending order of
-        file names is the same as the order of time sequence.
+        """Return path of all input images. Assume that the ascending order of file
+        names is the same as the order of time sequence.
 
         Parameters
         ----------

@@ -1,5 +1,5 @@
-"""
-DVS simulator.
+"""DVS simulator.
+
 Compute events from input frames.
 """
 import atexit
@@ -12,7 +12,7 @@ from typing import Optional
 import cv2
 import h5py
 import numpy as np
-import torch  # https://pytorch.org/docs/stable/torch.html
+import torch
 from screeninfo import get_monitors
 
 from v2ecore.emulator_utils import (
@@ -28,13 +28,12 @@ from v2ecore.output.ae_text_output import DVSTextOutput
 from v2ecore.output.aedat2_output import AEDat2Output
 from v2ecore.v2e_utils import checkAddSuffix, v2e_quit, video_writer
 
-# import rosbag # not yet for python 3
-
 logger = logging.getLogger(__name__)
 
 
 class EventEmulator(object):
     """compute events based on the input frame.
+
     - author: Tobi Delbruck, Yuhuang Hu, Zhe He
     - contact: tobi@ini.uzh.ch
     """
@@ -549,7 +548,7 @@ class EventEmulator(object):
         )
 
     def reset(self):
-        """resets so that next use will reinitialize the base frame"""
+        """Resets so that next use will reinitialize the base frame."""
         self.num_events_total = 0
         self.num_events_on = 0
         self.num_events_off = 0
