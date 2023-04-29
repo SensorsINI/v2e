@@ -2,9 +2,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-# import torchvision
-# import torchvision.transforms as transforms
-# import torch.optim as optim
 
 
 class down(nn.Module):
@@ -23,7 +20,7 @@ class down(nn.Module):
         block.
     """
 
-    def __init__(self, inChannels, outChannels, filterSize):
+    def __init__(self, inChannels: int, outChannels: int, filterSize: int) -> None:
         """
         Parameters
         ----------
