@@ -15,10 +15,8 @@ import numpy as np
 import torch
 from screeninfo import get_monitors
 
-from v2ecore.emulator_utils import (
-    compute_event_map,
-    compute_photoreceptor_noise_voltage,
-)
+from v2ecore.emulator_utils import compute_event_map
+from v2ecore.emulator_utils import compute_photoreceptor_noise_voltage
 from v2ecore.emulator_utils import generate_shot_noise
 from v2ecore.emulator_utils import lin_log
 from v2ecore.emulator_utils import low_pass_filter
@@ -26,7 +24,9 @@ from v2ecore.emulator_utils import rescale_intensity_frame
 from v2ecore.emulator_utils import subtract_leak_current
 from v2ecore.output.ae_text_output import DVSTextOutput
 from v2ecore.output.aedat2_output import AEDat2Output
-from v2ecore.v2e_utils import checkAddSuffix, v2e_quit, video_writer
+from v2ecore.v2e_utils import checkAddSuffix
+from v2ecore.v2e_utils import v2e_quit
+from v2ecore.v2e_utils import video_writer
 
 logger = logging.getLogger(__name__)
 

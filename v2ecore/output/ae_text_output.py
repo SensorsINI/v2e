@@ -1,7 +1,8 @@
-import numpy as np
-import logging
-from engineering_notation import EngNumber  # only from pip
 import atexit
+import logging
+
+import numpy as np
+from engineering_notation import EngNumber  # only from pip
 
 logger = logging.getLogger(__name__)
 

@@ -5,16 +5,18 @@ Reads DDD hdf5 dvs data and return aps frames + events.
 @latest update: 2019-May-31
 """
 import ctypes
+import logging
+import multiprocessing as mp
 import queue as queue
 import time
-import numpy as np
-import logging
+
 import h5py
+import numpy as np
 from tqdm import tqdm
-import multiprocessing as mp
-from v2ecore.ddd20_utils.datasets import CHUNK_SIZE
-from v2ecore.ddd20_interfaces.caer import unpack_data
+
 from v2ecore.ddd20_interfaces import caer
+from v2ecore.ddd20_interfaces.caer import unpack_data
+from v2ecore.ddd20_utils.datasets import CHUNK_SIZE
 
 logger = logging.getLogger(__name__)
 

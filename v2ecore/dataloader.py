@@ -4,10 +4,10 @@
 @contact: zhehe@student.ethz.ch
 @latest update: 2019-May-27th
 """
-import torch.utils.data as data
-
 import glob
+
 import numpy as np
+import torch.utils.data as data
 from PIL import Image
 
 

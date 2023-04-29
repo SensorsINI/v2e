@@ -1,10 +1,9 @@
 """A QA assistant for filling in v2e's input requirements."""
-
 from __future__ import annotations
 
+from getpass import getuser
 from pathlib import Path
 from typing import Any
-from getpass import getuser
 
 import cv2
 import questionary

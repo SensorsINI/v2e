@@ -1,5 +1,4 @@
 #!/usr/bin/python
-
 """
 Recorder for DAVIS + OpenXC data
 Author: J. Binas <jbinas@gmail.com>, 2017
@@ -7,13 +6,15 @@ Author: J. Binas <jbinas@gmail.com>, 2017
 This software is released under the
 GNU LESSER GENERAL PUBLIC LICENSE Version 3.
 """
-
 from __future__ import print_function
-import time
-import numpy as np
-import socket, struct
+
 import multiprocessing as mp
 import queue
+import socket
+import struct
+import time
+
+import numpy as np
 
 HOST = "127.0.0.1"
 PORT = 7777

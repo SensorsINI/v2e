@@ -1,7 +1,6 @@
 """Setup script for v2e."""
-
-from setuptools import setup
 from setuptools import find_packages
+from setuptools import setup
 
 classifiers = """
 Development Status :: 4 - Beta

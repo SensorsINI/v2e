@@ -9,32 +9,35 @@ video frames.
 # todo refractory period for pixel
 from __future__ import annotations
 
-import time
 import glob
 import importlib
+import os
 import sys
+import time
+from tempfile import TemporaryDirectory
 
 import cv2
 import numpy as np
-import os
-from tempfile import TemporaryDirectory
-from engineering_notation import EngNumber as eng  # only from pip
-from tqdm import tqdm
-
 import torch
+from engineering_notation import EngNumber as eng  # only from pip
 from loguru import logger
+from tqdm import tqdm
 
 import v2ecore.desktop as desktop
 from v2ecore.base_synthetic_input import base_synthetic_input
-from v2ecore.v2e_utils import all_images, read_image, check_lowpass, v2e_quit
-from v2ecore.v2e_utils import ImageFolderReader
-from v2ecore.v2e_utils import setup_input_video
-from v2ecore.v2e_args import v2e_check_dvs_exposure_args
-from v2ecore.v2e_args import NO_SLOWDOWN
-from v2ecore.renderer import EventRenderer, ExposureMode
-from v2ecore.slomo import SuperSloMo
 from v2ecore.emulator import EventEmulator
 from v2ecore.jarvis import get_arguments
+from v2ecore.renderer import EventRenderer
+from v2ecore.renderer import ExposureMode
+from v2ecore.slomo import SuperSloMo
+from v2ecore.v2e_args import NO_SLOWDOWN
+from v2ecore.v2e_args import v2e_check_dvs_exposure_args
+from v2ecore.v2e_utils import all_images
+from v2ecore.v2e_utils import check_lowpass
+from v2ecore.v2e_utils import ImageFolderReader
+from v2ecore.v2e_utils import read_image
+from v2ecore.v2e_utils import setup_input_video
+from v2ecore.v2e_utils import v2e_quit
 
 
 # torch device

@@ -1,11 +1,10 @@
+import numpy as np
 import torch
-
+import torch.nn as nn
+import torch.nn.functional as F
 # import torchvision
 # import torchvision.transforms as transforms
 # import torch.optim as optim
-import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
 
 
 class down(nn.Module):

@@ -1,14 +1,16 @@
 # superclass for v2e synthetic input
-
 import argparse
 import atexit
-
-import numpy as np
-import cv2
-from tqdm import tqdm
-from v2ecore.v2e_utils import *
 import sys
-from typing import Tuple, Optional, List
+from typing import List
+from typing import Optional
+from typing import Tuple
+
+import cv2
+import numpy as np
+from tqdm import tqdm
+
+from v2ecore.v2e_utils import *
 
 logger = logging.getLogger(__name__)
 

@@ -1,8 +1,9 @@
-import numpy as np
-import logging
-from engineering_notation import EngNumber  # only from pip
 import atexit
+import logging
 import struct
+
+import numpy as np
+from engineering_notation import EngNumber  # only from pip
 
 from v2ecore.v2e_utils import v2e_quit
 

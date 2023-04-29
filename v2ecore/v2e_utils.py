@@ -1,23 +1,23 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+import glob
 import logging
 import os
 import sys
 import tempfile
+from pathlib import Path
+from typing import Any
 
-import numpy as np
 import cv2
-import glob
 import easygui
-from numba import njit
+import numpy as np
 from engineering_notation import EngNumber as eng
+from numba import njit
 
 from v2ecore.constants import DVS_HEIGHT
 from v2ecore.constants import DVS_WIDTH
-from v2ecore.constants import OUTPUT_VIDEO_CODEC_FOURCC
 from v2ecore.constants import NO_SLOWDOWN
+from v2ecore.constants import OUTPUT_VIDEO_CODEC_FOURCC
 
 logger = logging.getLogger(__name__)
 

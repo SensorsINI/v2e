@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 """
 Simple desktop window enumeration for Python.
 
@@ -41,9 +40,12 @@ child_windows = window.children()
 
 See the desktop.windows.Window class for more information.
 """
-
-from desktop import _is_x11, _get_x11_vars, _readfrom, use_desktop
 import re
+
+from desktop import _get_x11_vars
+from desktop import _is_x11
+from desktop import _readfrom
+from desktop import use_desktop
 
 # System functions.
 

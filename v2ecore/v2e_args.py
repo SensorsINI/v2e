@@ -1,11 +1,11 @@
 import argparse
-import os
 import logging
+import os
 from pathlib import Path
-from v2ecore.emulator import EventEmulator
 
-from v2ecore.renderer import ExposureMode
 from v2ecore.constants import NO_SLOWDOWN
+from v2ecore.emulator import EventEmulator
+from v2ecore.renderer import ExposureMode
 
 logger = logging.getLogger(__name__)
 

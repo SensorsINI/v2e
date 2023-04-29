@@ -4,10 +4,10 @@ Author: Yuhuang Hu
 Email : yuhuang.hu@ini.uzh.ch
 """
 import os
-
 import subprocess
-import numpy as np
+
 import h5py
+import numpy as np
 
 from v2ecore.v2e_utils import select_events_in_roi
 

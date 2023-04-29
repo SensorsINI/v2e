@@ -5,14 +5,16 @@ Author: J. Binas <jbinas@gmail.com>, 2017
 This software is released under the
 GNU LESSER GENERAL PUBLIC LICENSE Version 3.
 """
+from __future__ import absolute_import
+from __future__ import print_function
 
-from __future__ import absolute_import, print_function
-
-import time, sys
 import multiprocessing as mp
+import queue
+import sys
+import time
+
 import numpy as np
 from openxc.tools import dump as oxc
-import queue
 
 
 class Monitor(mp.Process):

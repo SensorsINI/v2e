@@ -1,12 +1,15 @@
-import numpy as np
-import cv2
-import os
 import atexit
 import logging
+import os
 from enum import Enum
 
-from v2ecore.v2e_utils import video_writer, checkAddSuffix, v2e_quit
+import cv2
+import numpy as np
+
+from v2ecore.v2e_utils import checkAddSuffix
 from v2ecore.v2e_utils import hist2d_numba_seq
+from v2ecore.v2e_utils import v2e_quit
+from v2ecore.v2e_utils import video_writer
 
 logger = logging.getLogger(__name__)
 
