@@ -7,13 +7,13 @@ video frames.
 @contact: tobi@ini.uzh.ch, yuhuang.hu@ini.uzh.ch, zhehe@student.ethz.ch
 """
 # todo refractory period for pixel
+from __future__ import annotations
 
+import time
 import glob
-import argparse
 import importlib
 import sys
 
-import argcomplete
 import cv2
 import numpy as np
 import os
@@ -22,42 +22,20 @@ from engineering_notation import EngNumber as eng  # only from pip
 from tqdm import tqdm
 
 import torch
+from loguru import logger
 
 import v2ecore.desktop as desktop
 from v2ecore.base_synthetic_input import base_synthetic_input
 from v2ecore.v2e_utils import all_images, read_image, check_lowpass, v2e_quit
-from v2ecore.v2e_utils import set_output_dimension
-from v2ecore.v2e_utils import set_output_folder
 from v2ecore.v2e_utils import ImageFolderReader
-from v2ecore.v2e_args import v2e_args, write_args_info, SmartFormatter
+from v2ecore.v2e_utils import setup_input_video
 from v2ecore.v2e_args import v2e_check_dvs_exposure_args
 from v2ecore.v2e_args import NO_SLOWDOWN
 from v2ecore.renderer import EventRenderer, ExposureMode
 from v2ecore.slomo import SuperSloMo
 from v2ecore.emulator import EventEmulator
-from v2ecore.v2e_utils import inputVideoFileDialog
-import logging
-import time
-from typing import Optional, Any
+from v2ecore.jarvis import get_arguments
 
-logging.basicConfig()
-root = logging.getLogger()
-LOGGING_LEVEL = logging.INFO
-root.setLevel(LOGGING_LEVEL)  # todo move to info for production
-# https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output/7995762#7995762
-logging.addLevelName(
-    logging.DEBUG, "\033[1;36m%s\033[1;0m" % logging.getLevelName(logging.DEBUG)
-)  # cyan foreground
-logging.addLevelName(
-    logging.INFO, "\033[1;34m%s\033[1;0m" % logging.getLevelName(logging.INFO)
-)  # blue foreground
-logging.addLevelName(
-    logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.WARNING)
-)  # red foreground
-logging.addLevelName(
-    logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR)
-)  # red background
-logger = logging.getLogger(__name__)
 
 # torch device
 torch_device: str = torch.device("cuda" if torch.cuda.is_available() else "cpu").type
@@ -69,114 +47,45 @@ if torch_device == "cpu":
         "to generate the correct conda install command to enable GPU-accelerated CUDA."
     )
 
-# may only apply to windows
-try:
-    #  from scripts.regsetup import description
-    from gooey import Gooey  # pip install Gooey
-except Exception as e:
-    logger.info(
-        f"{e}: Gooey GUI builder not available, "
-        f"will use command line arguments.\n"
-        f"Install with 'pip install Gooey if you want a no-arg GUI to invoke v2e'. See README"
-    )
 
+def main() -> None:
+    # Get arguments.
+    args = get_arguments()
 
-def get_args():
-    """proceses input arguments
-    :returns: (args_namespace,other_args,command_line)"""
-    parser = argparse.ArgumentParser(
-        description="v2e: generate simulated DVS events from video.",
-        epilog="Run with no --input to open file dialog",
-        allow_abbrev=True,
-        formatter_class=SmartFormatter,
-    )
+    # Write arguments to a log file.
+    #  infofile = write_args_info(args, output_folder, other_args, command_line)
 
-    parser = v2e_args(parser)
+    # Set input file.
+    input_video = args["input_video"]
+    synthetic_input = args["synthetic_input"]
+    input_slowmotion_factor: float = args["input_slowmotion_factor"]
 
-    #  parser.add_argument(
-    #      "--rotate180", type=bool, default=False,
-    #      help="rotate all output 180 deg.")
-    # https://kislyuk.github.io/argcomplete/#global-completion
-    # Shellcode (only necessary if global completion is not activated -
-    # see Global completion below), to be put in e.g. .bashrc:
-    # eval "$(register-python-argcomplete v2e.py)"
-    argcomplete.autocomplete(parser)
+    # Set output video
+    timestamp_resolution: float = args["timestamp_resolution"]
+    auto_timestamp_resolution: bool = args["auto_timestamp_resolution"]
 
-    (
-        args_namespace,
-        other_args,
-    ) = (
-        parser.parse_known_args()
-    )  # change to known arguments so that synthetic input module can take arguments
-    command_line = ""
-    for a in sys.argv:
-        command_line = command_line + " " + a
-    return (args_namespace, other_args, command_line)
-
-
-def main():
-    try:
-        ga = Gooey(get_args, program_name="v2e", default_size=(575, 600))
-        logger.info(
-            "Use --ignore-gooey to disable GUI and " "run with command line arguments"
-        )
-        ga()
-    except Exception as e:
-        logger.info(
-            f"{e}: Gooey package GUI not available, using command line arguments. \n"
-            f'You can try to install with "pip install Gooey"'
+    if input_video is not None and synthetic_input is not None:
+        raise ValueError(
+            f"Both `input_video` '{input_video}' and `synthetic_input` "
+            f"'{synthetic_input}' are specified - you can only specify one of them."
         )
 
-    (args, other_args, command_line) = get_args()
-
-    # set input file
-    input_file = args.input
-    synthetic_input: str = args.synthetic_input
-
-    if synthetic_input is not None and input_file is not None:
-        logger.error(
-            f"Both input_file {input_file} and synthetic_input {synthetic_input} are specified - you can only specify one of them"
+    if input_video is None and synthetic_input is None:
+        raise ValueError(
+            f"Both `input_video` '{input_video}' and `synthetic_input` "
+            f"'{synthetic_input}' are not provided - you must provide one of them."
         )
-        v2e_quit(1)
 
-    if synthetic_input is None and input_file is None:
-        try:
-            input_file = inputVideoFileDialog()
-            if input_file is None:
-                logger.info("no file selected, quitting")
-                v2e_quit()
-        except Exception as e:
-            logger.error(
-                f"no input file specified and cannot show input file dialog; are you running without graphical display? ({e})"
-            )
-            v2e_quit(1)
-
-    # Set output folder
-    output_folder = set_output_folder(
-        args.output_folder,
-        input_file,
-        args.unique_output_folder if not args.overwrite else False,
-        args.overwrite,
-        args.output_in_place if (not synthetic_input) else False,
-        logger,
-    )
+    # Set output folder.
+    output_folder = args["output_folder"]
 
     # Set output width and height based on the arguments
-    output_width, output_height = set_output_dimension(
-        args.output_width,
-        args.output_height,
-        args.dvs128,
-        args.dvs240,
-        args.dvs346,
-        args.dvs640,
-        args.dvs1024,
-        logger,
-    )
+    output_height, output_width = args["output_height"], args["output_width"]
 
     # setup synthetic input classes and method
     synthetic_input_module = None
     synthetic_input_class = None
-    synthetic_input_instance: Optional[base_synthetic_input] = None
+    synthetic_input_instance: base_synthetic_input | None = None
     synthetic_input_next_frame_method = None
     if synthetic_input is not None:
         try:
@@ -191,7 +100,7 @@ def main():
             synthetic_input_instance: base_synthetic_input = synthetic_input_class(
                 width=output_width,
                 height=output_height,
-                preview=not args.no_preview,
+                preview=not args["no_preview"],
                 arg_list=other_args,
                 avi_path=os.path.join(output_folder, args.vid_orig),
                 parent_args=args,
@@ -231,17 +140,6 @@ def main():
         )
         v2e_quit(1)
 
-    # Writing the info file
-    infofile = write_args_info(args, output_folder, other_args, command_line)
-
-    fh = logging.FileHandler(infofile, mode="a")
-    fh.setLevel(LOGGING_LEVEL)
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
-
     num_frames = 0
     srcNumFramesToBeProccessed = 0
     srcDurationToBeProcessed = float("NaN")
@@ -250,99 +148,32 @@ def main():
     #  if (not input_file or not os.path.isfile(input_file)
     #      or not os.path.isdir(input_file)) \
     #          and not base_synthetic_input:
-    if not synthetic_input:
-        if not os.path.isfile(input_file) and not os.path.isdir(input_file):
-            logger.error("input file {} does not exist".format(input_file))
-            v2e_quit(1)
-        if os.path.isdir(input_file):
-            if len(os.listdir(input_file)) == 0:
-                logger.error(f"input folder {input_file} is empty")
-                v2e_quit(1)
-
-    # define video parameters
-    # the input start and stop time, may be round to actual
-    # frame timestamp
-    input_start_time = args.start_time
-    input_stop_time = args.stop_time
-
-    def is_float(element: Any) -> bool:
-        try:
-            float(element)
-            return True
-        except ValueError:
-            return False
-
     if (
-        not input_start_time is None
-        and not input_stop_time is None
-        and is_float(input_start_time)
-        and is_float(input_stop_time)
-        and input_stop_time <= input_start_time
-    ):
-        logger.error(
-            f"stop time {input_stop_time} must be later than start time {input_start_time}"
-        )
-        v2e_quit(1)
-
-    input_slowmotion_factor: float = args.input_slowmotion_factor
-    input_frame_rate: Optional[float] = args.input_frame_rate
-    timestamp_resolution: float = args.timestamp_resolution
-    auto_timestamp_resolution: bool = args.auto_timestamp_resolution
-    disable_slomo: bool = args.disable_slomo
-    slomo = None  # make it later on
-
-    if (
-        not disable_slomo
-        and auto_timestamp_resolution is False
+        not args["disable_slomo"]
+        and args["auto_timestamp_resolution"] is False
         and timestamp_resolution is None
     ):
-        logger.error(
-            "if --auto_timestamp_resolution=False, "
-            "then --timestamp_resolution must be set to "
+        raise ValueError(
+            "`auto_timestamp_resolution` is set to False, "
+            "then `timestamp_resolution must be set to "
             "some desired DVS event timestamp resolution in seconds, "
             "e.g. 0.01"
         )
-        v2e_quit()
 
     if auto_timestamp_resolution is True and timestamp_resolution is not None:
         logger.info(
-            f"auto_timestamp_resolution=True and "
-            f"timestamp_resolution={timestamp_resolution}: "
+            f"`auto_timestamp_resolution=True` and "
+            f"`timestamp_resolution={timestamp_resolution}`: "
             f"Limiting automatic upsampling to maximum timestamp interval."
         )
-
-    # DVS pixel thresholds
-    pos_thres = args.pos_thres
-    neg_thres = args.neg_thres
-    sigma_thres = args.sigma_thres
-
-    # Cutoff and noise frequencies
-    cutoff_hz = args.cutoff_hz
-    leak_rate_hz = args.leak_rate_hz
-    if leak_rate_hz > 0 and sigma_thres == 0:
-        logger.warning(
-            "leak_rate_hz>0 but sigma_thres==0, "
-            "so all leak events will be synchronous"
-        )
-    shot_noise_rate_hz = args.shot_noise_rate_hz
 
     # Visualization
     avi_frame_rate = args.avi_frame_rate
     dvs_vid = args.dvs_vid
     dvs_vid_full_scale = args.dvs_vid_full_scale
-    vid_orig = args.vid_orig
-    vid_slomo = args.vid_slomo
-    preview = not args.no_preview
-
-    # Event saving options
-    dvs_h5 = args.dvs_h5
-    dvs_aedat2 = args.dvs_aedat2
-    dvs_text = args.dvs_text
 
     # Debug feature: if show slomo stats
     slomo_stats_plot = args.slomo_stats_plot
-    #  rotate180 = args.rotate180  # never used, consider removing
-    batch_size = args.batch_size
 
     # DVS exposure
     exposure_mode, exposure_val, area_dimension = v2e_check_dvs_exposure_args(args)
@@ -351,211 +182,69 @@ def main():
 
     time_run_started = time.time()
 
-    slomoTimestampResolutionS = None
+    slomo_timestampe_resoltion_s = None
 
     if synthetic_input is None:
-        logger.info("opening video input file " + input_file)
+        logger.info("opening video input file " + input_video)
 
-        if os.path.isdir(input_file):
-            if input_frame_rate is None:
-                logger.error(
-                    "When the video is presented as a folder, "
-                    "The user must set --input_frame_rate manually"
-                )
-                v2e_quit(1)
-
-            cap = ImageFolderReader(input_file, args.input_frame_rate)
-            srcFps = cap.frame_rate
-            srcNumFrames = cap.num_frames
-
-        else:
-            cap = cv2.VideoCapture(input_file)
-            srcFps = cap.get(cv2.CAP_PROP_FPS)
-            srcNumFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            if input_frame_rate is not None:
-                logger.info(
-                    f"Input video frame rate {srcFps}Hz is overridden by command line argument --input_frame_rate={args.input_frame_rate}"
-                )
-                srcFps = args.input_frame_rate
-
-        if cap is not None:
-            # set the output width and height from first image in folder, but only if they were not already set
-            set_size = False
-            if output_height is None and hasattr(cap, "frame_height"):
-                set_size = True
-                output_height = cap.frame_height
-            if output_width is None and hasattr(cap, "frame_width"):
-                set_size = True
-                output_width = cap.frame_width
-            if set_size:
-                logger.warning(
-                    f"From input frame automatically set DVS output_width={output_width} and/or output_height={output_height}. "
-                    f"This may not be desired behavior. \nCheck DVS camera sizes arguments."
-                )
-                time.sleep(5)
-            elif output_height is None or output_width is None:
-                logger.warning(
-                    "Could not read video frame size from video input and so could not automatically set DVS output size. \nCheck DVS camera sizes arguments."
-                )
-
-        # Check frame rate and number of frames
-        if srcFps == 0:
-            logger.error(
-                "source {} fps is 0; v2e needs to have a timescale "
-                "for input video".format(input_file)
-            )
-            v2e_quit()
-
-        if srcNumFrames < 2:
-            logger.warning(
-                "num frames is less than 2, probably cannot be determined "
-                "from cv2.CAP_PROP_FRAME_COUNT"
-            )
-
-        srcTotalDuration = (srcNumFrames - 1) / srcFps
-        # the index of the frames, from 0 to srcNumFrames-1
-        start_frame = (
-            int(srcNumFrames * (input_start_time / srcTotalDuration))
-            if input_start_time
-            else 0
-        )
-        stop_frame = (
-            int(srcNumFrames * (input_stop_time / srcTotalDuration))
-            if input_stop_time
-            else srcNumFrames - 1
-        )
-        srcNumFramesToBeProccessed = stop_frame - start_frame + 1
-        # the duration to be processed, should subtract 1 frame when
-        # calculating duration
-        srcDurationToBeProcessed = (srcNumFramesToBeProccessed - 1) / srcFps
-
-        # redefining start and end time using the time calculated
-        # from the frames, the minimum resolution there is
-        start_time = start_frame / srcFps
-        stop_time = stop_frame / srcFps
-
-        srcFrameIntervalS = (1.0 / srcFps) / input_slowmotion_factor
-
-        slowdown_factor = NO_SLOWDOWN  # start with factor 1 for upsampling
-        if disable_slomo:
-            logger.warning(
-                "slomo interpolation disabled by command line option; "
-                "output DVS timestamps will have source frame interval "
-                "resolution"
-            )
-            # time stamp resolution equals to source frame interval
-            slomoTimestampResolutionS = srcFrameIntervalS
-        elif not auto_timestamp_resolution:
-            slowdown_factor = int(np.ceil(srcFrameIntervalS / timestamp_resolution))
-            if slowdown_factor < NO_SLOWDOWN:
-                slowdown_factor = NO_SLOWDOWN
-                logger.warning(
-                    "timestamp resolution={}s is >= source "
-                    "frame interval={}s, will not upsample".format(
-                        timestamp_resolution, srcFrameIntervalS
-                    )
-                )
-            elif slowdown_factor > 100 and cutoff_hz == 0:
-                logger.warning(
-                    f"slowdown_factor={slowdown_factor} is >100 but "
-                    "cutoff_hz={cutoff_hz}. We have observed that "
-                    "numerical errors in SuperSloMo can cause noise "
-                    "that makes fake events at the upsampling rate. "
-                    "Recommend to set physical cutoff_hz, "
-                    "e.g. --cutoff_hz=200 (or leave the default cutoff_hz)"
-                )
-            slomoTimestampResolutionS = srcFrameIntervalS / slowdown_factor
-
-            logger.info(
-                f"--auto_timestamp_resolution is False, "
-                f"srcFps={srcFps}Hz "
-                f"input_slowmotion_factor={input_slowmotion_factor}, "
-                f"real src FPS={srcFps*input_slowmotion_factor}Hz, "
-                f"srcFrameIntervalS={eng(srcFrameIntervalS)}s, "
-                f"timestamp_resolution={eng(timestamp_resolution)}s, "
-                f"so SuperSloMo will use slowdown_factor={slowdown_factor} "
-                f"and have "
-                f"slomoTimestampResolutionS={eng(slomoTimestampResolutionS)}s"
-            )
-
-            if slomoTimestampResolutionS > timestamp_resolution:
-                logger.warning(
-                    "Upsampled src frame intervals of {}s is larger than\n "
-                    "the desired DVS timestamp resolution of {}s".format(
-                        slomoTimestampResolutionS, timestamp_resolution
-                    )
-                )
-
-            check_lowpass(cutoff_hz, 1 / slomoTimestampResolutionS, logger)
-        else:  # auto_timestamp_resolution
-            if timestamp_resolution is not None:
-                slowdown_factor = int(np.ceil(srcFrameIntervalS / timestamp_resolution))
-
-                logger.info(
-                    f"--auto_timestamp_resolution=True and "
-                    f"timestamp_resolution={eng(timestamp_resolution)}s: "
-                    f"source video will be automatically upsampled but "
-                    f"with at least upsampling factor of {slowdown_factor}"
-                )
-            else:
-                logger.info(
-                    "--auto_timestamp_resolution=True and "
-                    "timestamp_resolution is not set: "
-                    "source video will be automatically upsampled to "
-                    "limit maximum interframe motion to 1 pixel"
-                )
+        (
+            cap,
+            src_fps,
+            output_height,
+            output_width,
+            src_num_frames,
+            src_total_duration,
+            start_frame,
+            stop_frame,
+            src_num_frames_to_be_proccessed,
+            src_duration_to_be_processed,
+            start_time,
+            stop_time,
+            src_frame_interval_s,
+            slowdown_factor,
+            slomo_timestampe_resoltion_s,
+        ) = setup_input_video(args)
 
         # the SloMo model, set no SloMo model if no slowdown
-        if not disable_slomo and (
-            auto_timestamp_resolution or slowdown_factor != NO_SLOWDOWN
+        slomo = None
+        if not args["disable_slomo"] and (
+            args["auto_timestamp_resolution"] or slowdown_factor != NO_SLOWDOWN
         ):
             slomo = SuperSloMo(
-                model=args.slomo_model,
-                auto_upsample=auto_timestamp_resolution,
+                model=args["slomo_model"],
+                auto_upsample=args["auto_timestamp_resolution"],
                 upsampling_factor=slowdown_factor,
-                video_path=None if args.skip_video_output else output_folder,
-                vid_orig=None if args.skip_video_output else vid_orig,
-                vid_slomo=None if args.skip_video_output else vid_slomo,
-                preview=preview,
-                batch_size=batch_size,
+                video_path=args["output_folder"],
+                vid_orig=args["vid_orig"],
+                vid_slomo=args["vid_slomo"],
+                preview=not args["no_preview"],
+                batch_size=args["batch_size"],
             )
 
-    if not synthetic_input and not auto_timestamp_resolution:
+    if synthetic_input is None and not auto_timestamp_resolution:
         logger.info(
             f"\n events will have timestamp resolution "
-            f"{eng(slomoTimestampResolutionS)}s,"
+            f"{eng(slomo_timestampe_resoltion_s)}s,"
         )
         if exposure_mode == ExposureMode.DURATION and dvsFps > (
-            1 / slomoTimestampResolutionS
+            1 / slomo_timestampe_resoltion_s
         ):
             logger.warning(
-                "DVS video frame rate={}Hz is larger than "
-                "the effective DVS frame rate of {}Hz; "
-                "DVS video will have blank frames".format(
-                    dvsFps, (1 / slomoTimestampResolutionS)
-                )
+                f"DVS video frame rate={dvsFps}Hz is larger than "
+                f"the effective DVS frame rate of {1/slomo_timestampe_resoltion_s}Hz; "
+                "DVS video will have blank frames."
             )
 
-    if not synthetic_input:
+    if synthetic_input is None:
         logger.info(
-            "Source video {} has total {} frames with total duration {}s. "
-            "\nSource video is {}fps with slowmotion_factor {} "
-            "(frame interval {}s),"
-            "\nWill convert {} frames {} to {}\n"
-            "(From {}s to {}s, duration {}s)".format(
-                input_file,
-                srcNumFrames,
-                eng(srcTotalDuration),
-                eng(srcFps),
-                eng(input_slowmotion_factor),
-                eng(srcFrameIntervalS),
-                stop_frame - start_frame + 1,
-                start_frame,
-                stop_frame,
-                start_time,
-                stop_time,
-                (stop_time - start_time),
-            )
+            f"Source video {str(input_video)} has total {src_num_frames} frames "
+            f"with total duration {eng(src_total_duration)}s.\n "
+            f"Source video is {eng(src_fps)}fps with slowmotion_factor "
+            f"{eng(input_slowmotion_factor)} (frame interval "
+            f"{src_frame_interval_s}s),\n"
+            f"Will convert {stop_frame-start_frame+1} frames {start_frame} to "
+            f"{stop_frame}\n"
+            f"(From {start_time}s to {stop_time}s, duration {stop_time-start_time}s)"
         )
 
         if exposure_mode == ExposureMode.DURATION:
@@ -570,36 +259,23 @@ def main():
             )  # todo something replicated here, already have start and stop times
 
             logger.info(
-                "v2e DVS video will have constant-duration frames \n"
-                "at {}fps (accumulation time {}s), "
-                "\nDVS video will have {} frames with duration {}s "
-                "and playback duration {}s\n".format(
-                    eng(dvsFps),
-                    eng(1 / dvsFps),
-                    dvsNumFrames,
-                    eng(dvsDuration),
-                    eng(dvsPlaybackDuration),
-                )
+                "v2e DVS video will have constant-duration frames"
+                f"at {eng(dvsFps)}fps (accumulation time {eng(1/dvsFps)}s), "
+                f"DVS video will have {dvsNumFrames} frames with duration "
+                f"{eng(dvsDuration)}s and playback duration {eng(dvsPlaybackDuration)}s"
             )
         elif exposure_mode == ExposureMode.SOURCE:
             logger.info(
-                f"v2e DVS video will have constant-duration frames \n"
-                f"at the source video {eng(srcFps)} fps (accumulation time {eng(srcFrameIntervalS)}s)"
+                f"v2e DVS video will have constant-duration frames "
+                f"at the source video {eng(src_fps)} fps (accumulation time "
+                f"{eng(src_frame_interval_s)}s)"
             )
         else:
             logger.info(
-                "v2e DVS video will have constant-count "
-                "frames with {} events), ".format(exposure_val)
+                "v2e DVS video will have constant-count frames with {exposure_val} "
+                "events."
             )
 
-    # check one more time that we have an output width and height
-    if output_width is None or output_height is None:
-        logger.error(
-            "Either or both of output_width or output_height is None,\n"
-            "which means that they were not specified or could not be inferred from the input video. \n "
-            "Please see options for DVS camera sizes."
-        )
-        v2e_quit(1)
     num_pixels = output_width * output_height
 
     hdr: bool = args.hdr
@@ -611,21 +287,21 @@ def main():
         logger.info("Simulating SCIDVS pixel")
 
     emulator = EventEmulator(
-        pos_thres=pos_thres,
-        neg_thres=neg_thres,
-        sigma_thres=sigma_thres,
-        cutoff_hz=cutoff_hz,
-        leak_rate_hz=leak_rate_hz,
-        shot_noise_rate_hz=shot_noise_rate_hz,
-        photoreceptor_noise=args.photoreceptor_noise,
-        leak_jitter_fraction=args.leak_jitter_fraction,
-        noise_rate_cov_decades=args.noise_rate_cov_decades,
-        refractory_period_s=args.refractory_period,
+        pos_thres=args["positive_threshold"],
+        neg_thres=args["negative_threshold"],
+        sigma_thres=args["sigma_threshold"],
+        cutoff_hz=args["cutoff_hz"],
+        leak_rate_hz=args["leak_rate_hz"],
+        shot_noise_rate_hz=args["shot_noise_rate_hz"],
+        photoreceptor_noise=args["photoreceptor_noise"],
+        leak_jitter_fraction=args["leak_jitter_fraction"],
+        noise_rate_cov_decades=args["noise_rate_cov_decades"],
+        refractory_period_s=args["refractory_period"],
         seed=args.dvs_emulator_seed,
-        output_folder=output_folder,
-        dvs_h5=dvs_h5,
-        dvs_aedat2=dvs_aedat2,
-        dvs_text=dvs_text,
+        output_folder=args["output_folder"],
+        dvs_h5=args["dvs_h5"],
+        dvs_aedat2=args["dvs_aedat2"],
+        dvs_text=args["dvs_text"],
         show_dvs_model_state=args.show_dvs_model_state,
         save_dvs_model_state=args.save_dvs_model_state,
         output_width=output_width,
@@ -648,7 +324,7 @@ def main():
     eventRenderer = EventRenderer(
         output_path=output_folder,
         dvs_vid=dvs_vid,
-        preview=preview,
+        preview=not args["no_preview"],
         full_scale_count=dvs_vid_full_scale,
         exposure_mode=exposure_mode,
         exposure_value=exposure_val,
@@ -677,7 +353,7 @@ def main():
                     ):
                         events = np.append(events, newEvents, axis=0)
                         events = np.array(events)
-                        if i % batch_size == 0:
+                        if i % args["batch_size"] == 0:
                             eventRenderer.render_events_to_frames(
                                 events, height=output_height, width=output_width
                             )
@@ -700,7 +376,7 @@ def main():
         inputWidth = None
         inputChannels = None
         if start_frame > 0:
-            logger.info("skipping to frame {}".format(start_frame))
+            logger.info(f"skipping to frame {start_frame}")
             for i in tqdm(range(start_frame), unit="fr", desc="src"):
                 if isinstance(cap, ImageFolderReader):
                     if i < start_frame - 1:
@@ -715,11 +391,7 @@ def main():
                         "reaching start_frame"
                     )
 
-        logger.info(
-            "processing frames {} to {} from video input".format(
-                start_frame, stop_frame
-            )
-        )
+        logger.info(f"processing frames {start_frame} to {stop_frame} from video input")
 
         c_l = 0
         c_r = None
@@ -742,7 +414,7 @@ def main():
             )
 
         with TemporaryDirectory() as source_frames_dir:
-            if os.path.isdir(input_file):  # folder input
+            if os.path.isdir(input_video):  # folder input
                 inputWidth = cap.frame_width
                 inputHeight = cap.frame_height
                 inputChannels = cap.frame_channels
@@ -751,20 +423,20 @@ def main():
                 inputHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                 inputChannels = 1 if int(cap.get(cv2.CAP_PROP_MONOCHROME)) else 3
             logger.info(
-                "Input video {} has W={} x H={} frames each with {} channels".format(
-                    input_file, inputWidth, inputHeight, inputChannels
-                )
+                f"Input video {input_video} has W={inputWidth} x H={inputHeight} "
+                f"frames each with {inputChannels} channels"
             )
 
             if (output_width is None) and (output_height is None):
                 output_width = inputWidth
                 output_height = inputHeight
                 logger.warning(
-                    "output size ({}x{}) was set automatically to "
-                    "input video size\n    Are you sure you want this? "
+                    f"output size ({output_width}x{output_height}) was set "
+                    "automatically to input video size\n"
+                    "Are you sure you want this? "
                     "It might be slow.\n Consider using\n "
                     "    --output_width=346 --output_height=260\n "
-                    "to match Davis346.".format(output_width, output_height)
+                    "to match Davis346."
                 )
 
                 # set emulator output width and height for the last time
@@ -773,12 +445,12 @@ def main():
 
             logger.info(
                 f"*** Stage 1/3: "
-                f"Resizing {srcNumFramesToBeProccessed} input frames "
+                f"Resizing {src_num_frames_to_be_proccessed} input frames "
                 f"to output size "
                 f"(with possible RGB to luma conversion)"
             )
             for inputFrameIndex in tqdm(
-                range(srcNumFramesToBeProccessed), desc="rgb2luma", unit="fr"
+                range(src_num_frames_to_be_proccessed), desc="rgb2luma", unit="fr"
             ):
                 # read frame
                 ret, inputVideoFrame = cap.read()
@@ -864,7 +536,7 @@ def main():
                         interpFramesFolder,
                         (output_width, output_height),
                     )
-                    avgTs = srcFrameIntervalS / avgUpsamplingFactor
+                    avgTs = src_frame_interval_s / avgUpsamplingFactor
                     logger.info(
                         "SloMo average upsampling factor={:5.2f}; "
                         "average DVS timestamp resolution={}s".format(
@@ -874,13 +546,13 @@ def main():
                     # check for undersampling wrt the
                     # photoreceptor lowpass filtering
 
-                    if cutoff_hz > 0:
+                    if args["cutoff_hz"] > 0:
                         logger.info(
                             "Using auto_timestamp_resolution. "
                             "checking if cutoff hz is ok given "
-                            "samplee rate {}".format(1 / avgTs)
+                            f"samplee rate {1/avgTs}"
                         )
-                        check_lowpass(cutoff_hz, 1 / avgTs, logger)
+                        check_lowpass(args["cutoff_hz"], 1 / avgTs, logger)
 
                     # read back to memory
                     interpFramesFilenames = all_images(interpFramesFolder)
@@ -962,7 +634,7 @@ def main():
                             ):
                                 events = np.append(events, newEvents, axis=0)
                                 events = np.array(events)
-                                if i % batch_size == 0:
+                                if i % args["batch_size"] == 0:
                                     eventRenderer.render_events_to_frames(
                                         events, height=output_height, width=output_width
                                     )
@@ -992,15 +664,15 @@ def main():
         if framePerS > 1
         else (str(eng(sPerFrame)) + "s/fr")
     )
-    timestr = "done processing {} frames in {}s ({})\n **************** see output folder {}".format(
-        num_frames, eng(totalTime), throughputStr, output_folder
+    timestr = (
+        f"done processing {num_frames} frames in {eng(totalTime)}s "
+        f"({throughputStr})\n **************** see output folder "
+        f"{output_folder}"
     )
     logger.info(
-        "generated total {} events ({} on, {} off)".format(
-            eng(emulator.num_events_total),
-            eng(emulator.num_events_on),
-            eng(emulator.num_events_off),
-        )
+        "generated total {eng(emulator.num_events_total)} events "
+        "({eng(emulator.num_events_on)} on, "
+        "{eng(emulator.num_events_off)} off)"
     )
     total_time = emulator.t_previous
     rate_total = emulator.num_events_total / total_time
@@ -1018,7 +690,7 @@ def main():
         try:
             from plyer import notification
 
-            logger.info(f"generating desktop notification")
+            logger.info("generating desktop notification")
             notification.notify(title="v2e done", message=timestr, timeout=3)
         except Exception as e:
             logger.info(f"could not show notification: {e}")
@@ -1030,7 +702,7 @@ def main():
             logger.info(f"showing {output_folder} in desktop")
             desktop.open(os.path.abspath(output_folder))
         except Exception as e:
-            logger.warning("{}: could not open {} in desktop".format(e, output_folder))
+            logger.warning(f"{e}: could not open '{output_folder}' in desktop")
     logger.info(timestr)
     sys.exit(0)
 

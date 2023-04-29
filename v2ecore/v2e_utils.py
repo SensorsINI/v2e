@@ -16,12 +16,9 @@ from engineering_notation import EngNumber as eng
 
 from v2ecore.constants import DVS_HEIGHT
 from v2ecore.constants import DVS_WIDTH
+from v2ecore.constants import OUTPUT_VIDEO_CODEC_FOURCC
+from v2ecore.constants import NO_SLOWDOWN
 
-# VIDEO_CODEC_FOURCC='RGBA' # uncompressed, >10MB for a few seconds of video
-
-# good codec, basically mp4 with simplest compression, packed in AVI,
-# only 15kB for a few seconds
-OUTPUT_VIDEO_CODEC_FOURCC = "XVID"
 logger = logging.getLogger(__name__)
 
 
@@ -527,3 +524,155 @@ def hist2d_numba_seq(tracks, bins, ranges):
             H[int(i), int(j)] += 1
 
     return H
+
+
+def setup_input_video(args: dict[str, Any]):
+    """Setup input video and its related constants."""
+
+    input_video = args["input_video"]
+    src_fps = args["input_frame_rate"]
+    input_slowmotion_factor = args["input_slowmotion_factor"]
+    input_start_time = args["start_time"]
+    input_stop_time = args["stop_time"]
+
+    # Set output width and height based on the arguments
+    output_height, output_width = args["output_height"], args["output_width"]
+
+    if input_video.isdir():
+        cap = ImageFolderReader(input_video, src_fps)
+        src_num_frames = cap.num_frames
+    else:
+        cap = cv2.VideoCapture(input_video)
+        src_num_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    if cap is not None:
+        # set the output width and height from first image in folder, but only if they were not already set
+        set_size = False
+        if output_height is None and hasattr(cap, "frame_height"):
+            set_size = True
+            output_height = cap.frame_height
+        if output_width is None and hasattr(cap, "frame_width"):
+            set_size = True
+            output_width = cap.frame_width
+        if set_size:
+            logger.warning(
+                f"From input frame automatically set DVS output_width={output_width} and/or output_height={output_height}. "
+                f"This may not be desired behavior. \nCheck DVS camera sizes arguments."
+            )
+        elif output_height is None or output_width is None:
+            logger.warning(
+                "Could not read video frame size from video input and so could not automatically set DVS output size. \nCheck DVS camera sizes arguments."
+            )
+
+    if src_num_frames < 2:
+        raise ValueError(
+            "Number of frames ({src_num_frames}) is less than 2, probably cannot "
+            "be determined."
+        )
+
+    src_total_duration = (src_num_frames - 1) / src_fps
+
+    # the index of the frames, from 0 to `src_num_frames-1`
+    start_frame = (
+        int(src_num_frames * (input_start_time / src_total_duration))
+        if input_start_time
+        else 0
+    )
+    stop_frame = (
+        int(src_num_frames * (input_stop_time / src_total_duration))
+        if input_stop_time
+        else src_num_frames - 1
+    )
+    src_num_frames_to_be_proccessed = stop_frame - start_frame + 1
+    # the duration to be processed, should subtract 1 frame when
+    # calculating duration
+    src_duration_to_be_processed = (src_num_frames_to_be_proccessed - 1) / src_fps
+
+    # redefining start and end time using the time calculated
+    # from the frames, the minimum resolution there is
+    start_time = start_frame / src_fps
+    stop_time = stop_frame / src_fps
+
+    src_frame_interval_s = (1.0 / src_fps) / input_slowmotion_factor
+
+    slowdown_factor = NO_SLOWDOWN  # start with factor 1 for upsampling
+    cutoff_hz = args["cutoff_hz"]
+    if args["disable_slomo"]:
+        logger.warning("SloMo interpolation is disabled.")
+        slomo_timestamp_resolution_s = src_frame_interval_s
+    elif not args["auto_timestamp_resolution"]:
+        timestamp_resolution = args["timestamp_resolution"]
+        slowdown_factor = int(np.ceil(src_frame_interval_s / timestamp_resolution))
+        if slowdown_factor < NO_SLOWDOWN:
+            slowdown_factor = NO_SLOWDOWN
+            logger.warning(
+                f"`timestamp_resolution`={timestamp_resolution}s is >= "
+                f"`source_frame_interval`={src_frame_interval_s}s, "
+                "the video will not be upsampled."
+            )
+        elif slowdown_factor > 100 and cutoff_hz == 0:
+            logger.warning(
+                f"slowdown_factor={slowdown_factor} is >100 but "
+                f"cutoff_hz={cutoff_hz}. We have observed that "
+                "numerical errors in SuperSloMo can cause noise "
+                "that makes fake events at the upsampling rate. "
+                "Recommend to set physical `cutoff_hz`, "
+                "e.g. `cutoff_hz=200` (or leave the default `cutoff_hz`)"
+            )
+        slomo_timestamp_resolution_s = src_frame_interval_s / slowdown_factor
+
+        logger.info(
+            f"`auto_timestamp_resolution` is False, "
+            f"`src_fps`={src_fps}Hz "
+            f"`input_slowmotion_factor`={input_slowmotion_factor}, "
+            f"real video FPS={src_fps*input_slowmotion_factor}Hz, "
+            f"video frame interval={eng(src_frame_interval_s)}s, "
+            f"timestamp resolution={eng(timestamp_resolution)}s, "
+            f"so SuperSloMo will use slowdown factor={slowdown_factor} "
+            f"and have "
+            f"SloMo timestamp resolution={eng(slomo_timestamp_resolution_s)}s"
+        )
+
+        if slomo_timestamp_resolution_s > timestamp_resolution:
+            logger.warning(
+                f"Upsampled frame intervals of {slomo_timestamp_resolution_s}s "
+                "is larger than the desired DVS timestamp resolution of "
+                f"{timestamp_resolution}s"
+            )
+
+        check_lowpass(cutoff_hz, 1 / slomo_timestamp_resolution_s, logger)
+    else:  # auto_timestamp_resolution
+        if timestamp_resolution is not None:
+            slowdown_factor = int(np.ceil(src_frame_interval_s / timestamp_resolution))
+
+            logger.info(
+                f"`auto_timestamp_resolution=True` and "
+                f"`timestamp_resolution`={eng(timestamp_resolution)}s: "
+                f"source video will be automatically upsampled but "
+                f"with at least upsampling factor of {slowdown_factor}"
+            )
+        else:
+            logger.info(
+                "`auto_timestamp_resolution=True` and "
+                "`timestamp_resolution` is not set: "
+                "source video will be automatically upsampled to "
+                "limit maximum inter-frame motion to 1 pixel"
+            )
+
+    return (
+        cap,
+        src_fps,
+        output_height,
+        output_width,
+        src_num_frames,
+        src_total_duration,
+        start_frame,
+        stop_frame,
+        src_num_frames_to_be_proccessed,
+        src_duration_to_be_processed,
+        start_time,
+        stop_time,
+        src_frame_interval_s,
+        slowdown_factor,
+        slomo_timestamp_resolution_s,
+    )
