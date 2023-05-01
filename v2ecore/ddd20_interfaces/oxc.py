@@ -9,11 +9,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import multiprocessing as mp
-import queue
-import sys
 import time
 
-import numpy as np
 from openxc.tools import dump as oxc
 
 
@@ -41,7 +38,7 @@ class Monitor(mp.Process):
                 self.exit.set()
 
     def receive(self, message, **kwargs):
-        """receive single message from interface"""
+        """Receive single message from interface."""
         if self.exit.is_set():
             return
         message["timestamp"] = int(time.time() * 1e6)
@@ -52,7 +49,7 @@ class Monitor(mp.Process):
             raise Queue.Full("vi buffer overflow")
 
     def get(self):
-        """get one message from buffer"""
+        """Get one message from buffer."""
         return self.q.get_nowait() if not self.q.empty() else False
 
 

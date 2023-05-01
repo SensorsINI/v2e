@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-Simple desktop dialogue box support for Python.
+"""Simple desktop dialogue box support for Python.
 
 Copyright (C) 2007, 2009, 2014 Paul Boddie <paul@boddie.org.uk>
 
@@ -49,17 +48,21 @@ from desktop import _readfrom
 from desktop import _status
 from desktop import use_desktop
 
+
 class _wrapper:
     def __init__(self, handler):
         self.handler = handler
+
 
 class _readvalue(_wrapper):
     def __call__(self, cmd, shell):
         return self.handler(cmd, shell).strip()
 
+
 class _readinput(_wrapper):
     def __call__(self, cmd, shell):
         return self.handler(cmd, shell)[:-1]
+
 
 class _readvalues_kdialog(_wrapper):
     def __call__(self, cmd, shell):
@@ -69,6 +72,7 @@ class _readvalues_kdialog(_wrapper):
         else:
             return []
 
+
 class _readvalues_zenity(_wrapper):
     def __call__(self, cmd, shell):
         result = self.handler(cmd, shell).strip()
@@ -76,6 +80,7 @@ class _readvalues_zenity(_wrapper):
             return result.split("|")
         else:
             return []
+
 
 class _readvalues_Xdialog(_wrapper):
     def __call__(self, cmd, shell):
@@ -85,6 +90,7 @@ class _readvalues_Xdialog(_wrapper):
         else:
             return []
 
+
 class _readdate_kdialog(_wrapper):
     def __call__(self, cmd, shell):
         result = self.handler(cmd, shell).strip()
@@ -92,6 +98,7 @@ class _readdate_kdialog(_wrapper):
             return strptime(result, "%a %b %d %Y")
         else:
             return None
+
 
 class _readdate_zenity(_wrapper):
     def __call__(self, cmd, shell):
@@ -101,10 +108,11 @@ class _readdate_zenity(_wrapper):
         else:
             return None
 
+
 # Dialogue parameter classes.
 
-class String:
 
+class String:
     "A generic parameter."
 
     def __init__(self, name):
@@ -113,15 +121,15 @@ class String:
     def convert(self, value, program):
         return [value or ""]
 
-class Strings(String):
 
+class Strings(String):
     "Multiple string parameters."
 
     def convert(self, value, program):
         return value or []
 
-class StringPairs(String):
 
+class StringPairs(String):
     "Multiple string parameters duplicated to make identifiers."
 
     def convert(self, value, program):
@@ -131,8 +139,8 @@ class StringPairs(String):
             l.append(v)
         return l
 
-class StringKeyword:
 
+class StringKeyword:
     "A keyword parameter."
 
     def __init__(self, keyword, name):
@@ -142,8 +150,8 @@ class StringKeyword:
     def convert(self, value, program):
         return [self.keyword + "=" + (value or "")]
 
-class StringKeywords:
 
+class StringKeywords:
     "Multiple keyword parameters."
 
     def __init__(self, keyword, name):
@@ -156,15 +164,11 @@ class StringKeywords:
             l.append(self.keyword + "=" + v)
         return l
 
-class Integer(String):
 
+class Integer(String):
     "An integer parameter."
 
-    defaults = {
-        "width" : 40,
-        "height" : 15,
-        "list_height" : 10
-        }
+    defaults = {"width": 40, "height": 15, "list_height": 10}
     scale = 8
 
     def __init__(self, name, pixels=0):
@@ -179,8 +183,8 @@ class Integer(String):
             value = self.defaults[self.name]
         return [str(int(value) * self.factor)]
 
-class IntegerKeyword(Integer):
 
+class IntegerKeyword(Integer):
     "An integer keyword parameter."
 
     def __init__(self, keyword, name, pixels=0):
@@ -192,15 +196,15 @@ class IntegerKeyword(Integer):
             value = self.defaults[self.name]
         return [self.keyword + "=" + str(int(value) * self.factor)]
 
-class Boolean(String):
 
+class Boolean(String):
     "A boolean parameter."
 
     values = {
-        "kdialog" : ["off", "on"],
-        "zenity" : ["FALSE", "TRUE"],
-        "Xdialog" : ["off", "on"]
-        }
+        "kdialog": ["off", "on"],
+        "zenity": ["FALSE", "TRUE"],
+        "Xdialog": ["off", "on"],
+    }
 
     def convert(self, value, program):
         values = self.values[program]
@@ -209,8 +213,8 @@ class Boolean(String):
         else:
             return [values[0]]
 
-class MenuItemList(String):
 
+class MenuItemList(String):
     "A menu item list parameter."
 
     def convert(self, value, program):
@@ -220,8 +224,8 @@ class MenuItemList(String):
             l.append(v.text)
         return l
 
-class ListItemList(String):
 
+class ListItemList(String):
     "A radiolist/checklist item list parameter."
 
     def __init__(self, name, status_first=0):
@@ -241,10 +245,11 @@ class ListItemList(String):
                 l += status
         return l
 
+
 # Dialogue argument values.
 
-class MenuItem:
 
+class MenuItem:
     "A menu item which can also be used with radiolists and checklists."
 
     def __init__(self, value, text, status=0):
@@ -252,40 +257,39 @@ class MenuItem:
         self.text = text
         self.status = status
 
+
 # Dialogue classes.
+
 
 class Dialogue:
 
     commands = {
-        "KDE" : "kdialog",
-        "KDE4" : "kdialog",
-        "GNOME" : "zenity",
-        "XFCE" : "zenity", # NOTE: Based on observations with Xubuntu.
-        "X11" : "Xdialog"
-        }
+        "KDE": "kdialog",
+        "KDE4": "kdialog",
+        "GNOME": "zenity",
+        "XFCE": "zenity",  # NOTE: Based on observations with Xubuntu.
+        "X11": "Xdialog",
+    }
 
     def open(self, desktop=None):
-
-        """
-        Open a dialogue box (dialog) using a program appropriate to the desktop
+        """Open a dialogue box (dialog) using a program appropriate to the desktop
         environment in use.
 
-        If the optional 'desktop' parameter is specified then attempt to use
-        that particular desktop environment's mechanisms to open the dialog
-        instead of guessing or detecting which environment is being used.
+        If the optional 'desktop' parameter is specified then attempt to use that
+        particular desktop environment's mechanisms to open the dialog instead of
+        guessing or detecting which environment is being used.
 
-        Suggested values for 'desktop' are "standard", "KDE", "KDE4", "GNOME",
-        "Mac OS X", "Windows".
+        Suggested values for 'desktop' are "standard", "KDE", "KDE4", "GNOME", "Mac OS
+        X", "Windows".
 
-        The result of the dialogue interaction may be a string indicating user
-        input (for Input, Password, Menu, Pulldown), a list of strings
-        indicating selections of one or more items (for RadioList, CheckList),
-        or a value indicating true or false (for Question, Warning, Message,
-        Error).
+        The result of the dialogue interaction may be a string indicating user input
+        (for Input, Password, Menu, Pulldown), a list of strings indicating selections
+        of one or more items (for RadioList, CheckList), or a value indicating true or
+        false (for Question, Warning, Message, Error).
 
-        Where a string value may be expected but no choice is made, an empty
-        string may be returned. Similarly, where a list of values is expected
-        but no choice is made, an empty list may be returned.
+        Where a string value may be expected but no choice is made, an empty string may
+        be returned. Similarly, where a list of values is expected but no choice is
+        made, an empty list may be returned.
         """
 
         # Decide on the desktop environment in use.
@@ -297,7 +301,10 @@ class Dialogue:
         try:
             program = self.commands[desktop_in_use]
         except KeyError:
-            raise OSError("Desktop '%s' not supported (no known dialogue box command could be suggested)" % desktop_in_use)
+            raise OSError(
+                "Desktop '%s' not supported (no known dialogue box command could be suggested)"
+                % desktop_in_use
+            )
 
         # The handler is one of the functions communicating with the subprocess.
         # Some handlers return boolean values, others strings.
@@ -314,16 +321,17 @@ class Dialogue:
 
         return handler(cmd, 0)
 
+
 class Simple(Dialogue):
     def __init__(self, text, width=None, height=None):
         self.text = text
         self.width = width
         self.height = height
 
-class Question(Simple):
 
-    """
-    A dialogue asking a question and showing response buttons.
+class Question(Simple):
+    """A dialogue asking a question and showing response buttons.
+
     Options: text, width (in characters), height (in characters)
     Response: a boolean value indicating an affirmative response (true) or a
               negative response
@@ -331,15 +339,24 @@ class Question(Simple):
 
     name = "question"
     info = {
-        "kdialog" : (_status, ["--yesno", String("text")]),
-        "zenity" : (_status, ["--question", StringKeyword("--text", "text")]),
-        "Xdialog" : (_status, ["--stdout", "--yesno", String("text"), Integer("height"), Integer("width")]),
-        }
+        "kdialog": (_status, ["--yesno", String("text")]),
+        "zenity": (_status, ["--question", StringKeyword("--text", "text")]),
+        "Xdialog": (
+            _status,
+            [
+                "--stdout",
+                "--yesno",
+                String("text"),
+                Integer("height"),
+                Integer("width"),
+            ],
+        ),
+    }
+
 
 class Warning(Simple):
+    """A dialogue asking a question and showing response buttons.
 
-    """
-    A dialogue asking a question and showing response buttons.
     Options: text, width (in characters), height (in characters)
     Response: a boolean value indicating an affirmative response (true) or a
               negative response
@@ -347,15 +364,24 @@ class Warning(Simple):
 
     name = "warning"
     info = {
-        "kdialog" : (_status, ["--warningyesno", String("text")]),
-        "zenity" : (_status, ["--warning", StringKeyword("--text", "text")]),
-        "Xdialog" : (_status, ["--stdout", "--yesno", String("text"), Integer("height"), Integer("width")]),
-        }
+        "kdialog": (_status, ["--warningyesno", String("text")]),
+        "zenity": (_status, ["--warning", StringKeyword("--text", "text")]),
+        "Xdialog": (
+            _status,
+            [
+                "--stdout",
+                "--yesno",
+                String("text"),
+                Integer("height"),
+                Integer("width"),
+            ],
+        ),
+    }
+
 
 class Message(Simple):
+    """A message dialogue.
 
-    """
-    A message dialogue.
     Options: text, width (in characters), height (in characters)
     Response: a boolean value indicating an affirmative response (true) or a
               negative response
@@ -363,15 +389,24 @@ class Message(Simple):
 
     name = "message"
     info = {
-        "kdialog" : (_status, ["--msgbox", String("text")]),
-        "zenity" : (_status, ["--info", StringKeyword("--text", "text")]),
-        "Xdialog" : (_status, ["--stdout", "--msgbox", String("text"), Integer("height"), Integer("width")]),
-        }
+        "kdialog": (_status, ["--msgbox", String("text")]),
+        "zenity": (_status, ["--info", StringKeyword("--text", "text")]),
+        "Xdialog": (
+            _status,
+            [
+                "--stdout",
+                "--msgbox",
+                String("text"),
+                Integer("height"),
+                Integer("width"),
+            ],
+        ),
+    }
+
 
 class Error(Simple):
+    """An error dialogue.
 
-    """
-    An error dialogue.
     Options: text, width (in characters), height (in characters)
     Response: a boolean value indicating an affirmative response (true) or a
               negative response
@@ -379,15 +414,24 @@ class Error(Simple):
 
     name = "error"
     info = {
-        "kdialog" : (_status, ["--error", String("text")]),
-        "zenity" : (_status, ["--error", StringKeyword("--text", "text")]),
-        "Xdialog" : (_status, ["--stdout", "--msgbox", String("text"), Integer("height"), Integer("width")]),
-        }
+        "kdialog": (_status, ["--error", String("text")]),
+        "zenity": (_status, ["--error", StringKeyword("--text", "text")]),
+        "Xdialog": (
+            _status,
+            [
+                "--stdout",
+                "--msgbox",
+                String("text"),
+                Integer("height"),
+                Integer("width"),
+            ],
+        ),
+    }
+
 
 class Menu(Simple):
+    """A menu of options, one of which being selectable.
 
-    """
-    A menu of options, one of which being selectable.
     Options: text, width (in characters), height (in characters),
              list_height (in items), items (MenuItem objects)
     Response: a value corresponding to the chosen item
@@ -395,42 +439,56 @@ class Menu(Simple):
 
     name = "menu"
     info = {
-        "kdialog" : (_readvalue(_readfrom), ["--menu", String("text"), MenuItemList("items")]),
-        "zenity" : (_readvalue(_readfrom), ["--list", StringKeyword("--text", "text"), StringKeywords("--column", "titles"),
-            MenuItemList("items")]
-            ),
-        "Xdialog" : (_readvalue(_readfrom), ["--stdout", "--menubox",
-            String("text"), Integer("height"), Integer("width"), Integer("list_height"), MenuItemList("items")]
-            ),
-        }
+        "kdialog": (
+            _readvalue(_readfrom),
+            ["--menu", String("text"), MenuItemList("items")],
+        ),
+        "zenity": (
+            _readvalue(_readfrom),
+            [
+                "--list",
+                StringKeyword("--text", "text"),
+                StringKeywords("--column", "titles"),
+                MenuItemList("items"),
+            ],
+        ),
+        "Xdialog": (
+            _readvalue(_readfrom),
+            [
+                "--stdout",
+                "--menubox",
+                String("text"),
+                Integer("height"),
+                Integer("width"),
+                Integer("list_height"),
+                MenuItemList("items"),
+            ],
+        ),
+    }
     item = MenuItem
     number_of_titles = 2
 
-    def __init__(self, text, titles, items=None, width=None, height=None, list_height=None):
-
-        """
-        Initialise a menu with the given heading 'text', column 'titles', and
-        optional 'items' (which may be added later), 'width' (in characters),
-        'height' (in characters) and 'list_height' (in items).
-        """
+    def __init__(
+        self, text, titles, items=None, width=None, height=None, list_height=None
+    ):
+        """Initialise a menu with the given heading 'text', column 'titles', and
+        optional 'items' (which may be added later), 'width' (in characters), 'height'
+        (in characters) and 'list_height' (in items)."""
 
         Simple.__init__(self, text, width, height)
-        self.titles = ([""] * self.number_of_titles + titles)[-self.number_of_titles:]
+        self.titles = ([""] * self.number_of_titles + titles)[-self.number_of_titles :]
         self.items = items or []
         self.list_height = list_height
 
     def add(self, *args, **kw):
-
-        """
-        Add an item, passing the given arguments to the appropriate item class.
-        """
+        """Add an item, passing the given arguments to the appropriate item class."""
 
         self.items.append(self.item(*args, **kw))
 
-class RadioList(Menu):
 
-    """
-    A list of radio buttons, one of which being selectable.
+class RadioList(Menu):
+    """A list of radio buttons, one of which being selectable.
+
     Options: text, width (in characters), height (in characters),
              list_height (in items), items (MenuItem objects), titles
     Response: a list of values corresponding to chosen items (since some
@@ -440,21 +498,39 @@ class RadioList(Menu):
 
     name = "radiolist"
     info = {
-        "kdialog" : (_readvalues_kdialog(_readfrom), ["--radiolist", String("text"), ListItemList("items")]),
-        "zenity" : (_readvalues_zenity(_readfrom),
-            ["--list", "--radiolist", StringKeyword("--text", "text"), StringKeywords("--column", "titles"),
-            ListItemList("items", 1)]
-            ),
-        "Xdialog" : (_readvalues_Xdialog(_readfrom), ["--stdout", "--radiolist",
-            String("text"), Integer("height"), Integer("width"), Integer("list_height"), ListItemList("items")]
-            ),
-        }
+        "kdialog": (
+            _readvalues_kdialog(_readfrom),
+            ["--radiolist", String("text"), ListItemList("items")],
+        ),
+        "zenity": (
+            _readvalues_zenity(_readfrom),
+            [
+                "--list",
+                "--radiolist",
+                StringKeyword("--text", "text"),
+                StringKeywords("--column", "titles"),
+                ListItemList("items", 1),
+            ],
+        ),
+        "Xdialog": (
+            _readvalues_Xdialog(_readfrom),
+            [
+                "--stdout",
+                "--radiolist",
+                String("text"),
+                Integer("height"),
+                Integer("width"),
+                Integer("list_height"),
+                ListItemList("items"),
+            ],
+        ),
+    }
     number_of_titles = 3
 
-class CheckList(Menu):
 
-    """
-    A list of checkboxes, many being selectable.
+class CheckList(Menu):
+    """A list of checkboxes, many being selectable.
+
     Options: text, width (in characters), height (in characters),
              list_height (in items), items (MenuItem objects), titles
     Response: a list of values corresponding to chosen items
@@ -462,21 +538,39 @@ class CheckList(Menu):
 
     name = "checklist"
     info = {
-        "kdialog" : (_readvalues_kdialog(_readfrom), ["--checklist", String("text"), ListItemList("items")]),
-        "zenity" : (_readvalues_zenity(_readfrom),
-            ["--list", "--checklist", StringKeyword("--text", "text"), StringKeywords("--column", "titles"),
-            ListItemList("items", 1)]
-            ),
-        "Xdialog" : (_readvalues_Xdialog(_readfrom), ["--stdout", "--checklist",
-            String("text"), Integer("height"), Integer("width"), Integer("list_height"), ListItemList("items")]
-            ),
-        }
+        "kdialog": (
+            _readvalues_kdialog(_readfrom),
+            ["--checklist", String("text"), ListItemList("items")],
+        ),
+        "zenity": (
+            _readvalues_zenity(_readfrom),
+            [
+                "--list",
+                "--checklist",
+                StringKeyword("--text", "text"),
+                StringKeywords("--column", "titles"),
+                ListItemList("items", 1),
+            ],
+        ),
+        "Xdialog": (
+            _readvalues_Xdialog(_readfrom),
+            [
+                "--stdout",
+                "--checklist",
+                String("text"),
+                Integer("height"),
+                Integer("width"),
+                Integer("list_height"),
+                ListItemList("items"),
+            ],
+        ),
+    }
     number_of_titles = 3
 
-class Pulldown(Menu):
 
-    """
-    A pull-down menu of options, one of which being selectable.
+class Pulldown(Menu):
+    """A pull-down menu of options, one of which being selectable.
+
     Options: text, width (in characters), height (in characters),
              items (list of values)
     Response: a value corresponding to the chosen item
@@ -484,61 +578,106 @@ class Pulldown(Menu):
 
     name = "pulldown"
     info = {
-        "kdialog" : (_readvalue(_readfrom), ["--combobox", String("text"), Strings("items")]),
-        "zenity" : (_readvalue(_readfrom),
-            ["--list", "--radiolist", StringKeyword("--text", "text"), StringKeywords("--column", "titles"),
-            StringPairs("items")]
-            ),
-        "Xdialog" : (_readvalue(_readfrom),
-            ["--stdout", "--combobox", String("text"), Integer("height"), Integer("width"), Strings("items")]),
-        }
+        "kdialog": (
+            _readvalue(_readfrom),
+            ["--combobox", String("text"), Strings("items")],
+        ),
+        "zenity": (
+            _readvalue(_readfrom),
+            [
+                "--list",
+                "--radiolist",
+                StringKeyword("--text", "text"),
+                StringKeywords("--column", "titles"),
+                StringPairs("items"),
+            ],
+        ),
+        "Xdialog": (
+            _readvalue(_readfrom),
+            [
+                "--stdout",
+                "--combobox",
+                String("text"),
+                Integer("height"),
+                Integer("width"),
+                Strings("items"),
+            ],
+        ),
+    }
     item = str
     number_of_titles = 2
 
-class Input(Simple):
 
-    """
-    An input dialogue, consisting of an input field.
+class Input(Simple):
+    """An input dialogue, consisting of an input field.
+
     Options: text, input, width (in characters), height (in characters)
     Response: the text entered into the dialogue by the user
     """
 
     name = "input"
     info = {
-        "kdialog" : (_readinput(_readfrom),
-            ["--inputbox", String("text"), String("data")]),
-        "zenity" : (_readinput(_readfrom),
-            ["--entry", StringKeyword("--text", "text"), StringKeyword("--entry-text", "data")]),
-        "Xdialog" : (_readinput(_readfrom),
-            ["--stdout", "--inputbox", String("text"), Integer("height"), Integer("width"), String("data")]),
-        }
+        "kdialog": (
+            _readinput(_readfrom),
+            ["--inputbox", String("text"), String("data")],
+        ),
+        "zenity": (
+            _readinput(_readfrom),
+            [
+                "--entry",
+                StringKeyword("--text", "text"),
+                StringKeyword("--entry-text", "data"),
+            ],
+        ),
+        "Xdialog": (
+            _readinput(_readfrom),
+            [
+                "--stdout",
+                "--inputbox",
+                String("text"),
+                Integer("height"),
+                Integer("width"),
+                String("data"),
+            ],
+        ),
+    }
 
     def __init__(self, text, data="", width=None, height=None):
         Simple.__init__(self, text, width, height)
         self.data = data
 
-class Password(Input):
 
-    """
-    A password dialogue, consisting of a password entry field.
+class Password(Input):
+    """A password dialogue, consisting of a password entry field.
+
     Options: text, width (in characters), height (in characters)
     Response: the text entered into the dialogue by the user
     """
 
     name = "password"
     info = {
-        "kdialog" : (_readinput(_readfrom),
-            ["--password", String("text")]),
-        "zenity" : (_readinput(_readfrom),
-            ["--entry", StringKeyword("--text", "text"), "--hide-text"]),
-        "Xdialog" : (_readinput(_readfrom),
-            ["--stdout", "--password", "--inputbox", String("text"), Integer("height"), Integer("width")]),
-        }
+        "kdialog": (_readinput(_readfrom), ["--password", String("text")]),
+        "zenity": (
+            _readinput(_readfrom),
+            ["--entry", StringKeyword("--text", "text"), "--hide-text"],
+        ),
+        "Xdialog": (
+            _readinput(_readfrom),
+            [
+                "--stdout",
+                "--password",
+                "--inputbox",
+                String("text"),
+                Integer("height"),
+                Integer("width"),
+            ],
+        ),
+    }
+
 
 class TextFile(Simple):
+    """A text file input box.
 
-    """
-    A text file input box.
     Options: filename, text, width (in characters), height (in characters)
     Response: any text returned by the dialogue program (typically an empty
               string)
@@ -546,73 +685,127 @@ class TextFile(Simple):
 
     name = "textfile"
     info = {
-        "kdialog" : (_readfrom, ["--textbox", String("filename"), Integer("width", pixels=1), Integer("height", pixels=1)]),
-        "zenity" : (_readfrom, ["--text-info", StringKeyword("--filename", "filename"), IntegerKeyword("--width", "width", pixels=1),
-            IntegerKeyword("--height", "height", pixels=1)]
-            ),
-        "Xdialog" : (_readfrom, ["--stdout", "--textbox", String("filename"), Integer("height"), Integer("width")]),
-        }
+        "kdialog": (
+            _readfrom,
+            [
+                "--textbox",
+                String("filename"),
+                Integer("width", pixels=1),
+                Integer("height", pixels=1),
+            ],
+        ),
+        "zenity": (
+            _readfrom,
+            [
+                "--text-info",
+                StringKeyword("--filename", "filename"),
+                IntegerKeyword("--width", "width", pixels=1),
+                IntegerKeyword("--height", "height", pixels=1),
+            ],
+        ),
+        "Xdialog": (
+            _readfrom,
+            [
+                "--stdout",
+                "--textbox",
+                String("filename"),
+                Integer("height"),
+                Integer("width"),
+            ],
+        ),
+    }
 
     def __init__(self, filename, text="", width=None, height=None):
         Simple.__init__(self, text, width, height)
         self.filename = filename
 
-class FileSelector(Simple):
 
-    """
-    A file selector dialogue.
+class FileSelector(Simple):
+    """A file selector dialogue.
+
     Options: directory to start in
     Response: a filename
     """
 
     name = "fileselector"
     info = {
-        "kdialog" : (_readvalue(_readfrom), ["--getopenfilename", String("directory")]),
-        "zenity" : (_readvalue(_readfrom), ["--file-selection", StringKeyword("--filename", "directory")]),
-        "Xdialog" : (_readvalue(_readfrom), ["--fselect", String("directory")]),
-        }
+        "kdialog": (_readvalue(_readfrom), ["--getopenfilename", String("directory")]),
+        "zenity": (
+            _readvalue(_readfrom),
+            ["--file-selection", StringKeyword("--filename", "directory")],
+        ),
+        "Xdialog": (_readvalue(_readfrom), ["--fselect", String("directory")]),
+    }
 
     def __init__(self, directory, text="", width=None, height=None):
         Simple.__init__(self, text, width, height)
         self.directory = directory
 
-class DirectorySelector(Simple):
 
-    """
-    A directory selector dialogue.
+class DirectorySelector(Simple):
+    """A directory selector dialogue.
+
     Options: directory to start in
     Response: a filename
     """
 
     name = "directoryselector"
     info = {
-        "kdialog" : (_readvalue(_readfrom), ["--getexistingdirectory", String("directory")]),
-        "zenity" : (_readvalue(_readfrom), ["--file-selection", "--directory", StringKeyword("--filename", "directory")]),
-        "Xdialog" : (_readvalue(_readfrom), ["--dselect", String("directory")]),
-        }
+        "kdialog": (
+            _readvalue(_readfrom),
+            ["--getexistingdirectory", String("directory")],
+        ),
+        "zenity": (
+            _readvalue(_readfrom),
+            [
+                "--file-selection",
+                "--directory",
+                StringKeyword("--filename", "directory"),
+            ],
+        ),
+        "Xdialog": (_readvalue(_readfrom), ["--dselect", String("directory")]),
+    }
 
     def __init__(self, directory, text="", width=None, height=None):
         Simple.__init__(self, text, width, height)
         self.directory = directory
 
-class Calendar(Simple):
 
-    """
-    A calendar dialogue.
+class Calendar(Simple):
+    """A calendar dialogue.
+
     Response: a tuple of the form (year, month, day number)
     """
 
     name = "calendar"
     info = {
-        "kdialog" : (_readdate_kdialog(_readfrom), ["--calendar", String("text")]),
-        "zenity" : (_readdate_zenity(_readfrom), ["--calendar", "--date-format", "%Y %m %d"]),
-        "Xdialog" : (_readdate_kdialog(_readfrom), ["--calendar", String("text")]),
-        }
+        "kdialog": (_readdate_kdialog(_readfrom), ["--calendar", String("text")]),
+        "zenity": (
+            _readdate_zenity(_readfrom),
+            ["--calendar", "--date-format", "%Y %m %d"],
+        ),
+        "Xdialog": (_readdate_kdialog(_readfrom), ["--calendar", String("text")]),
+    }
+
 
 # Available dialogues.
 
-available = [Question, Warning, Message, Error, Menu, CheckList, RadioList, Input, Password, Pulldown, TextFile, Calendar,
-             FileSelector, DirectorySelector]
+available = [
+    Question,
+    Warning,
+    Message,
+    Error,
+    Menu,
+    CheckList,
+    RadioList,
+    Input,
+    Password,
+    Pulldown,
+    TextFile,
+    Calendar,
+    FileSelector,
+    DirectorySelector,
+]
 
 # Supported desktop environments.
 
