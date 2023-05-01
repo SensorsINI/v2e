@@ -1,5 +1,6 @@
 # Refactor Notes
 
++ The top goal of this refactor is to transform v2e to a set of usable API with extensible modules.
 + Only logging the following levels: INFO, WARNING, DEBUG. Instead of logging errors, we simply raise the error and exit the program.
 + Instead of using `argparse`, we use `questionary` for a guided configuration process.
 + Making emulator extensible via a registry.
@@ -8,6 +9,7 @@
 + The master branch should be protected, and any improvement should go through code review.
 + Future plan: clear benchmark and demo examples.
 + Parallelize for-loops via joblib.
++ Testing
 
 ## Precommit Hooks
 
