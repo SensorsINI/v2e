@@ -72,9 +72,18 @@ class moving_dot(base_synthetic_input): # the class name should be the same as t
         parser.add_argument('--contrast',type=float,default=10)
         parser.add_argument('--bg',type=float,default=5)
         parser.add_argument('--radius',type=float,default=100)
-        parser.add_argument('--cycles',type=float,default=4)
-        parser.add_argument('--dt',type=float,default=100e-6)
+        parser.add_argument('--cycles',type=float,default=None,help='number of cycles of moving dots')
+        parser.add_argument('--dt',type=float,default=100e-6,help='time step in seconds')
+        parser.add_argument('--t_total',type=float,default=None,help='specifies total time in seconds if given, other use cycles')
         args = parser.parse_args(arg_list)
+
+        if (args.cycles is None and args.t_total is None) or (args.cycles is not None and args.t_total is not None):
+            raise Exception('specify either one of --cycles or --t_total')
+
+        self.speed_pps = 1000  # final speed, pix/s
+        self.dot_sigma: float = 1  # gaussian sigma of dot in pixels
+
+        self.radius = args.radius  # of circular motion of dot
 
         self.dt = args.dt  # frame interval sec
 
@@ -82,18 +91,20 @@ class moving_dot(base_synthetic_input): # the class name should be the same as t
         self.contrast: float = args.contrast  # compare this with pos_thres and neg_thres and sigma_thr, e.g. use 1.2 for dot to be 20% brighter than backgreound
         self.bg: int = args.bg # background gray level in range 0-255
         self.dt = args.dt # frame interval sec
-        self.cycles = args.cycles
-        self.radius = args.radius  # of circular motion of dot
+        self.circum = 2 * np.pi * self.radius
+        self.period = self.circum / self.speed_pps
 
-        self.speed_pps = 1000  # final speed, pix/s
-        self.dot_sigma: float = 1  # gaussian sigma of dot in pixels
         # computed values below here
         # self.t_total = 4 * np.pi * self.radius * self.cycles / self.speed_pps
-        self.circum = 2 * np.pi * self.radius
-        self.t_total = self.circum * self.cycles / self.speed_pps
+        if args.t_total is not None:
+            self.t_total=args.t_total
+            self.cycles = self.t_total/self.period
+        else: # cycles specified
+            self.cycles=args.cycles
+            self.t_total = self.circum * self.cycles / self.speed_pps
+
         # t_total=cycles*period
         self.times = np.arange(0, self.t_total, self.dt)
-        self.period = self.circum / self.speed_pps
         # self.theta = (self.speed_pps * self.speed_pps / (8 * np.pi * self.radius * self.radius * self.cycles)) * self.times * self.times
         # constant speed
         self.theta = 2 * np.pi * self.cycles * (self.times / self.t_total)

@@ -21,8 +21,8 @@ exp="duration .01"
 # gradients
 seq=gradients
 
-v2e  --output_folder output/$seq-dvs --pos_thr=$thr --neg_thr=$thr --sigma_thr=$sig_thr --cutoff_hz=$cutoff --refractory_period=$refr --leak_rate_hz=0 --shot_noise_rate_hz=0  --vid_orig=inten --dvs_vid=dvs --unique_output --dvs_aedat2=dvs --output_width=346 --output_height=260 --batch=1 --disable_slomo --dt=$dt --contrast=$contrast --dvs_exposure $exp --shot_noise_rate_hz=1 --show_dvs_model_state all --save_dvs_model_state --synthetic_input=scripts.gradients
-v2e  --output_folder output/$seq-csdvs  --cs_lambda_pixels=$lambda --cs_tau_p_ms=$tau --pos_thr=$thr --neg_thr=$thr --sigma_thr=$sig_thr --cutoff_hz=$cutoff --refractory_period=$refr --leak_rate_hz=0 --shot_noise_rate_hz=0  --vid_orig=inten --dvs_vid=dvs --unique_output --dvs_aedat2=dvs --output_width=346 --output_height=260 --batch=1 --disable_slomo --dt=$dt --contrast=$contrast --dvs_exposure $exp --shot_noise_rate_hz=1 --show_dvs_model_state all --save_dvs_model_state --synthetic_input=scripts.gradients
+#v2e  --output_folder output/$seq-dvs --pos_thr=$thr --neg_thr=$thr --sigma_thr=$sig_thr --cutoff_hz=$cutoff --refractory_period=$refr --leak_rate_hz=0 --shot_noise_rate_hz=0  --vid_orig=inten --dvs_vid=dvs --unique_output --dvs_aedat2=dvs --output_width=346 --output_height=260 --batch=1 --disable_slomo --dt=$dt --contrast=$contrast --dvs_exposure $exp --shot_noise_rate_hz=1 --show_dvs_model_state all --save_dvs_model_state --synthetic_input=scripts.gradients
+#v2e  --output_folder output/$seq-csdvs  --cs_lambda_pixels=$lambda --cs_tau_p_ms=$tau --pos_thr=$thr --neg_thr=$thr --sigma_thr=$sig_thr --cutoff_hz=$cutoff --refractory_period=$refr --leak_rate_hz=0 --shot_noise_rate_hz=0  --vid_orig=inten --dvs_vid=dvs --unique_output --dvs_aedat2=dvs --output_width=346 --output_height=260 --batch=1 --disable_slomo --dt=$dt --contrast=$contrast --dvs_exposure $exp --shot_noise_rate_hz=1 --show_dvs_model_state all --save_dvs_model_state --synthetic_input=scripts.gradients
 
 # cloudy sky
 seq=cloudy-sky
@@ -66,3 +66,5 @@ refr=.1e-3
 #
 #v2e --timestamp_resolution=.001 --auto_timestamp=False --output_folder=output/$seq-dvs --start=$start --stop=$stop --input_slowmotion_factor=$slomo --input=$input --vid_orig=$seq-input   --pos_thr=$thr --neg_thr=$thr --sigma_thr=$sig_thr --cutoff_hz=$cutoff --refractory_period=$refr --cutoff_hz=$cutoff --refractory_period=$refr --leak_rate_hz=0 --dvs_vid=dvs --unique_output --dvs_aedat2=dvs --dvs346
 #v2e --cs_lambda_pixels=$lambda --cs_tau_p_ms=$tau --disable_slomo --output_folder=output/$seq-csdvs --start=$start --stop=$stop --input_slowmotion_factor=$slomo --input=$input  --vid_orig=$seq-input ---pos_thr=$thr --neg_thr=$thr --sigma_thr=$sig_thr --cutoff_hz=$cutoff --refractory_period=$refr --cutoff_hz=$cutoff --refractory_period=$refr --leak_rate_hz=0 --dvs_vid=csdvs --unique_output --dvs_aedat2=csdvs --dvs346 --dvs_exposure=source  --show_dvs_model_state all --save_dvs_model_state
+
+

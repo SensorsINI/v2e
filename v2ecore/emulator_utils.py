@@ -14,6 +14,7 @@ import torch.nn.functional as F
 logger = logging.getLogger(__name__)
 
 
+
 def lin_log(x, threshold=20):
     """
     linear mapping + logarithmic mapping.
@@ -84,7 +85,13 @@ def low_pass_filter(
         eps = inten01*(delta_time/tau)
         max_eps = torch.max(eps)
         if max_eps >0.3:
-            logger.warning(f'IIR lowpass filter update has large maximum update eps={max_eps:.2f} from delta_time/tau={delta_time:.3g}/{tau:.3g}')
+            IIR_MAX_WARNINGS = 10
+            if low_pass_filter.iir_warning_count<IIR_MAX_WARNINGS:
+                logger.warning(f'IIR lowpass filter update has large maximum update eps={max_eps:.2f} from delta_time/tau={delta_time:.3g}/{tau:.3g}')
+                low_pass_filter.iir_warning_count+=1
+                if low_pass_filter.iir_warning_count==IIR_MAX_WARNINGS:
+                    logger.warning(f'Supressing further warnings about inaccurate IIR lowpass filtering; check timestamp resolution and DVS photoreceptor cutoff frequency')
+
         eps = torch.clamp(eps, max=1)  # keep filter stable
     else:
         eps=delta_time/tau
@@ -100,6 +107,8 @@ def low_pass_filter(
     # now 1st order.
 
     return new_lp_log_frame
+
+low_pass_filter.iir_warning_count=0
 
 
 def subtract_leak_current(base_log_frame,
@@ -126,10 +135,16 @@ def subtract_leak_current(base_log_frame,
 
 
 def compute_event_map(diff_frame, pos_thres, neg_thres):
-    """Compute event map.
+    """
+        Compute event maps, i.e. 2d arrays of [width,height] containing quantized number of ON and OFF events.
 
-    Prepare positive and negative event frames that later will be used
-    for generating events.
+    Args:
+        diff_frame:  the input difference frame between stored log intensity and current frame log intensity [width, height]
+        pos_thres:  ON threshold values [width, height]
+        neg_thres:  OFF threshold values [width, height]
+
+    Returns:
+        pos_evts_frame, neg_evts_frame;  ndarrays of integer ON and OFF event counts
     """
     # extract positive and negative differences
     pos_frame = F.relu(diff_frame)

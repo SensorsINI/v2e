@@ -123,16 +123,6 @@ def v2e_args(parser):
 
     # DVS model parameters
     modelGroup = parser.add_argument_group('DVS model')
-    modelGroup.add_argument(
-        "--output_height", type=int, default=None,
-        help="Height of output DVS data in pixels. "
-             "If None, same as input video. "
-             "Use --output_height=260 for Davis346.")
-    modelGroup.add_argument(
-        "--output_width", type=int, default=None,
-        help="Width of output DVS data in pixels. "
-             "If None, same as input video. "
-             "Use --output_width=346 for Davis346.")
 
     modelGroup.add_argument(
         "--dvs_params", type=str, default=None,
@@ -208,18 +198,29 @@ def v2e_args(parser):
         help="save the model states that are shown (cf --show_dvs_model_state) to avi files")
 
     # common camera types
-    camGroup = modelGroup.add_argument_group(
-        'DVS camera sizes (overrides --output_width and --output_height')
+    camGroup = parser.add_argument_group(
+        'DVS camera sizes (selecting --dvs346, --dvs640, etc. overrides --output_width and --output_height')
+    camGroup.add_argument(
+        "--output_height", type=int, default=None,
+        help="Height of output DVS data in pixels. "
+             "If None, same as input video. "
+             "Use --output_height=260 for Davis346.")
+    camGroup.add_argument(
+        "--output_width", type=int, default=None,
+        help="Width of output DVS data in pixels. "
+             "If None, same as input video. "
+             "Use --output_width=346 for Davis346.")
+
     camAction = camGroup.add_mutually_exclusive_group()
     camAction.add_argument(
         '--dvs128', action='store_true',
         help='Set size for 128x128 DVS (DVS128)')
     camAction.add_argument(
         '--dvs240', action='store_true',
-        help='Set size for 240x180 DVS (Davis240)')
+        help='Set size for 240x180 DVS (DAVIS240)')
     camAction.add_argument(
         '--dvs346', action='store_true',
-        help='Set size for 346x260 DVS (Davis346)')
+        help='Set size for 346x260 DVS (DAVIS346)')
     camAction.add_argument(
         '--dvs640', action='store_true',
         help='Set size for 640x480 DVS')
@@ -275,14 +276,15 @@ def v2e_args(parser):
              "In addition, the user has to set the frame rate manually.")
     inGroup.add_argument(
         "--input_frame_rate", type=float,
-        help="Manually define the video frame rate when the video is "
-             "presented as a list of image files."
-             "When the input video is a video file, this "
-             "option will be ignored.")
+        help="Either override the video file metadata frame rate or manually define the video frame rate when the video is "
+             "presented as a list of image files. Overrides the stored (metadata) frame rate of input video. "
+             "This option overrides the --input_slowmotion_factor argument in case "
+             "the input is from a video file."
+             )
     # note R| for SmartFormatter
     inGroup.add_argument(
         "--input_slowmotion_factor", type=float, default=1.0,
-        help="R|Sets the known slow-motion factor of the input video, "
+        help="R|(See --input_frame_rate argument too.) Sets the known slow-motion factor of the input video, "
              "\ni.e. how much the video is slowed down, i.e., "
              "\nthe ratio of shooting frame rate to playback frame rate. "
              "\ninput_slowmotion_factor<1 for sped-up video and "
@@ -297,6 +299,7 @@ def v2e_args(parser):
              "\n1ms that is in AVI file "
              "\nwith default 30 FPS playback spec, "
              "\nthen use ((1/30)s)*(1000Hz)=33.33333.")
+
     inGroup.add_argument(
         "--start_time", type=float, default=None,
         help="Start at this time in seconds in video. "
@@ -373,12 +376,12 @@ def v2e_args(parser):
     # DVS output as events
     dvsEventOutputGroup = parser.add_argument_group('Output: DVS events')
     dvsEventOutputGroup.add_argument(
-        "--davis_output", action="store_true",
+        "--ddd_output", action="store_true",
         help="Save frames, frame timestamp and corresponding event index"
-             "in HDF5. Default is False.")
+             " in HDF5 format used for DDD17 and DDD20 datasets. Default is False.")
     dvsEventOutputGroup.add_argument(
         "--dvs_h5", type=output_file_check, default=None,
-        help="Output DVS events as hdf5 event database. ")
+        help="Output DVS events as hdf5 event database.")
     dvsEventOutputGroup.add_argument(
         "--dvs_aedat2", type=output_file_check, default='v2e-dvs-events.aedat',
         help="Output DVS events as DAVIS346 camera AEDAT-2.0 event file "
@@ -408,6 +411,11 @@ def v2e_args(parser):
                                                                     ' then the simulation of diffuser runs until it converges, '
                                                                     'i.e. until the maximum change between timesteps '
                                                                     'is smaller than a threshold value')
+
+    # SCIDVS pixel study
+    scidvs_group = parser.add_argument_group('SCIDVS pixel')
+    scidvs_group.add_argument('--scidvs', action='store_true',help='Simulate proposed SCIDVS pixel with nonlinear adapatation and high gain')
+
 
     # # perform basic checks, however this fails if script adds
     # # more arguments later

@@ -153,7 +153,6 @@ def main():
         args.dvs640, args.dvs1024,
         logger)
 
-    num_pixels=output_width*output_height
 
     # setup synthetic input classes and method
     synthetic_input_module = None
@@ -195,6 +194,11 @@ def main():
             logger.error(f'{synthetic_input} method incorrect?: {e}')
             v2e_quit(1)
 
+    # check to make sure there are no other arguments that might be bogus misspelled arguments in case
+    # we don't have synthetic input class to pass these to
+    if synthetic_input_instance is None and len(other_args)>0:
+        logger.error(f'There is no synthetic input class specified but there are extra arguments {other_args} that are probably incorrect')
+        v2e_quit(1)
 
 
 
@@ -248,6 +252,7 @@ def main():
         v2e_quit(1)
 
     input_slowmotion_factor: float = args.input_slowmotion_factor
+    input_frame_rate:Optional[float] =args.input_frame_rate
     timestamp_resolution: float = args.timestamp_resolution
     auto_timestamp_resolution: bool = args.auto_timestamp_resolution
     disable_slomo: bool = args.disable_slomo
@@ -317,7 +322,7 @@ def main():
         logger.info("opening video input file " + input_file)
 
         if os.path.isdir(input_file):
-            if args.input_frame_rate is None:
+            if input_frame_rate is None:
                 logger.error(
                     "When the video is presented as a folder, "
                     "The user must set --input_frame_rate manually")
@@ -326,17 +331,33 @@ def main():
             cap = ImageFolderReader(input_file, args.input_frame_rate)
             srcFps = cap.frame_rate
             srcNumFrames = cap.num_frames
-            # set the output width and height from first image in folder, but only if they were not already set
-            if output_height is None: output_height=cap.frame_height
-            if output_height is None: output_width=cap.frame_width
 
         else:
             cap = cv2.VideoCapture(input_file)
             srcFps = cap.get(cv2.CAP_PROP_FPS)
             srcNumFrames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            if args.input_frame_rate is not None:
+            if input_frame_rate is not None:
                 logger.info(f'Input video frame rate {srcFps}Hz is overridden by command line argument --input_frame_rate={args.input_frame_rate}')
                 srcFps=args.input_frame_rate
+
+        if cap is not None:
+            # set the output width and height from first image in folder, but only if they were not already set
+            set_size = False
+            if output_height is None and hasattr(cap,'frame_height'):
+                set_size = True
+                output_height = cap.frame_height
+            if output_width is None and hasattr(cap,'frame_width'):
+                set_size = True
+                output_width = cap.frame_width
+            if set_size:
+                logger.warning(
+                    f'From input frame automatically set DVS output_width={output_width} and/or output_height={output_height}. '
+                    f'This may not be desired behavior. \nCheck DVS camera sizes arguments.')
+                time.sleep(5);
+            elif output_height is None or output_width is None:
+                logger.warning(
+                    'Could not read video frame size from video input and so could not automatically set DVS output size. \nCheck DVS camera sizes arguments.')
+
         # Check frame rate and number of frames
         if srcFps == 0:
             logger.error(
@@ -490,9 +511,21 @@ def main():
                 'frames with {} events), '
                 .format(exposure_val))
 
+    # check one more time that we have an output width and height
+    if output_width is None or output_height is None:
+        logger.error("Either or both of output_width or output_height is None,\n"
+                     "which means that they were not specified or could not be inferred from the input video. \n "
+                     "Please see options for DVS camera sizes.")
+        v2e_quit(1)
+    num_pixels=output_width*output_height
+
     hdr: bool = args.hdr
     if hdr:
         logger.info('Treating input as HDR logarithmic video')
+
+    scidvs:bool=args.scidvs
+    if scidvs:
+        logger.info('Simulating SCIDVS pixel')
 
     emulator = EventEmulator(
         pos_thres=pos_thres, neg_thres=neg_thres,
@@ -508,7 +541,8 @@ def main():
         output_width=output_width, output_height=output_height,
         device=torch_device,
         cs_lambda_pixels=args.cs_lambda_pixels, cs_tau_p_ms=args.cs_tau_p_ms,
-        hdr=hdr
+        hdr=hdr,
+        scidvs=scidvs
     )
 
     if args.dvs_params is not None:
@@ -771,7 +805,7 @@ def main():
 
                 # parepare extra steps for data storage
                 # right before event emulation
-                if args.davis_output:
+                if args.ddd_output:
                     emulator.prepare_storage(nFrames, interpTimes)
 
                 # generate events from frames and accumulate events to DVS frames for output DVS video
@@ -852,6 +886,7 @@ def main():
                 '{}: could not open {} in desktop'.format(e, output_folder))
     logger.info(timestr)
     sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

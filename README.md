@@ -12,6 +12,8 @@ See [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6U
 
 Vote for [new v2e features](https://docs.google.com/forms/d/e/1FAIpQLSdJoIH3wBkPANWTng56VeXiItkh_fl5Lz3QwZIpQ6ut1AMFCw/viewform?usp=sf_link).
 
+v2e development was supported by the Swiss National Competence Center for Robotics [(NCCR Robotics)](https://nccr-robotics.ch/).
+
 ## News
 
 See [changelog](https://github.com/SensorsINI/v2e/blob/master/CHANGELOG.md) for latest news
@@ -116,41 +118,40 @@ Don't be intimidated by the huge number of options. Running _v2e.py_ with no arg
 **On headless platforms**, with no graphics output, use --no_preview option to suppress the OpenCV windows.
 
 ```
-usage: v2e [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
-           [--output_in_place [OUTPUT_IN_PLACE]] [--overwrite]
-           [--unique_output_folder [UNIQUE_OUTPUT_FOLDER]]
-           [--auto_timestamp_resolution [AUTO_TIMESTAMP_RESOLUTION]]
-           [--timestamp_resolution TIMESTAMP_RESOLUTION]
-           [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
-           [--dvs_params DVS_PARAMS] [--pos_thres POS_THRES]
-           [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
-           [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
-           [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ]
-           [--leak_jitter_fraction LEAK_JITTER_FRACTION]
-           [--noise_rate_cov_decades NOISE_RATE_COV_DECADES]
-           [--refractory_period REFRACTORY_PERIOD]
-           [--dvs_emulator_seed DVS_EMULATOR_SEED]
-           [--show_dvs_model_state SHOW_DVS_MODEL_STATE [SHOW_DVS_MODEL_STATE ...]]
-           [--save_dvs_model_state]
-           [--dvs128 | --dvs240 | --dvs346 | --dvs640 | --dvs1024]
-           [--disable_slomo] [--slomo_model SLOMO_MODEL]
-           [--batch_size BATCH_SIZE] [--vid_orig VID_ORIG]
-           [--vid_slomo VID_SLOMO] [--slomo_stats_plot] [-i INPUT]
-           [--input_frame_rate INPUT_FRAME_RATE]
-           [--input_slowmotion_factor INPUT_SLOWMOTION_FACTOR]
-           [--start_time START_TIME] [--stop_time STOP_TIME] [--crop CROP]
-           [--synthetic_input SYNTHETIC_INPUT]
-           [--dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]]
-           [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
-           [--skip_video_output] [--no_preview] [--davis_output]
-           [--dvs_h5 DVS_H5] [--dvs_aedat2 DVS_AEDAT2] [--dvs_text DVS_TEXT]
-           [--cs_lambda_pixels CS_LAMBDA_PIXELS] [--cs_tau_p_ms CS_TAU_P_MS]
-
+usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
+              [--output_in_place [OUTPUT_IN_PLACE]] [--overwrite]
+              [--unique_output_folder [UNIQUE_OUTPUT_FOLDER]]
+              [--auto_timestamp_resolution [AUTO_TIMESTAMP_RESOLUTION]]
+              [--timestamp_resolution TIMESTAMP_RESOLUTION]
+              [--dvs_params DVS_PARAMS] [--pos_thres POS_THRES]
+              [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
+              [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
+              [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ]
+              [--photoreceptor_noise]
+              [--leak_jitter_fraction LEAK_JITTER_FRACTION]
+              [--noise_rate_cov_decades NOISE_RATE_COV_DECADES]
+              [--refractory_period REFRACTORY_PERIOD]
+              [--dvs_emulator_seed DVS_EMULATOR_SEED]
+              [--show_dvs_model_state SHOW_DVS_MODEL_STATE [SHOW_DVS_MODEL_STATE ...]]
+              [--save_dvs_model_state] [--output_height OUTPUT_HEIGHT]
+              [--output_width OUTPUT_WIDTH]
+              [--dvs128 | --dvs240 | --dvs346 | --dvs640 | --dvs1024]
+              [--disable_slomo] [--slomo_model SLOMO_MODEL]
+              [--batch_size BATCH_SIZE] [--vid_orig VID_ORIG]
+              [--vid_slomo VID_SLOMO] [--slomo_stats_plot] [-i INPUT]
+              [--input_frame_rate INPUT_FRAME_RATE]
+              [--input_slowmotion_factor INPUT_SLOWMOTION_FACTOR]
+              [--start_time START_TIME] [--stop_time STOP_TIME] [--crop CROP]
+              [--hdr] [--synthetic_input SYNTHETIC_INPUT]
+              [--dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]]
+              [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
+              [--skip_video_output] [--no_preview] [--ddd_output]
+              [--dvs_h5 DVS_H5] [--dvs_aedat2 DVS_AEDAT2]
+              [--dvs_text DVS_TEXT] [--cs_lambda_pixels CS_LAMBDA_PIXELS]
+              [--cs_tau_p_ms CS_TAU_P_MS] [--scidvs]
 v2e: generate simulated DVS events from video.
-
 optional arguments:
   -h, --help            show this help message and exit
-
 Output: General:
   -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
                         folder to store outputs.
@@ -166,35 +167,27 @@ Output: General:
                         If specifying --output_folder, makes unique output
                         folder based on output_folder, e.g. output1 (if non-
                         empty output_folder already exists)
-
 DVS timestamp resolution:
   --auto_timestamp_resolution [AUTO_TIMESTAMP_RESOLUTION]
-                        (Ignored by --disable_slomo.) If True (default),
-                        upsampling_factor is automatically determined to limit
-                        maximum movement between frames to 1 pixel. If False,
-                        --timestamp_resolution sets the upsampling factor for
-                        input video. Can be combined with
-                        --timestamp_resolution to ensure DVS events have at
-                        most some resolution.
+                        (Ignored by --disable_slomo or --synthetic_input.) If
+                        True (default), upsampling_factor is automatically
+                        determined to limit maximum movement between frames to
+                        1 pixel. If False, --timestamp_resolution sets the
+                        upsampling factor for input video. Can be combined
+                        with --timestamp_resolution to ensure DVS events have
+                        at most some resolution.
   --timestamp_resolution TIMESTAMP_RESOLUTION
-                        (Ignored by --disable_slomo.) Desired DVS timestamp
-                        resolution in seconds; determines slow motion
-                        upsampling factor; the video will be upsampled from
-                        source fps to achieve the at least this timestamp
-                        resolution.I.e. slowdown_factor =
+                        (Ignored by --disable_slomo or --synthetic_input.)
+                        Desired DVS timestamp resolution in seconds;
+                        determines slow motion upsampling factor; the video
+                        will be upsampled from source fps to achieve the at
+                        least this timestamp resolution.I.e. slowdown_factor =
                         (1/fps)/timestamp_resolution; using a high resolution
                         e.g. of 1ms will result in slow rendering since it
                         will force high upsampling ratio. Can be combind with
                         --auto_timestamp_resolution to limit upsampling to a
                         maximum limit value.
-
 DVS model:
-  --output_height OUTPUT_HEIGHT
-                        Height of output DVS data in pixels. If None, same as
-                        input video. Use --output_height=260 for Davis346.
-  --output_width OUTPUT_WIDTH
-                        Width of output DVS data in pixels. If None, same as
-                        input video. Use --output_width=346 for Davis346.
   --dvs_params DVS_PARAMS
                         Easy optional setting of parameters for DVS
                         model:None, 'clean', 'noisy'; 'clean' turns off noise,
@@ -218,13 +211,23 @@ DVS model:
                         https://ieeexplore.ieee.org/document/4444573.CAUTION:
                         See interaction with timestamp_resolution and
                         auto_timestamp_resolution; check output logger
-                        warnings.
+                        warnings. The input sample rate (frame rate) must be
+                        fast enough to for accurate IIR lowpass filtering.
   --leak_rate_hz LEAK_RATE_HZ
                         leak event rate per pixel in Hz - see
                         https://ieeexplore.ieee.org/abstract/document/7962235
   --shot_noise_rate_hz SHOT_NOISE_RATE_HZ
                         Temporal noise rate of ON+OFF events in darkest parts
                         of scene; reduced in brightest parts.
+  --photoreceptor_noise
+                        Create temporal noise by injecting Gaussian noise to
+                        the log photoreceptor before lowpass filtering.This
+                        way, more accurate statistics of temporal noise will
+                        tend to result but the noise rate will only
+                        approximate the desired noise rate; the photoreceptor
+                        noise will be computed to result in the
+                        --shot_noise_rate noise value. Overrides the default
+                        shot noise mechanism reported in 2020 v2e paper.
   --leak_jitter_fraction LEAK_JITTER_FRACTION
                         Jitter of leak noise events relative to the (FPN)
                         interval, drawn from normal distribution
@@ -244,13 +247,25 @@ DVS model:
                         One or more space separated list model states. Do not
                         use '='. E.g. '--show_dvs_model_state all'. Possible
                         models states are (without quotes) either 'all' or
-                        chosen from dict_keys(['new_frame', 'lp_log_frame0',
-                        'lp_log_frame1', 'cs_surround_frame',
+                        chosen from dict_keys(['new_frame', 'log_new_frame',
+                        'lp_log_frame', 'scidvs_highpass',
+                        'photoreceptor_noise_arr', 'cs_surround_frame',
                         'c_minus_s_frame', 'base_log_frame', 'diff_frame'])
   --save_dvs_model_state
                         save the model states that are shown (cf
                         --show_dvs_model_state) to avi files
-
+DVS camera sizes (selecting --dvs346, --dvs640, etc. overrides --output_width and --output_height:
+  --output_height OUTPUT_HEIGHT
+                        Height of output DVS data in pixels. If None, same as
+                        input video. Use --output_height=260 for Davis346.
+  --output_width OUTPUT_WIDTH
+                        Width of output DVS data in pixels. If None, same as
+                        input video. Use --output_width=346 for Davis346.
+  --dvs128              Set size for 128x128 DVS (DVS128)
+  --dvs240              Set size for 240x180 DVS (DAVIS240)
+  --dvs346              Set size for 346x260 DVS (DAVIS346)
+  --dvs640              Set size for 640x480 DVS
+  --dvs1024             Set size for 1024x768 DVS
 SloMo upsampling (see also "DVS timestamp resolution" group):
   --disable_slomo       Disables slomo interpolation; the output DVS events
                         will have exactly the timestamp resolution of the
@@ -267,7 +282,6 @@ SloMo upsampling (see also "DVS timestamp resolution" group):
                         Output slomo of src video slowed down by
                         slowdown_factor.
   --slomo_stats_plot    show a plot of slomo statistics
-
 Input file handling:
   -i INPUT, --input INPUT
                         Input video file or a image folder; leave empty for
@@ -275,11 +289,14 @@ Input file handling:
                         folder should contain a ordered list of image files.In
                         addition, the user has to set the frame rate manually.
   --input_frame_rate INPUT_FRAME_RATE
-                        Manually define the video frame rate when the video is
-                        presented as a list of image files.When the input
-                        video is a video file, this option will be ignored.
+                        Either override the video file metadata frame rate or
+                        manually define the video frame rate when the video is
+                        presented as a list of image files. Overrides the
+                        stored (metadata) frame rate of input video. This
+                        option overrides the --input_slowmotion_factor
+                        argument in case the input is from a video file.
   --input_slowmotion_factor INPUT_SLOWMOTION_FACTOR
-                        Sets the known slow-motion factor of the input video, 
+                        (See --input_frame_rate argument too.) Sets the known slow-motion factor of the input video, 
                         i.e. how much the video is slowed down, i.e., 
                         the ratio of shooting frame rate to playback frame rate. 
                         input_slowmotion_factor<1 for sped-up video and 
@@ -303,20 +320,25 @@ Input file handling:
                         E.g. CROP=(100,100,0,0) crops 100 pixels from left and
                         right of input frames. CROP can also be specified as
                         L,R,T,B without ()
-
+  --hdr                 Treat input video as high dynamic range (HDR)
+                        logarithmic, i.e. skip the linlog conversion step. Use
+                        --hdr for HDR input with floating point gray scale
+                        input videos. Units of log input are based on white
+                        255 pixels have values ln(255)=5.5441
 Synthetic input:
   --synthetic_input SYNTHETIC_INPUT
                         Input from class SYNTHETIC_INPUT that has methods
                         next_frame() and total_frames(). Disables file input
-                        and SuperSloMo frame interpolation.
-                        SYNTHETIC_INPUT.next_frame() should return a frame of
+                        and SuperSloMo frame interpolation and the DVS
+                        timestamp resolution is set by the times returned by
+                        next_frame() method. SYNTHETIC_INPUT.next_frame()
+                        should return a tuple (frame, time) with frame having
                         the correct resolution (see DVS model arguments) which
                         is array[y][x] with pixel [0][0] at upper left corner
-                        and pixel values 0-255. SYNTHETIC_INPUT must be
-                        resolvable from the classpath. SYNTHETIC_INPUT is the
-                        module name without .py suffix. See example
-                        moving_dot.py.
-
+                        and pixel values 0-255. The time is a float in
+                        seconds. SYNTHETIC_INPUT must be resolvable from the
+                        classpath. SYNTHETIC_INPUT is the module name without
+                        .py suffix. See example moving_dot.py.
 Output: DVS video:
   --dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]
                         Mode to finish DVS frame event integration:
@@ -337,10 +359,10 @@ Output: DVS video:
                         video, SloMo video, and DVS video. This mode also
                         prevents showing preview of output (cf --no_preview).
   --no_preview          disable preview in cv2 windows for faster processing.
-
 Output: DVS events:
-  --davis_output        Save frames, frame timestamp and corresponding event
-                        indexin HDF5. Default is False.
+  --ddd_output          Save frames, frame timestamp and corresponding event
+                        index in HDF5 format used for DDD17 and DDD20
+                        datasets. Default is False.
   --dvs_h5 DVS_H5       Output DVS events as hdf5 event database.
   --dvs_aedat2 DVS_AEDAT2
                         Output DVS events as DAVIS346 camera AEDAT-2.0 event
@@ -348,7 +370,6 @@ Output: DVS events:
                         events. To suppress, supply argument None.
   --dvs_text DVS_TEXT   Output DVS events as text file with one event per line
                         [timestamp (float s), x, y, polarity (0,1)].
-
 Center-Surround DVS:
   --cs_lambda_pixels CS_LAMBDA_PIXELS
                         space constant of surround in pixels, None to disable.
@@ -366,10 +387,10 @@ Center-Surround DVS:
                         simulation of diffuser runs until it converges, i.e.
                         until the maximum change between timesteps is smaller
                         than a threshold value
-
+SCIDVS pixel:
+  --scidvs              Simulate proposed SCIDVS pixel with nonlinear
+                        adapatation and high gain
 Run with no --input to open file dialog
-
-
 ```
 You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.  Or leave out all options and just use the file chooser to select the movie.
 

@@ -59,6 +59,18 @@ class DVSTextOutput:
             self.file.write(s)
 
     def appendEvents(self, events: np.ndarray):
+        """Append events to text output
+
+         Parameters
+         ----------
+         events: np.ndarray if any events, else None
+             [N, 4], each row contains [timestamp, x coordinate, y coordinate, sign of event (+1 ON, -1 OFF)].
+             NOTE x,y, NOT y,x.
+
+         Returns
+         -------
+         None
+         """
         if self.file is None:
             raise Exception('output file closed already')
 
@@ -66,9 +78,9 @@ class DVSTextOutput:
             return
         n = events.shape[0]
         t = (events[:, 0]).astype(np.float)
-        x = events[:, 2].astype(np.int32) # Issue #37, thanks Mohsi Jawaid
+        x = events[:, 1].astype(np.int32) # Issue #37, thanks Mohsi Jawaid
         if self.flipx: x = (self.sizex - 1) - x  # 0 goes to sizex-1
-        y = events[:, 1].astype(np.int32)
+        y = events[:, 2].astype(np.int32)
         if self.flipy: y = (self.sizey - 1) - y
         p = ((events[:, 3] + 1) / 2).astype(np.int32) # go from -1/+1 to 0,1
         for i in range(n):
