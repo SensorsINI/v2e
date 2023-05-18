@@ -196,9 +196,9 @@ def main():
 
     # check to make sure there are no other arguments that might be bogus misspelled arguments in case
     # we don't have synthetic input class to pass these to
-    if synthetic_input_instance is None and len(other_args)>0:
-        logger.error(f'There is no synthetic input class specified but there are extra arguments {other_args} that are probably incorrect')
-        v2e_quit(1)
+#     if synthetic_input_instance is None and len(other_args)>0:
+#         logger.error(f'There is no synthetic input class specified but there are extra arguments {other_args} that are probably incorrect')
+#         v2e_quit(1)
 
 
 
