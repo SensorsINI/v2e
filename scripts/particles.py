@@ -50,14 +50,14 @@ class particles(base_synthetic_input): # the class name should be the same as th
         """
         super().__init__(width, height, avi_path, preview, arg_list, parent_args)
         parser=argparse.ArgumentParser(arg_list)
-        parser.add_argument('--num_particles',type=int,default=particles.NUM_PARTICLES)
-        parser.add_argument('--contrast',type=float,default=particles.CONTRAST)
-        parser.add_argument('--bg',type=float,default=particles.BACKGROUND)
-        parser.add_argument('--radius',type=float,default=particles.RADIUS)
-        parser.add_argument('--total_time',type=float,default=particles.TOTAL_TIME)
-        parser.add_argument('--speed_min',type=float,default=particles.SPEED_MIN)
-        parser.add_argument('--speed_max',type=float,default=particles.SPEED_MAX)
-        parser.add_argument('--dt',type=float,default=particles.DT)
+        parser.add_argument('--num_particles',type=int,default=particles.NUM_PARTICLES, help='max number of particles at one time')
+        parser.add_argument('--contrast',type=float,default=particles.CONTRAST, help='constrast of each particle relative to background')
+        parser.add_argument('--bg',type=float,default=particles.BACKGROUND, help='background brightness 0-255')
+        parser.add_argument('--radius',type=float,default=particles.RADIUS, help='radius of each particle, px')
+        parser.add_argument('--total_time',type=float,default=particles.TOTAL_TIME, help='total simulation time in seconds')
+        parser.add_argument('--speed_min',type=float,default=particles.SPEED_MIN, help='min speed in px/s, uniform sampling')
+        parser.add_argument('--speed_max',type=float,default=particles.SPEED_MAX, help='max speed in px/s, uniform sampling')
+        parser.add_argument('--dt',type=float,default=particles.DT, help='event timestemp, seconds')
 
         args=parser.parse_args(arg_list)
 
@@ -164,7 +164,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
         """ Returns the next frame and its time, or None when finished
 
         :returns: (frame, time)
-            If there are no more frames frame is None.
+            If there are no more frames, then frame is None.
             time is in seconds.
         """
         if self.frame_number >= len(self.times):
@@ -213,8 +213,8 @@ def fill_dot(pix_arr: np.ndarray, x: float, y: float, fg: float, bg: float, radi
     :param radius: the sigma of Gaussian, i.e. radius of dot
     """
     x0, y0 = round(x), round(y)
-    d=int(radius * 5)
-
+    d=int(radius * 2)+1
+    fgbg_diff=fg-bg
     for iy in range(-d, +d):
         for ix in range(-d, +d):
             thisx, thisy = int(x0 + ix), int(y0 + iy)
@@ -223,13 +223,12 @@ def fill_dot(pix_arr: np.ndarray, x: float, y: float, fg: float, bg: float, radi
                 continue
             ddx, ddy = thisx - x, thisy - y  # distances of this pixel to float dot location
             dist2 = ddx * ddx + ddy * ddy  # square distance
-            v = 10 * np.exp(-dist2 / (radius * radius))  # gaussian normalized intensity value
+            v = 2 * np.exp(-dist2 / (radius * radius))  # gaussian normalized intensity value
             if v > 1: # make a disk, not a gaussian blob
                 v = 1
-            elif v < .01:
-                v = 0
-            v = fg * v  # intensity value from 0-1 intensity
-            pix_arr[thisy][thisx] = v
+
+            pv = bg+ (fgbg_diff * v)  # intensity value from 0-1 intensity
+            pix_arr[thisy][thisx] = pv
 
 
 

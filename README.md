@@ -76,7 +76,7 @@ After installing pytorch to your CUDA environment, to install v2e in developer m
 conda activate v2e # activate your env with pytoch already installed by conda
 git clone https://github.com/SensorsINI/v2e
 cd v2e
-python -m pip install -e . # use pip to install requirements from setup.py in user mode (so your edits to source files in v2e take effect immeediately
+python -m pip install -e . # use pip to install requirements from setup.py in user mode (so your edits to source files in v2e take effect immediately
 ```
 
 + If you want an additional Windows GUI interface, you will need to install [Gooey](https://github.com/chriskiehl/Gooey) package. This package works the best on Windows:

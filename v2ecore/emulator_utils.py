@@ -176,7 +176,7 @@ def compute_event_map(diff_frame, pos_thres, neg_thres):
 
 def compute_photoreceptor_noise_voltage(shot_noise_rate_hz, f3db, sample_rate_hz, pos_thr, neg_thr, sigma_thr) -> float:
     """
-     Computes the necessary photoreceptor noise voltage to result in obseved shot noise rate at low light intensity.
+     Computes the necessary photoreceptor noise voltage to result in observed shot noise rate at low light intensity.
      This computation relies on the known f3dB photoreceptor lowpass filter cutoff frequency and the known (nominal) event threshold.
      emulator.py injects Gaussian distributed noise to the photoreceptor that should in principle generate the desired shot noise events.
 
