@@ -153,6 +153,14 @@ def main():
         args.dvs640, args.dvs1024,
         logger)
 
+    # Visualization
+    avi_frame_rate = args.avi_frame_rate
+    dvs_vid = args.dvs_vid  if not args.skip_video_output else None
+    dvs_vid_full_scale = args.dvs_vid_full_scale
+    vid_orig = args.vid_orig if not args.skip_video_output else None
+    vid_slomo = args.vid_slomo if not args.skip_video_output else None
+    preview = not args.no_preview
+
 
     # setup synthetic input classes and method
     synthetic_input_module = None
@@ -168,9 +176,10 @@ def main():
                 classname=synthetic_input
             synthetic_input_class:synthetic_input = getattr(
                 synthetic_input_module, classname)
+            vid_path=os.path.join(output_folder, vid_orig) if not vid_orig is None else None
             synthetic_input_instance:base_synthetic_input = synthetic_input_class(
                 width=output_width, height=output_height,
-                preview=not args.no_preview, arg_list=other_args, avi_path=os.path.join(output_folder,args.vid_orig),parent_args=args) #TODO output folder might not be unique, could write to first output folder
+                preview=not args.no_preview, arg_list=other_args, avi_path=vid_path,parent_args=args) #TODO output folder might not be unique, could write to first output folder
 
             if not isinstance(synthetic_input_instance,base_synthetic_input):
                 logger.error(f'synthetic input instance of {synthetic_input} is of type {type(synthetic_input_instance)}, but it should be a sublass of synthetic_input;'
@@ -290,13 +299,6 @@ def main():
     shot_noise_rate_hz = args.shot_noise_rate_hz
 
 
-    # Visualization
-    avi_frame_rate = args.avi_frame_rate
-    dvs_vid = args.dvs_vid
-    dvs_vid_full_scale = args.dvs_vid_full_scale
-    vid_orig = args.vid_orig
-    vid_slomo = args.vid_slomo
-    preview = not args.no_preview
 
     # Event saving options
     dvs_h5 = args.dvs_h5
@@ -879,7 +881,7 @@ def main():
 
     # try to show desktop
     # suppress folder opening if it's not necessary
-    if not args.skip_video_output and not args.no_preview:
+    if not args.skip_video_output and not args.no_preview and not args.dvs_aedat2 and not args.dvs_h5 and not args.dvs_text:
         try:
             logger.info(f'showing {output_folder} in desktop')
             desktop.open(os.path.abspath(output_folder))

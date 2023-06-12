@@ -85,8 +85,9 @@ class base_synthetic_input(): # the class name should be the same as the filenam
             the frame, or None to write self.pix_arr
         :returns: None
         """
-        self.video_writer.write(
-            cv2.cvtColor(frame if frame is not None else self.pix_arr, cv2.COLOR_GRAY2BGR))
+        if not self.video_writer is None:
+            self.video_writer.write(
+                cv2.cvtColor(frame if frame is not None else self.pix_arr, cv2.COLOR_GRAY2BGR))
 
     def cleanup(self):
         if self.video_writer is not None:
