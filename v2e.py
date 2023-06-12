@@ -278,6 +278,7 @@ def main():
     pos_thres = args.pos_thres
     neg_thres = args.neg_thres
     sigma_thres = args.sigma_thres
+    record_single_pixel_states=args.record_single_pixel_states
 
     # Cutoff and noise frequencies
     cutoff_hz = args.cutoff_hz
@@ -542,7 +543,8 @@ def main():
         device=torch_device,
         cs_lambda_pixels=args.cs_lambda_pixels, cs_tau_p_ms=args.cs_tau_p_ms,
         hdr=hdr,
-        scidvs=scidvs
+        scidvs=scidvs,
+        record_single_pixel_states=record_single_pixel_states
     )
 
     if args.dvs_params is not None:

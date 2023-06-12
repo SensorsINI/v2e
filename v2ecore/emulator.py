@@ -6,6 +6,7 @@ import atexit
 import logging
 import math
 import os
+import pickle
 import random
 from typing import Optional
 
@@ -48,6 +49,9 @@ class EventEmulator(object):
                     'c_minus_s_frame': slg, 'base_log_frame': slg, 'diff_frame': slg}
 
     MAX_CHANGE_TO_TERMINATE_EULER_SURROUND_STEPPING = 1e-5
+
+    SINGLE_PIXEL_STATES_FILENAME='pixel-states.dat'
+    SINGLE_PIXEL_MAX_SAMPLES=10000
 
     # scidvs adaptation
     def scidvs_dvdt(self, v, tau=None):
@@ -105,7 +109,8 @@ class EventEmulator(object):
             cs_lambda_pixels: float = None,
             cs_tau_p_ms: float = None,
             hdr: bool = False,
-            scidvs: bool = False
+            scidvs: bool = False,
+            record_single_pixel_states=None
     ):
         """
         Parameters
@@ -148,6 +153,8 @@ class EventEmulator(object):
             Treat input as HDR floating point logarithmic gray scale with 255 input scaled as ln(255)=5.5441
         scidvs: bool
             Simulate the high gain adaptive photoreceptor SCIDVS pixel
+        record_single_pixel_states: tuple
+            Record this pixel states to 'pixel_states.npy'
         """
 
         logger.info(
@@ -257,6 +264,32 @@ class EventEmulator(object):
                         f'cs_tau_h_ms:  {self.cs_tau_h_ms}\n\t'
                         f'cs_lambda_pixels:  {self.cs_lambda_pixels:.2f}\n\t'
                         )
+
+        # record pixel
+        self.record_single_pixel_states=record_single_pixel_states
+        self.single_pixel_sample_count=0
+        if self.record_single_pixel_states is None:
+            self.single_pixel_states=None
+        else:
+            if not (type(self.record_single_pixel_states) is tuple):
+                raise ValueError(f'--record_single_pixel_states {self.record_single_pixel_states} should be a tuple, e.g. (10,20)')
+            if len(self.record_single_pixel_states)!=2:
+                raise ValueError(f'--record_single_pixel_states {self.record_single_pixel_states} should have two pixel addresses (x,y)')
+            for i in self.record_single_pixel_states:
+                if not (type(i) is int):
+                    raise ValueError(f'--record_single_pixel_states {self.record_single_pixel_states} should have two integer-value pixel addresses (x,y)')
+            self.single_pixel_states={
+                'time':np.empty(self.SINGLE_PIXEL_MAX_SAMPLES)*np.nan,
+                'new_frame':np.empty(self.SINGLE_PIXEL_MAX_SAMPLES)*np.nan,
+                'base_log_frame':np.empty(self.SINGLE_PIXEL_MAX_SAMPLES)*np.nan,
+                'lp_log_frame':np.empty(self.SINGLE_PIXEL_MAX_SAMPLES)*np.nan,
+                'log_new_frame':np.empty(self.SINGLE_PIXEL_MAX_SAMPLES)*np.nan,
+                'pos_thres':np.empty(self.SINGLE_PIXEL_MAX_SAMPLES)*np.nan,
+                'neg_thres':np.empty(self.SINGLE_PIXEL_MAX_SAMPLES)*np.nan,
+                'diff_frame':np.empty(self.SINGLE_PIXEL_MAX_SAMPLES)*np.nan,
+                'final_neg_evts_frame':np.empty(self.SINGLE_PIXEL_MAX_SAMPLES)*np.nan,
+                'final_pos_evts_frame':np.empty(self.SINGLE_PIXEL_MAX_SAMPLES)*np.nan,
+            } # dict to be filled with arrays of states (and time array)
 
         self.log_input = hdr
         if self.log_input:
@@ -370,6 +403,17 @@ class EventEmulator(object):
         for vw in self.video_writers:
             logger.info(f'closing video AVI {vw}')
             self.video_writers[vw].release()
+
+        if not self.record_single_pixel_states is None:
+            self.save_recorded_single_pixel_states()
+
+    def save_recorded_single_pixel_states(self):
+        try:
+            with open(self.SINGLE_PIXEL_STATES_FILENAME,'wb') as outfile:
+                pickle.dump(self.single_pixel_states, outfile, protocol=pickle.HIGHEST_PROTOCOL)
+                logger.info(f'saved single pixel states with {self.single_pixel_sample_count} samples to {self.SINGLE_PIXEL_STATES_FILENAME}')
+        except Exception as e:
+            logger.error(f'could not save pickled pixel states, got {e}')
 
     def _init(self, first_frame_linear):
         """
@@ -892,6 +936,32 @@ class EventEmulator(object):
             # determine after the events are added
             self.frame_ev_idx_dataset[self.frame_counter - 1] = \
                 self.dvs_h5_dataset.shape[0]
+
+        if not self.record_single_pixel_states is None:
+            if self.single_pixel_sample_count<self.SINGLE_PIXEL_MAX_SAMPLES:
+                k=self.single_pixel_sample_count
+                if k%250==0:
+                    logger.info(f'recorded {k} single pixel states')
+                self.single_pixel_states['time'][k]=t_frame
+                self.single_pixel_states['new_frame'][k]=new_frame[self.record_single_pixel_states]
+                self.single_pixel_states['base_log_frame'][k]=self.base_log_frame[self.record_single_pixel_states]
+                self.single_pixel_states['lp_log_frame'][k]=self.lp_log_frame[self.record_single_pixel_states]
+                self.single_pixel_states['log_new_frame'][k]=self.log_new_frame[self.record_single_pixel_states]
+                if type(self.pos_thres) is float:
+                    self.single_pixel_states['pos_thres'][k]=self.pos_thres
+                else:
+                    self.single_pixel_states['pos_thres'][k]=self.pos_thres[self.record_single_pixel_states]
+                if type(self.neg_thres) is float:
+                    self.single_pixel_states['neg_thres'][k]=self.neg_thres
+                else:
+                    self.single_pixel_states['neg_thres'][k]=self.neg_thres[self.record_single_pixel_states]
+                self.single_pixel_states['diff_frame'][k]=self.diff_frame[self.record_single_pixel_states]
+                self.single_pixel_states['final_neg_evts_frame'][k]=final_neg_evts_frame[self.record_single_pixel_states]
+                self.single_pixel_states['final_pos_evts_frame'][k]=final_pos_evts_frame[self.record_single_pixel_states]
+                self.single_pixel_sample_count+=1
+            else:
+                self.save_recorded_single_pixel_states()
+                self.record_single_pixel_states=None
 
         # assign new time
         self.t_previous = t_frame

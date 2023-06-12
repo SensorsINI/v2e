@@ -197,6 +197,11 @@ def v2e_args(parser):
         "--save_dvs_model_state", action="store_true",
         help="save the model states that are shown (cf --show_dvs_model_state) to avi files")
 
+    modelGroup.add_argument("--record_single_pixel_states",type=tuple_type, default=None,
+        help=f"Record internal states of a single pixel specified by (x,y) tuple to '{EventEmulator.SINGLE_PIXEL_STATES_FILENAME}'."
+             f"The file is a pickled binary dict that has the state arrays over time imcluding a time array."
+             "Pixel location can also be specified as x,y without ()")
+
     # common camera types
     camGroup = parser.add_argument_group(
         'DVS camera sizes (selecting --dvs346, --dvs640, etc. overrides --output_width and --output_height')

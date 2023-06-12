@@ -8,7 +8,7 @@
 
 # NOTE: There are nonintuitive effects of low contrast dot moving repeatedly over the same circle:
 # The dot initially makes events and then appears to disappear. The cause is that the mean level of dot
-# is encoded by the baseLogFrame which is initially at zero but increases to code the average of dot and background.
+# is encoded by the base_log_frame which is initially at zero but increases to code the average of dot and background.
 # Then the low contrast of dot causes only a single ON event on first cycle
 import argparse
 import atexit
@@ -29,13 +29,13 @@ logger = logging.getLogger(__name__)
 class particles(base_synthetic_input): # the class name should be the same as the filename, like in Java
     """ Generates moving dots on linear trajectories
     """
-    CONTRAST = 1.2
+    CONTRAST = 1.25
     TOTAL_TIME = 1
-    NUM_PARTICLES = 40
-    RADIUS=.25
+    NUM_PARTICLES = 300
+    RADIUS=1
     DT=100e-6
-    SPEED_MIN=10
-    SPEED_MAX=1000
+    SPEED_MIN=3
+    SPEED_MAX=100
 
 
     def __init__(self, width: int = 346, height: int = 260, avi_path: Optional[str] = None, preview=False,
@@ -88,6 +88,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
         # self.t_total = 4 * np.pi * self.radius * self.cycles / self.speed_pps
         # t_total=cycles*period
         self.times = np.arange(0, self.t_total, self.dt)
+        self.time=0 # last global update time saved here
         # constant speed
         self.w = width
         self.h = height
@@ -110,30 +111,36 @@ class particles(base_synthetic_input): # the class name should be the same as th
 
 
     def cleanup(self):
-        logger.info(f'particles() generated {self.particle_count} particles in {self.time}s')
+        logger.info(f'particles() generated {self.particle_count:,} particles in {self.time:.3f}s')
 
     class particle():
         def __init__(self,  outer, width:int, height:int , time:float, radius:float, speed_min, speed_max):
             self.width=width
             self.height=height
-            # generate particle on some edge, moving into the array with random velocity
-            edge=np.random.randint(0,4) # nsew
-            if edge==0 or edge==1: #north/south
-                pos_x=np.random.randint(0,width)
-                pos_y=0 if edge==0 else height
-            else: # e or w
-                pos_y=np.random.randint(0,height)
-                pos_x=0 if edge==3 else width
-            angle_rad=0
-            if edge==1: #n
-                angle_rad=np.random.uniform(np.pi/4,-.75*np.pi)
-            elif edge==0: # s
-                angle_rad=np.random.uniform(np.pi/4,.75*np.pi)
-            elif edge==3: # e
-                angle_rad=np.random.uniform(-np.pi/4,np.pi/4)
-            elif edge==2: # w
-                angle_rad=np.random.uniform(np.pi/4,3*np.pi/2-np.pi/4)
+            # # generate particle on some edge, moving into the array with random velocity
+            # edge=np.random.randint(0,4) # nsew
+            # if edge==0 or edge==1: #north/south
+            #     pos_x=np.random.randint(0,width)
+            #     pos_y=0 if edge==0 else height
+            # else: # e or w
+            #     pos_y=np.random.randint(0,height)
+            #     pos_x=0 if edge==3 else width
+            # angle_rad=0
+            # if edge==1: #n
+            #     angle_rad=np.random.uniform(np.pi/4,-.75*np.pi)
+            # elif edge==0: # s
+            #     angle_rad=np.random.uniform(np.pi/4,.75*np.pi)
+            # elif edge==3: # e
+            #     angle_rad=np.random.uniform(-np.pi/4,np.pi/4)
+            # elif edge==2: # w
+            #     angle_rad=np.random.uniform(np.pi/4,3*np.pi/2-np.pi/4)
 
+            # generate random position somehwere in array (replaces the edge init that starts with empty array that biases initially towards all noise)
+            pos_x=np.random.uniform(0,width)
+            pos_y=np.random.uniform(0,height)
+            # pos_x=np.random.uniform(0,5) # to debug single pixel generate most particle near corner
+            # pos_y=np.random.uniform(0,5)
+            angle_rad=np.random.uniform(0, 2*np.pi)
 
             self.position=np.array([pos_x,pos_y])
             self.speed=np.random.uniform(speed_min,speed_max)
@@ -173,17 +180,17 @@ class particles(base_synthetic_input): # the class name should be the same as th
             cv2.destroyAllWindows()
             logger.info(f'finished after {self.frame_number} frames having made {self.particle_count} particles')
             return None, self.times[-1]
-        time = self.times[self.frame_number]
+        self.time = self.times[self.frame_number]
         self.pix_arr.fill(self.bg)
         for p in self.particles:
             if p.is_out_of_bounds():
                 self.particles.remove(p)
-                newp=particles.particle(self,self.w,self.h,time,self.radius,self.speed_pps_min,self.speed_pps_max)
+                newp=particles.particle(self,self.w,self.h,self.time,self.radius,self.speed_pps_min,self.speed_pps_max)
                 self.particles.append(newp)
                 self.particle_count+=1
                 # logger.info(f'made new particle {newp}')
             else:
-                p.update(time)
+                p.update(self.time)
                 p.draw(self.pix_arr)
 
         if self.preview and self.frame_number % 10 == 0:
@@ -197,7 +204,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
                 cv2.destroyAllWindows()
                 return None, time
         self.frame_number += 1
-        return (self.pix_arr, time)
+        return (self.pix_arr, self.time)
 
 
 @njit
