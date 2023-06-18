@@ -57,7 +57,7 @@ logging.addLevelName(
     logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevelName(
         logging.WARNING)) # red foreground
 logging.addLevelName(
-    logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(
+    logging.ERROR, "\033[38;5;9m%s\033[1;0m" % logging.getLevelName(
         logging.ERROR)) # red background
 logger = logging.getLogger(__name__)
 
@@ -304,6 +304,17 @@ def main():
     dvs_h5 = args.dvs_h5
     dvs_aedat2 = args.dvs_aedat2
     dvs_text = args.dvs_text
+    # signal noise output CSV file
+    label_signal_noise=args.label_signal_noise
+    if label_signal_noise and dvs_text is None:
+        logger.error('if you specify --label_signal_noise you must specify --dvs_text')
+        v2e_quit(1)
+    if label_signal_noise and args.photoreceptor_noise:
+        logger.error('if you specify --label_signal_noise you cannot use --photoreceptor_noise option')
+        v2e_quit(1)
+    if label_signal_noise and shot_noise_rate_hz==0:
+        logger.error('You specified --label_signal_noise, but --shot_noise_rate=0 and there will be no noise events')
+        v2e_quit(1)
 
     # Debug feature: if show slomo stats
     slomo_stats_plot = args.slomo_stats_plot
@@ -546,7 +557,8 @@ def main():
         cs_lambda_pixels=args.cs_lambda_pixels, cs_tau_p_ms=args.cs_tau_p_ms,
         hdr=hdr,
         scidvs=scidvs,
-        record_single_pixel_states=record_single_pixel_states
+        record_single_pixel_states=record_single_pixel_states,
+        label_signal_noise=label_signal_noise
     )
 
     if args.dvs_params is not None:
@@ -881,7 +893,7 @@ def main():
 
     # try to show desktop
     # suppress folder opening if it's not necessary
-    if not args.skip_video_output and not args.no_preview and not args.dvs_aedat2 and not args.dvs_h5 and not args.dvs_text:
+    if not output_folder is None:
         try:
             logger.info(f'showing {output_folder} in desktop')
             desktop.open(os.path.abspath(output_folder))

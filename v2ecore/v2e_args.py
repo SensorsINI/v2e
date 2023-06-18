@@ -33,6 +33,12 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError(f'Boolean value expected, got {v}')
 
+def none_or_str(value): # https://stackoverflow.com/questions/48295246/how-to-pass-none-keyword-as-command-line-argument
+    """ Use in argparse add_argument as type none_or_str
+    """
+    if value == 'None' or value=='':
+        return None
+    return value
 
 # https://stackoverflow.com/questions/3853722/how-to-insert-newlines-on-argparse-help-text
 class SmartFormatter(argparse.HelpFormatter):
@@ -94,6 +100,12 @@ def v2e_args(parser):
         help="If specifying --output_folder, makes unique output "
              "folder based on output_folder, e.g. output1 "
              "(if non-empty output_folder already exists)")
+    outGroupGeneral.add_argument(
+        "--skip_video_output", action="store_true",
+        help="Skip producing video outputs, including the original video, "
+             "SloMo video, and DVS video. "
+             "This mode also prevents showing preview of output "
+             "(cf --no_preview).")
 
     # timestamp resolution
     timestampResolutionGroup = parser.add_argument_group(
@@ -164,10 +176,12 @@ def v2e_args(parser):
         # default for good lighting, very low rate
         help="Temporal noise rate of ON+OFF events in "
              "darkest parts of scene; reduced in brightest parts. ")
-    modelGroup.add_argument('--photoreceptor_noise',action='store_true',help='Create temporal noise by injecting Gaussian noise to the log photoreceptor before lowpass filtering.'
-                                                                             'This way, more accurate statistics of temporal noise will tend to result but the noise rate will only approximate the desired noise rate;'
-                                                                             ' the photoreceptor noise will be computed to result in the --shot_noise_rate noise value. '
-                                                                             'Overrides the default shot noise mechanism reported in 2020 v2e paper.')
+    modelGroup.add_argument('--photoreceptor_noise',action='store_true',
+            help='Create temporal noise by injecting Gaussian noise to the log photoreceptor before lowpass filtering.'
+                 'This way, more accurate statistics of temporal noise will tend to result (in particular, alternating ON and OFF noise events)'
+                 'but the noise rate will only approximate the desired noise rate;'
+                 ' the photoreceptor noise will be computed to result in the --shot_noise_rate noise value. '
+                 'Overrides the default shot noise mechanism reported in 2020 v2e paper.')
     modelGroup.add_argument(
         "--leak_jitter_fraction", type=float, default=0.1,
         help="Jitter of leak noise events relative to the (FPN) "
@@ -252,12 +266,15 @@ def v2e_args(parser):
              "Batch size 8-16 is recommended if your GPU "
              "has sufficient memory.")
     sloMoGroup.add_argument(
-        "--vid_orig", type=str, default="video_orig.avi",
+        "--vid_orig", type=none_or_str, default="video_orig.avi",
         help="Output src video at same rate as slomo video "
-             "(with duplicated frames).")
+             "(with duplicated frames). "
+             "Specify emtpy string or 'None' to skip output.")
+
     sloMoGroup.add_argument(
-        "--vid_slomo", type=str, default="video_slomo.avi",
-        help="Output slomo of src video slowed down by slowdown_factor.")
+        "--vid_slomo", type=none_or_str, default="video_slomo.avi",
+        help="Output slomo of src video slowed down by slowdown_factor."
+             "Specify emtpy string or 'None' to skip output.")
 
     # TODO in general, allow reuse of slomo output
     #  sloMoGroup.add_argument(
@@ -356,18 +373,12 @@ def v2e_args(parser):
              "\n\t\t-dvs_exposure area_count 500 64"
              "\n\tsource: each DVS frame is from one source frame (slomo or original, depending on if slomo is used)")
     outGroupDvsVideo.add_argument(
-        "--dvs_vid", type=str, default="dvs-video.avi",
-        help="Output DVS events as AVI video at frame_rate. To suppress, supply argument None.")
+        "--dvs_vid", type=none_or_str, default="dvs-video.avi",
+        help="Output DVS events as AVI video at frame_rate. To suppress, supply empty argument or 'None'.")
     outGroupDvsVideo.add_argument(
         "--dvs_vid_full_scale", type=int, default=2,
         help="Set full scale event count histogram count for DVS videos "
              "to be this many ON or OFF events for full white or black.")
-    outGroupDvsVideo.add_argument(
-        "--skip_video_output", action="store_true",
-        help="Skip producing video outputs, including the original video, "
-             "SloMo video, and DVS video. "
-             "This mode also prevents showing preview of output "
-             "(cf --no_preview).")
     outGroupDvsVideo.add_argument(
         "--no_preview", action="store_true",
         help="disable preview in cv2 windows for faster processing.")
@@ -395,6 +406,16 @@ def v2e_args(parser):
         "--dvs_text", type=output_file_check, default=None,
         help="Output DVS events as text file with one event per "
              "line [timestamp (float s), x, y, polarity (0,1)]. ")
+    dvsEventOutputGroup.add_argument('--label_signal_noise', action='store_true',
+                                 help='append to the --dvs_text file a column,'
+                                      'containing list of signal and shot noise events. '
+                                      'Each row of the CSV appends a 1 for signal and 0 for noise.'
+                                      '** Notes: 1: requires activating --dvs_text option; '
+                                      '2: requires disabling --photoreceptor_noise option '
+                                      '(because when noise arises from photoreceptor it is '
+                                      'impossible to tell if event was caused by signal or noise.'
+                                      '3: Only labels shot noise events (because leak noise events arise from leak and cannot be distinguished from photoreceptor input).')
+
     #  dvsEventOutputGroup.add_argument(
     #      "--dvs_numpy", type=output_file_check, default="None",
     #      help="Accumulates DVS events to memory and writes final numpy data "

@@ -144,7 +144,7 @@ def compute_event_map(diff_frame, pos_thres, neg_thres):
         neg_thres:  OFF threshold values [width, height]
 
     Returns:
-        pos_evts_frame, neg_evts_frame;  ndarrays of integer ON and OFF event counts
+        pos_evts_frame, neg_evts_frame;  2d Tensors of integer ON and OFF event counts
     """
     # extract positive and negative differences
     pos_frame = F.relu(diff_frame)
@@ -290,9 +290,6 @@ def compute_photoreceptor_noise_voltage(shot_noise_rate_hz, f3db, sample_rate_hz
         compute_photoreceptor_noise_voltage.vrms_computation_printed=True
     return vnscaled
 
-
-
-
 compute_photoreceptor_noise_voltage.vrms_computation_printed=False
 compute_photoreceptor_noise_voltage.last_sample_rate=None
 compute_photoreceptor_noise_voltage.last_vn=None
@@ -300,40 +297,56 @@ compute_photoreceptor_noise_voltage.last_vn=None
 def generate_shot_noise(
         shot_noise_rate_hz,
         delta_time,
-        num_iters,
         shot_noise_inten_factor,
         inten01,
         pos_thres_pre_prob,
         neg_thres_pre_prob):
     """Generate shot noise.
+    :param shot_noise_rate_hz: the rate per pixel in hz
+    :param delta_time: the delta time for this frame in seconds
+    :param shot_noise_inten_factor: factor to model the slight increase
+        of shot noise with intensity when shot noise dominates at low intensity
+    :param inten01: the pixel light intensities in this frame; shape is used to generate output
+    :param pos_thres_pre_prob: per pixel factor to generate more
+        noise from pixels with lower ON threshold: self.pos_thres_nominal/self.pos_thres
+    :param neg_thres_pre_prob: same for OFF
 
+    :returns: shot_on_coord, shot_off_coord, each are (h,w) arrays of on and off boolean True for noise events per pixel
     """
-    # new shot noise generator, generate for the entire batch
+    # new shot noise generator, generate for the entire batch of iterations over this frame
+
+    if shot_noise_rate_hz*delta_time>1:
+        logger.warning(f'shot_noise_rate_hz*delta_time={shot_noise_rate_hz:.2f}*{delta_time:.2g}={shot_noise_rate_hz*delta_time:.2f} is too large, decrease timestamp resolution or sample rate')
+
+    # shot noise factor is the probability of generating an OFF event in this frame (which is tiny typically)
+    # we compute it by taking half the total shot noise rate (OFF only),
+    # multiplying by the delta time of this frame,
+    # and multiplying by the intensity factor
+    # division by num_iter is correct if generate_shot_noise is called outside the iteration loop, unless num_iter=1 for calling outside loop
     shot_noise_factor = (
-        (shot_noise_rate_hz/2)*delta_time/num_iters) * \
-        ((shot_noise_inten_factor-1)*inten01+1)
-    # =1 for inten=0 and SHOT_NOISE_INTEN_FACTOR for inten=1
+        (shot_noise_rate_hz/2)*delta_time) * \
+        ((shot_noise_inten_factor-1)*inten01+1) # =1 for inten=0 and SHOT_NOISE_INTEN_FACTOR for inten=1 # TODO check this logic again, the shot noise rate should increase with intensity but factor is negative here
 
     # probability for each pixel is
     # dt*rate*nom_thres/actual_thres.
     # That way, the smaller the threshold,
     # the larger the rate
     one_minus_shot_ON_prob_this_sample = \
-        1 - shot_noise_factor*pos_thres_pre_prob
+        1 - shot_noise_factor*pos_thres_pre_prob # ON shot events are generated when uniform sampled random number from range 0-1 is larger than this; the larger shot_noise_factor, the larger the noise rate
     shot_OFF_prob_this_sample = \
-        shot_noise_factor*neg_thres_pre_prob
+        shot_noise_factor*neg_thres_pre_prob # OFF shot events when 0-1 sample less than this
 
-    # for shot noise
+    # for shot noise generate rands from 0-1 for each pixel
     rand01 = torch.rand(
-        size=[num_iters]+list(inten01.shape),
+        size=inten01.shape,
         dtype=torch.float32,
         device=inten01.device)  # draw_frame samples
 
-    # pre compute all the shot noise cords
+    # precompute all the shot noise cords, gets binary array size of chip
     shot_on_cord = torch.gt(
-        rand01, one_minus_shot_ON_prob_this_sample.unsqueeze(0))
+        rand01, one_minus_shot_ON_prob_this_sample)
     shot_off_cord = torch.lt(
-        rand01, shot_OFF_prob_this_sample.unsqueeze(0))
+        rand01, shot_OFF_prob_this_sample)
 
     return shot_on_cord, shot_off_cord
 

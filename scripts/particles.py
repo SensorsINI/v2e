@@ -58,6 +58,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
         parser.add_argument('--speed_min',type=float,default=particles.SPEED_MIN, help='min speed in px/s, uniform sampling')
         parser.add_argument('--speed_max',type=float,default=particles.SPEED_MAX, help='max speed in px/s, uniform sampling')
         parser.add_argument('--dt',type=float,default=particles.DT, help='event timestemp, seconds')
+        parser.add_argument('--edge',action='store_true', help='start all particles on edge, otherwise at random location')
 
         args=parser.parse_args(arg_list)
 
@@ -71,6 +72,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
         self.num_particles=args.num_particles # at any one time
         self.particle_count=0
         self.t_total = args.total_time
+        self.start_on_edge=args.edge
 
         self.bg=args.bg
         self.fg=self.bg*self.contrast
@@ -80,14 +82,14 @@ class particles(base_synthetic_input): # the class name should be the same as th
 
         self.particles=[]
         for i in range(self.num_particles):
-            p=self.particle(self,width=width,height=height,time=0,radius=self.radius,speed_min=self.speed_pps_min,speed_max=self.speed_pps_max)
+            p=self.particle(self,width=width,height=height,time=0,radius=self.radius,speed_min=self.speed_pps_min,speed_max=self.speed_pps_max, start_on_edge=self.start_on_edge)
             self.particles.append(p)
             self.particle_count+=1
 
         # computed values below here
         # self.t_total = 4 * np.pi * self.radius * self.cycles / self.speed_pps
         # t_total=cycles*period
-        self.times = np.arange(0, self.t_total, self.dt)
+        self.times = np.arange(0, self.t_total, self.dt) # note floating point roundoff can produce small eps on top of step
         self.time=0 # last global update time saved here
         # constant speed
         self.w = width
@@ -114,32 +116,33 @@ class particles(base_synthetic_input): # the class name should be the same as th
         logger.info(f'particles() generated {self.particle_count:,} particles in {self.time:.3f}s')
 
     class particle():
-        def __init__(self,  outer, width:int, height:int , time:float, radius:float, speed_min, speed_max):
+        def __init__(self,  outer, width:int, height:int , time:float, radius:float, speed_min, speed_max, start_on_edge:bool=False):
             self.width=width
             self.height=height
-            # # generate particle on some edge, moving into the array with random velocity
-            # edge=np.random.randint(0,4) # nsew
-            # if edge==0 or edge==1: #north/south
-            #     pos_x=np.random.randint(0,width)
-            #     pos_y=0 if edge==0 else height
-            # else: # e or w
-            #     pos_y=np.random.randint(0,height)
-            #     pos_x=0 if edge==3 else width
-            # angle_rad=0
-            # if edge==1: #n
-            #     angle_rad=np.random.uniform(np.pi/4,-.75*np.pi)
-            # elif edge==0: # s
-            #     angle_rad=np.random.uniform(np.pi/4,.75*np.pi)
-            # elif edge==3: # e
-            #     angle_rad=np.random.uniform(-np.pi/4,np.pi/4)
-            # elif edge==2: # w
-            #     angle_rad=np.random.uniform(np.pi/4,3*np.pi/2-np.pi/4)
-
-            # generate random position somehwere in array (replaces the edge init that starts with empty array that biases initially towards all noise)
-            pos_x=np.random.uniform(0,width)
-            pos_y=np.random.uniform(0,height)
-            # pos_x=np.random.uniform(0,5) # to debug single pixel generate most particle near corner
-            # pos_y=np.random.uniform(0,5)
+            if start_on_edge:
+                # generate particle on some edge, moving into the array with random velocity
+                edge=np.random.randint(0,4) # nsew
+                if edge==0 or edge==1: #north/south
+                    pos_x=np.random.randint(0,width)
+                    pos_y=0 if edge==0 else height
+                else: # e or w
+                    pos_y=np.random.randint(0,height)
+                    pos_x=0 if edge==3 else width
+                angle_rad=0
+                if edge==1: #n
+                    angle_rad=np.random.uniform(np.pi/4,-.75*np.pi)
+                elif edge==0: # s
+                    angle_rad=np.random.uniform(np.pi/4,.75*np.pi)
+                elif edge==3: # e
+                    angle_rad=np.random.uniform(-np.pi/4,np.pi/4)
+                elif edge==2: # w
+                    angle_rad=np.random.uniform(np.pi/4,3*np.pi/2-np.pi/4)
+            else:
+                # generate random position somehwere in array (replaces the edge init that starts with empty array that biases initially towards all noise)
+                pos_x=np.random.uniform(0,width)
+                pos_y=np.random.uniform(0,height)
+                # pos_x=np.random.uniform(0,5) # to debug single pixel generate most particle near corner
+                # pos_y=np.random.uniform(0,5)
             angle_rad=np.random.uniform(0, 2*np.pi)
 
             self.position=np.array([pos_x,pos_y])
@@ -185,7 +188,7 @@ class particles(base_synthetic_input): # the class name should be the same as th
         for p in self.particles:
             if p.is_out_of_bounds():
                 self.particles.remove(p)
-                newp=particles.particle(self,self.w,self.h,self.time,self.radius,self.speed_pps_min,self.speed_pps_max)
+                newp=particles.particle(self,self.w,self.h,self.time,self.radius,self.speed_pps_min,self.speed_pps_max, self.start_on_edge)
                 self.particles.append(newp)
                 self.particle_count+=1
                 # logger.info(f'made new particle {newp}')

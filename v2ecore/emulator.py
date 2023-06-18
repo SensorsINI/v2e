@@ -59,8 +59,8 @@ class EventEmulator(object):
 
         Parameters
         ----------
-        v:Tensor
             the input 'voltage',
+        v:Tensor
             actually log intensity in base e units
         tau:Optional[Tensor]
             if None, tau is set internally
@@ -110,7 +110,8 @@ class EventEmulator(object):
             cs_tau_p_ms: float = None,
             hdr: bool = False,
             scidvs: bool = False,
-            record_single_pixel_states=None
+            record_single_pixel_states=None,
+            label_signal_noise=False
     ):
         """
         Parameters
@@ -155,6 +156,8 @@ class EventEmulator(object):
             Simulate the high gain adaptive photoreceptor SCIDVS pixel
         record_single_pixel_states: tuple
             Record this pixel states to 'pixel_states.npy'
+        label_signal_noise: bool
+            Record signal and noise event labels to a CSV file
         """
 
         logger.info(
@@ -201,7 +204,7 @@ class EventEmulator(object):
         self.leak_jitter_fraction = leak_jitter_fraction
         self.noise_rate_cov_decades = noise_rate_cov_decades
 
-        self.SHOT_NOISE_INTEN_FACTOR = 0.25
+        self.SHOT_NOISE_INTEN_FACTOR = 0.25 # this factor models the slight increase of shot noise with intensity
 
         # output properties
         self.output_folder = output_folder
@@ -265,6 +268,9 @@ class EventEmulator(object):
                         f'cs_lambda_pixels:  {self.cs_lambda_pixels:.2f}\n\t'
                         )
 
+        # label signal and noise events
+        self.label_signal_noise=label_signal_noise
+
         # record pixel
         self.record_single_pixel_states=record_single_pixel_states
         self.single_pixel_sample_count=0
@@ -320,12 +326,12 @@ class EventEmulator(object):
                 logger.info('opening AEDAT-2.0 output file ' + path)
                 self.dvs_aedat2 = AEDat2Output(
                     path, output_width=self.output_width,
-                    output_height=self.output_height)
+                    output_height=self.output_height, label_signal_noise=self.label_signal_noise)
             if dvs_text:
                 path = os.path.join(self.output_folder, dvs_text)
                 path = checkAddSuffix(path, '.txt')
                 logger.info('opening text DVS output file ' + path)
-                self.dvs_text = DVSTextOutput(path)
+                self.dvs_text = DVSTextOutput(path,label_signal_noise=self.label_signal_noise)
 
 
 
@@ -548,7 +554,7 @@ class EventEmulator(object):
         self.lp_log_frame: Optional[np.ndarray] = None  # stage 1
         self.cs_surround_frame: Optional[np.ndarray] = None
         self.c_minus_s_frame: Optional[np.ndarray] = None
-        self.base_log_frame: Optional[np.ndarray] = None
+        self.base_log_frame: Optional[np.ndarray] = None # memorized log intensities at change detector
         self.diff_frame: Optional[np.ndarray] = None  # [height, width]
         self.scidvs_highpass: Optional[np.ndarray] = None
         self.scidvs_previous_photo: Optional[np.ndarray] = None
@@ -746,54 +752,116 @@ class EventEmulator(object):
                 v2e_quit()
 
         # generate event map
+        # print(f'\ndiff_frame max={torch.max(self.diff_frame)} pos_thres mean={torch.mean(self.pos_thres)} expect {int(torch.max(self.diff_frame)/torch.mean(self.pos_thres))} max events')
         pos_evts_frame, neg_evts_frame = compute_event_map(
             self.diff_frame, self.pos_thres, self.neg_thres)
         max_num_events_any_pixel = max(pos_evts_frame.max(),
                                        neg_evts_frame.max())  # max number of events in any pixel for this interframe
+        max_num_events_any_pixel=max_num_events_any_pixel.cpu().numpy().item() # turn singleton tensor to scalar
         if max_num_events_any_pixel > 100:
             logger.warning(f'Too many events generated for this frame: num_iter={max_num_events_any_pixel}>100 events')
 
-        if max_num_events_any_pixel == 0 and self.shot_noise_rate_hz > 0 and not self.photoreceptor_noise:
-            logger.warning(
-                'no events generated for frame, generating any sampled temporal noise for this frame with 1 iteration')
-            max_num_events_any_pixel = 1
+        # to assemble all events
+        events = torch.empty((0, 4), dtype=torch.float32, device=self.device)  # ndarray shape (N,4) where N is the number of events are rows are [t,x,y,p]
+        # event timestamps at each iteration
+        # min_ts_steps timestamps are linearly spaced
+        # they start after the self.t_previous to make sure
+        # that there is interval from previous frame
+        # they end at t_frame.
+        # delta_time=t_frame - self.t_previous
+        # e.g. t_start=0, t_end=1, min_ts_steps=2, i=0,1
+        # ts=1*1/2, 2*1/2
+        #  ts = self.t_previous + delta_time * (i + 1) / min_ts_steps
+        # if min_ts_steps==1, then there is only a single timestamp at t_frame
+        min_ts_steps=max_num_events_any_pixel if max_num_events_any_pixel>0 else 1
+        ts_step = delta_time / min_ts_steps
+        ts = torch.linspace(
+            start=self.t_previous+ts_step,
+            end=t_frame,
+            steps=min_ts_steps, dtype=torch.float32, device=self.device)
+        # print(f'ts={ts}')
+
         # record final events update
         final_pos_evts_frame = torch.zeros(
             pos_evts_frame.shape, dtype=torch.int32, device=self.device)
         final_neg_evts_frame = torch.zeros(
             neg_evts_frame.shape, dtype=torch.int32, device=self.device)
 
-        # update the base frame, after we know how many events per pixel
-        # add to memorized brightness values just the events we emitted.
-        # don't add the remainder.
-        # the next aps frame might have sufficient value to trigger
-        # another event or it might not, but we are correct in not storing
-        # the current frame brightness
-        #  self.base_log_frame += pos_evts_frame*self.pos_thres
-        #  self.base_log_frame -= neg_evts_frame*self.neg_thres
+        if max_num_events_any_pixel == 0:
+            logger.warning(f'no signal events generated for frame #{self.frame_counter:,} at t={t_frame:.4f}s')
+            # max_num_events_any_pixel = 1
+        else: # there are signal events to generate
+            for i in range(max_num_events_any_pixel):
+                # events for this iteration
 
-        # all events
-        events = [] # # ndarray shape (N,4) where N is the number of events are rows are [t,x,y,p]
+                # already have the number of events for each pixel in
+                # pos_evts_frame, just find bool array of pixels with events in
+                # this iteration of max # events
 
-        # event timestamps at each iteration
-        # intermediate timestamps are linearly spaced
-        # they start after the t_start to make sure
-        # that there is space from previous frame
-        # they end at t_end
-        # e.g. t_start=0, t_end=1, num_iters=2, i=0,1
-        # ts=1*1/2, 2*1/2
-        #  ts = self.t_previous + delta_time * (i + 1) / num_iters
-        ts_step = delta_time / max_num_events_any_pixel
-        ts = torch.linspace(
-            start=self.t_previous + ts_step,
-            end=t_frame,
-            steps=max_num_events_any_pixel, dtype=torch.float32, device=self.device)
+                # it must be >= because we need to make event for
+                # each iteration up to total # events for that pixel
+                pos_cord = (pos_evts_frame >= i + 1)
+                neg_cord = (neg_evts_frame >= i + 1)
 
-        # NOISE: add temporal noise here by
+
+                # filter events with refractory_period
+                # only filter when refractory_period_s is large enough
+                # otherwise, pass everything
+                # TODO David Howe figured out that the reference level was resetting to the log photoreceptor value at event generation,
+                # NOT at the value at the end of the refractory period.
+                # Brian McReynolds thinks that this effect probably only makes a significant difference if the temporal resolution of the signal
+                # is high enough so that dt is less than one refractory period.
+                if self.refractory_period_s > ts_step:
+                    pos_time_since_last_spike = (
+                            pos_cord * ts[i] - self.timestamp_mem)
+                    neg_time_since_last_spike = (
+                            neg_cord * ts[i] - self.timestamp_mem)
+
+                    # filter the events
+                    pos_cord = (
+                            pos_time_since_last_spike > self.refractory_period_s)
+                    neg_cord = (
+                            neg_time_since_last_spike > self.refractory_period_s)
+
+                    # assign new history
+                    self.timestamp_mem = torch.where(
+                        pos_cord, ts[i], self.timestamp_mem)
+                    self.timestamp_mem = torch.where(
+                        neg_cord, ts[i], self.timestamp_mem)
+
+                # update event count frames with the shot noise
+                final_pos_evts_frame += pos_cord
+                final_neg_evts_frame += neg_cord
+
+                # generate events
+                # make a list of coordinates x,y addresses of events
+                # torch.nonzero(as_tuple=True)
+                # Returns a tuple of 1-D tensors, one for each dimension in input,
+                # each containing the indices (in that dimension) of all non-zero elements of input .
+
+                # pos_event_xy and neg_event_xy each return two 1-d tensors each with same length of the number of events
+                #   Tensor 0 is list of y addresses (first dimension in pos_cord input)
+                #   Tensor 1 is list of x addresses
+                pos_event_xy = pos_cord.nonzero(as_tuple=True)
+                neg_event_xy = neg_cord.nonzero(as_tuple=True)
+
+                events_curr_iter = self.get_event_list_from_coords(pos_event_xy, neg_event_xy, ts[i])
+
+                # shuffle and append to the events collectors
+                if events_curr_iter is not None:
+                    idx = torch.randperm(events_curr_iter.shape[0])
+                    events_curr_iter = events_curr_iter[idx].view(events_curr_iter.size())
+                    events=torch.cat((events,events_curr_iter))
+
+                # end of iteration over max_num_events_any_pixel
+
+        # NOISE: add shot temporal noise here by
         # simple Poisson process that has a base noise rate
         # self.shot_noise_rate_hz.
         # If there is such noise event,
-        # then we output event from each such pixel
+        # then we output event from each such pixel. Note this is too simplified to model
+        # alternating ON/OFF noise; see --photoreceptor_noise option for that type of noise
+        # Advantage here is to be able to label signal and noise events.
 
         # the shot noise rate varies with intensity:
         # for lowest intensity the rate rises to parameter.
@@ -802,116 +870,66 @@ class EventEmulator(object):
 
         shot_on_cord, shot_off_cord = None, None
 
+        num_signal_events=len(events)
+        signnoise_label=torch.ones(num_signal_events,dtype=torch.bool, device=self.device) if self.label_signal_noise else None # all signal so far
+
         # This was in the loop, here we calculate loop-independent quantities
         if self.shot_noise_rate_hz > 0 and not self.photoreceptor_noise:
+            # generate all the noise events for this entire input frame; there could be (but unlikely) several per pixel but only 1 on or off event is returned here
             shot_on_cord, shot_off_cord = generate_shot_noise(
                 shot_noise_rate_hz=self.shot_noise_rate_hz,
                 delta_time=delta_time,
-                num_iters=max_num_events_any_pixel,
                 shot_noise_inten_factor=self.SHOT_NOISE_INTEN_FACTOR,
                 inten01=inten01,
                 pos_thres_pre_prob=self.pos_thres_pre_prob,
                 neg_thres_pre_prob=self.neg_thres_pre_prob)
 
-        for i in range(max_num_events_any_pixel):
-            # events for this iteration
-            events_curr_iter = None
-
-            # already have the number of events for each pixel in
-            # pos_evts_frame, just find bool array of pixels with events in
-            # this iteration of max # events
-
-            # it must be >= because we need to make event for
-            # each iteration up to total # events for that pixel
-            pos_cord = (pos_evts_frame >= i + 1)
-            neg_cord = (neg_evts_frame >= i + 1)
-
-            # generate shot noise
-            if self.shot_noise_rate_hz > 0 and not self.photoreceptor_noise:
-                # update event list
-                pos_cord = torch.logical_or(pos_cord, shot_on_cord[i])
-                neg_cord = torch.logical_or(neg_cord, shot_off_cord[i])
-
-            # filter events with refractory_period
-            # only filter when refractory_period_s is large enough
-            # otherwise, pass everything
-            if self.refractory_period_s > ts_step:
-                pos_time_since_last_spike = (
-                        pos_cord * ts[i] - self.timestamp_mem)
-                neg_time_since_last_spike = (
-                        neg_cord * ts[i] - self.timestamp_mem)
-
-                # filter the events
-                pos_cord = (
-                        pos_time_since_last_spike > self.refractory_period_s)
-                neg_cord = (
-                        neg_time_since_last_spike > self.refractory_period_s)
-
-                # assign new history
-                self.timestamp_mem = torch.where(
-                    pos_cord, ts[i], self.timestamp_mem)
-                self.timestamp_mem = torch.where(
-                    neg_cord, ts[i], self.timestamp_mem)
-
-            # update event count frames with the shot noise
-            final_pos_evts_frame += pos_cord
-            final_neg_evts_frame += neg_cord
-
-            # generate events
-            # make a list of coordinates x,y addresses of events
-            # torch.nonzero(as_tuple=True)
-            # Returns a tuple of 1-D tensors, one for each dimension in input,
-            # each containing the indices (in that dimension) of all non-zero elements of input .
-
-            # pos_event_xy and neg_event_xy each return two 1-d tensors each with same length of the number of events
+            # noise_on_xy and noise_off_xy each are two 1-d tensors each with same length of the number of events
             #   Tensor 0 is list of y addresses (first dimension in pos_cord input)
             #   Tensor 1 is list of x addresses
-            pos_event_xy = pos_cord.nonzero(as_tuple=True)
-            neg_event_xy = neg_cord.nonzero(as_tuple=True)
+            shot_on_xy = shot_on_cord.nonzero(as_tuple=True)
+            shot_off_xy = shot_off_cord.nonzero(as_tuple=True)
 
+            # give noise events the last timestamp generated for any signal event from this frame
+            shot_noise_events = self.get_event_list_from_coords(shot_on_xy, shot_off_xy, ts[-1])
 
-            # update event stats
-            num_pos_events = pos_event_xy[0].shape[0]
-            num_neg_events = neg_event_xy[0].shape[0]
-            num_events = num_pos_events + num_neg_events
-
-            self.num_events_on += num_pos_events
-            self.num_events_off += num_neg_events
-            self.num_events_total += num_events
-
-            if num_events > 0:
-                # events_curr_iter is 2d array [N,4] with 2nd dimension [t,x,y,p]
-                events_curr_iter = torch.ones( # set all elements 1 so that polarities start out positive ON events
-                    (num_events, 4), dtype=torch.float32,
-                    device=self.device)
-                events_curr_iter[:, 0] *= ts[i] # put all timestamps into events
-
-                # pos_event cords
-                # events_curr_iter is 2d array [N,4] with 2nd dimension [t,x,y,p]. N is the number of events from this frame
-                events_curr_iter[:num_pos_events, 1] = pos_event_xy[1] # tensor 1 of pos_event_xy is x addresses
-                events_curr_iter[:num_pos_events, 2] = pos_event_xy[0] # tensor 0 of pos_event_xy is y addresses
-
-                # neg event cords
-                events_curr_iter[num_pos_events:, 1] = neg_event_xy[1]
-                events_curr_iter[num_pos_events:, 2] = neg_event_xy[0]
-
-                # neg events polarity
-                events_curr_iter[num_pos_events:, 3] *= -1
-
-            # shuffle and append to the events collectors
-            if events_curr_iter is not None:
-                idx = torch.randperm(events_curr_iter.shape[0])
-                events_curr_iter = events_curr_iter[idx].view(
-                    events_curr_iter.size())
-                events.append(events_curr_iter)
+            # append the shot noise events and shuffle in, keeping track of labels if labeling
+            # append to the signal events and shuffle
+            if shot_noise_events is not None:
+                num_shot_noise_events=len(shot_noise_events)
+                events=torch.cat((events, shot_noise_events), dim=0) # stack signal events before noise events, [N,4]
+                num_total_events=len(events)
+                idx = torch.randperm(num_total_events)
+                events = events[idx].view(events.size())
+                if self.label_signal_noise:
+                    noise_label=torch.zeros((num_shot_noise_events),dtype=torch.bool, device=self.device)
+                    signnoise_label=torch.cat((signnoise_label,noise_label))
+                    signnoise_label=signnoise_label[idx].view(signnoise_label.size())
 
         # update base log frame according to the final
         # number of output events
-        self.base_log_frame += final_pos_evts_frame * self.pos_thres
+        # update the base frame, after we know how many events per pixel
+        # add to memorized brightness values just the events we emitted.
+        # don't add the remainder.
+        # the next aps frame might have sufficient value to trigger
+        # another event, or it might not, but we are correct in not storing
+        # the current frame brightness
+        #  self.base_log_frame += pos_evts_frame*self.pos_thres
+        #  self.base_log_frame -= neg_evts_frame*self.neg_thres
+
+        self.base_log_frame += final_pos_evts_frame * self.pos_thres # TODO should this be self.lp_log_frame ? I.e. output of lowpass photoreceptor?
         self.base_log_frame -= final_neg_evts_frame * self.neg_thres
 
+        # however, if we made a shot noise event, then just memorize the log intensity at this point, so that the pixels are reset and forget the log intensity input
+        if not self.photoreceptor_noise and self.shot_noise_rate_hz>0:
+            self.base_log_frame[shot_on_xy]=self.lp_log_frame[shot_on_xy]
+            self.base_log_frame[shot_off_xy]=self.lp_log_frame[shot_off_xy]
+
+
         if len(events) > 0:
-            events = torch.vstack(events).cpu().data.numpy() # # ndarray shape (N,4) where N is the number of events are rows are [t,x,y,p]
+            events = events.cpu().data.numpy() # # ndarray shape (N,4) where N is the number of events are rows are [t,x,y,p]
+            if signnoise_label is not None:
+                signnoise_label=signnoise_label.cpu().numpy()
             if self.dvs_h5 is not None:
                 # convert data to uint32 (microsecs) format
                 temp_events = np.array(events, dtype=np.float32)
@@ -927,9 +945,12 @@ class EventEmulator(object):
                 self.dvs_h5_dataset[-temp_events.shape[0]:] = temp_events
 
             if self.dvs_aedat2 is not None:
-                self.dvs_aedat2.appendEvents(events)
+                self.dvs_aedat2.appendEvents(events, signnoise_label=signnoise_label)
             if self.dvs_text is not None:
-                self.dvs_text.appendEvents(events)
+                if self.label_signal_noise:
+                    self.dvs_text.appendEvents(events, signnoise_label=signnoise_label)
+                else:
+                    self.dvs_text.appendEvents(events)
 
         if self.frame_ev_idx_dataset is not None:
             # save frame event idx
@@ -962,13 +983,56 @@ class EventEmulator(object):
             else:
                 self.save_recorded_single_pixel_states()
                 self.record_single_pixel_states=None
-
         # assign new time
         self.t_previous = t_frame
         if len(events) > 0:
+
+            # debug TODO remove
+            tsout = events[:, 0]
+            tsoutdiff = np.diff(tsout)
+            if (np.any(tsoutdiff < 0)):
+                print('nonmonotonic timestamp in events')
+
             return events # ndarray shape (N,4) where N is the number of events are rows are [t,x,y,p]. Confirmed by Tobi Oct 2023
         else:
             return None
+
+    def get_event_list_from_coords(self, pos_event_xy, neg_event_xy, ts):
+        """ Gets event list from ON and OFF event coordinate lists.
+        :param pos_event_xy: Tensor[2,n] where n is number of ON events, [0,n] are y addresses and [1,n] are x addresses
+        :param neg_event_xy: Tensor[2,m] where m is number of ON events, [0,m] are y addresses and [1,m] are x addresses
+        :param ts: the timestamp given to all events (scalar)
+        :returns: Tensor[n+m,4] of AER [t, x, y, p]
+        """
+        # update event stats
+        num_pos_events = pos_event_xy[0].shape[0]
+        num_neg_events = neg_event_xy[0].shape[0]
+        num_events = num_pos_events + num_neg_events
+        events_curr_iter=None
+        if num_events > 0:
+            # following will update stats for all events (signal and shot noise)
+            self.num_events_on += num_pos_events
+            self.num_events_off += num_neg_events
+            self.num_events_total += num_events
+
+            # events_curr_iter is 2d array [N,4] with 2nd dimension [t,x,y,p]
+            events_curr_iter = torch.ones(  # set all elements 1 so that polarities start out positive ON events
+                (num_events, 4), dtype=torch.float32,
+                device=self.device)
+            events_curr_iter[:, 0] *= ts  # put all timestamps into events
+
+            # pos_event cords
+            # events_curr_iter is 2d array [N,4] with 2nd dimension [t,x,y,p]. N is the number of events from this frame
+            # we replace the x's (element 1) and y's (element 2) with the on event coordinates in the first num_pos_coord entries of events_curr_iter
+            events_curr_iter[:num_pos_events, 1] = pos_event_xy[1]  # tensor 1 of pos_event_xy is x addresses
+            events_curr_iter[:num_pos_events, 2] = pos_event_xy[0]  # tensor 0 of pos_event_xy is y addresses
+
+            # neg event cords
+            # we replace the x's (element 1) and y's (element 2) with the off event coordinates in the remaining entries num_pos_events: entries of events_curr_iter
+            events_curr_iter[num_pos_events:, 1] = neg_event_xy[1]
+            events_curr_iter[num_pos_events:, 2] = neg_event_xy[0]
+            events_curr_iter[num_pos_events:, 3] = -1  # neg events polarity is -1 so flip the signs
+        return events_curr_iter
 
     def _update_csdvs(self, delta_time):
         if self.cs_surround_frame is None:

@@ -1,5 +1,7 @@
 import numpy as np
 import logging
+
+import torch
 from engineering_notation import EngNumber  # only from pip
 import atexit
 import struct
@@ -16,7 +18,7 @@ class AEDat2Output:
 
     SUPPORTED_SIZES=((346,260),(240,180))
 
-    def __init__(self, filepath: str, output_width=346, output_height=240):
+    def __init__(self, filepath: str, output_width=346, output_height=240, label_signal_noise:bool=False):
         """
 
         Parameters
@@ -24,10 +26,16 @@ class AEDat2Output:
         filepath - full path to output AEDAT file, including ".aedat" or ".aedat2" extension
         output_width - the width of output address space
         output_height - the height of output address space
+       :param label_signal_noise: set True to label noise events as 'special'
         """
         self.filepath = filepath
         self.file=None
-        # edit below to match https://inivation.github.io/inivation-docs/Software%20user%20guides/AEDAT_file_formats.html#introduction
+        # set bit 10 (11'th bit) to 1 to mark special event. Bit number 11 is OFF or ON bit.
+        self.noise_special_event_bit= 1 << 10 # https://gitlab.com/inivation/inivation-docs/-/blob/master/Software%20user%20guides/AEDAT_file_formats.md#dvs
+        self.label_signal_noise=label_signal_noise
+        if self.label_signal_noise:
+            logger.info(f'labeling noise events as special events by ORing address with bit 11 set to 1 using bit pattern "{self.noise_special_event_bit:032_b}"')
+        # edit below to match https://gitlab.com/inivation/inivation-docs/-/blob/master/Software%20user%20guides/AEDAT_file_formats.md
         # see AEDAT-2.0 format section
         if output_width==346 and output_height==260:
             # DAVIS
@@ -37,7 +45,7 @@ class AEDat2Output:
             # bits 11 and 32 (1-based) both being zero signals a polarity event
             self.yShiftBits = 22
             self.xShiftBits = 12
-            self.polShiftBits = 11  # see https://inivation.com/support/software/fileformat/#aedat-20
+            self.polShiftBits = 11  # see https://gitlab.com/inivation/inivation-docs/-/blob/master/Software%20user%20guides/AEDAT_file_formats.md
             self.sizex = output_width
             self.sizey = output_height
             self.flipy = True  # v2e uses computer vision matrix printing convention of UL pixel being 0,0, but jAER uses original graphics and graphing convention that 0,0 is LL
@@ -50,7 +58,7 @@ class AEDat2Output:
             # bits 11 and 32 (1-based) both being zero signals a polarity event
             self.yShiftBits = 22
             self.xShiftBits = 12
-            self.polShiftBits = 11  # see
+            self.polShiftBits = 11  # see https://gitlab.com/inivation/inivation-docs/-/blob/master/Software%20user%20guides/AEDAT_file_formats.md#dvs-or-aps
             self.sizex = output_width
             self.sizey = output_height
             self.flipy = True  # v2e uses computer vision matrix printing convention of UL pixel being 0,0, but jAER uses original graphics and graphing convention that 0,0 is LL
@@ -91,18 +99,24 @@ class AEDat2Output:
         date = datetime.datetime.now().strftime('# Creation time: %I:%M%p %B %d %Y\r\n')  # Tue Jan 26 13:57:06 CET 2016
         time = '# Creation time: System.currentTimeMillis() {}\r\n'.format(int(time.time() * 1000.))
         user = '# User name: {}\r\n'.format(getpass.getuser())
+        if self.label_signal_noise:
+            sn_comment='# noise events are labeled as addressed external input events when the --label_signal_noise option is selected for output\r\n'
+        else:
+            sn_comment=''
+        # IMPORTANT, use \r\n to terminate lines!!!! otherwise the whole file will be corrupted
         header = ('#!AER-DAT2.0\r\n',
                   '# This is a raw AE data file created by AEDat2Output in v2e (see https://github.com/SensorsINI/v2e) as specified at https://inivation.com/support/software/fileformat/#aedat-20\r\n',
                   '# Data format is int32 address, int32 timestamp (8 bytes total), repeated for each event\r\n',
                   '# Timestamps tick is 1 us\r\n',
+                  sn_comment,
                   date, time,
-                  user
+                  user,
                   )
         for s in header:
             bytes = s.encode('UTF-8')
             self.file.write(bytes)
 
-    def appendEvents(self, events: np.ndarray):
+    def appendEvents(self, events: np.ndarray, signnoise_label:np.ndarray=None ):
         """Append events to AEDAT-2.0 output
 
           Parameters
@@ -110,6 +124,8 @@ class AEDat2Output:
           events: np.ndarray if any events, else None
               [N, 4], each row contains [timestamp, x coordinate, y coordinate, sign of event (+1 ON, -1 OFF)].
               NOTE x,y, NOT y,x.
+          signnoise: np.ndarray
+            [N] each entry is 1 for signal or 0 for noise
 
           Returns
           -------
@@ -123,6 +139,8 @@ class AEDat2Output:
             return
         n = events.shape[0]
         t = (1e6 * events[:, 0]).astype(np.int32)   # to us from seconds
+        if np.any(np.diff(t)<0):
+            logger.warning('nonmonontoic timestamp')
         x = events[:, 1].astype(np.int32)
         if self.flipx: x = (self.sizex - 1) - x  # 0 goes to sizex-1
         y = events[:, 2].astype(np.int32)
@@ -130,12 +148,17 @@ class AEDat2Output:
         p = ((events[:, 3] + 1) / 2).astype(np.int32) # 0=off, 1=on
 
         a = (x << self.xShiftBits | y << self.yShiftBits | p << self.polShiftBits)
-        out = np.empty(2 * n, dtype=np.int32)
-        out[0::2] = a  # addresses even
-        out[1::2] = t  # timestamps odd
-        #make sure we don't write comment char as first event
-        bytes=out.byteswap().tobytes(order='C')
+        if self.label_signal_noise and not signnoise_label is None:
+            noise_mask=np.logical_not(signnoise_label) # true or 1 for noise event elements
+            # print(f'\naddr before noise mask {a[0]:032_b}')
+            a[np.where(noise_mask)]|=self.noise_special_event_bit # set the special event bits 11 and 10 to 1 for noise events
+            # print(f'addr after noise mask  {a[0]:032_b}')
+        out = np.empty(2 * n, dtype=np.int32) # for n events allocate 2n int32 because file holds int32 values addr0, timestamp0, addr1, timestamp1
+        out[0::2] = a  # put addresses to even positions of out
+        out[1::2] = t  # put timestamps to odd positions
+        bytes=out.byteswap().tobytes(order='C') # produce c-style bytes in Java big endian format for jAER
         if self.numEventsWritten==0:
+            #make sure we don't write comment char as first event
             chopped=False
             while bytes[0:1].decode('utf-8',errors='ignore')=='#':
                 logger.warning('first event would write a # comment char, dropping it')
