@@ -160,6 +160,7 @@ class EventEmulator(object):
             Record signal and noise event labels to a CSV file
         """
 
+        self.no_events_warning_count = 0
         logger.info(
             "ON/OFF log_e temporal contrast thresholds: "
             "{} / {} +/- {}".format(pos_thres, neg_thres, sigma_thres))
@@ -787,8 +788,9 @@ class EventEmulator(object):
         final_neg_evts_frame = torch.zeros(
             neg_evts_frame.shape, dtype=torch.int32, device=self.device)
 
-        if max_num_events_any_pixel == 0:
+        if max_num_events_any_pixel == 0 and self.no_events_warning_count<100:
             logger.warning(f'no signal events generated for frame #{self.frame_counter:,} at t={t_frame:.4f}s')
+            self.no_events_warning_count+=1
             # max_num_events_any_pixel = 1
         else: # there are signal events to generate
             for i in range(max_num_events_any_pixel):
@@ -894,13 +896,13 @@ class EventEmulator(object):
             shot_noise_events = self.get_event_list_from_coords(shot_on_xy, shot_off_xy, ts[-1])
 
             # append the shot noise events and shuffle in, keeping track of labels if labeling
-            # append to the signal events and shuffle
+            # append to the signal events but don't shuffle since this causes nonmonotonic timestamps
             if shot_noise_events is not None:
                 num_shot_noise_events=len(shot_noise_events)
                 events=torch.cat((events, shot_noise_events), dim=0) # stack signal events before noise events, [N,4]
                 num_total_events=len(events)
-                idx = torch.randperm(num_total_events)
-                events = events[idx].view(events.size())
+                # idx = torch.randperm(num_total_events)  # makes timestamps nonmonotonic
+                # events = events[idx].view(events.size())
                 if self.label_signal_noise:
                     noise_label=torch.zeros((num_shot_noise_events),dtype=torch.bool, device=self.device)
                     signnoise_label=torch.cat((signnoise_label,noise_label))
@@ -928,6 +930,10 @@ class EventEmulator(object):
 
         if len(events) > 0:
             events = events.cpu().data.numpy() # # ndarray shape (N,4) where N is the number of events are rows are [t,x,y,p]
+            timestamps=events[:,0]
+            if np.any(np.diff(timestamps)<0):
+                idx=np.argwhere(np.diff(timestamps)<0)
+                logger.warning(f'nonmonotonic timestamp(s) at indices {idx}')
             if signnoise_label is not None:
                 signnoise_label=signnoise_label.cpu().numpy()
             if self.dvs_h5 is not None:

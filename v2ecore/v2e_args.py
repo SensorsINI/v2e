@@ -1,6 +1,7 @@
 import argparse
 import os
 import logging
+import time
 from pathlib import Path
 from v2ecore.emulator import EventEmulator
 
@@ -242,10 +243,10 @@ def v2e_args(parser):
         help='Set size for 346x260 DVS (DAVIS346)')
     camAction.add_argument(
         '--dvs640', action='store_true',
-        help='Set size for 640x480 DVS')
+        help='Set size for 640x480 DVS (DAVIS640)')
     camAction.add_argument(
         '--dvs1024', action='store_true',
-        help='Set size for 1024x768 DVS')
+        help='Set size for 1024x768 DVS (not supported for AEDAT-2.0 output since there is no jAER DVS1024 camera')
 
     # slow motion frame synthesis
     sloMoGroup = parser.add_argument_group(
@@ -477,11 +478,12 @@ def write_args_info(args, path, other_args=None, command_line=None) -> str:
         arguments_list += "{}:\t{}\n".format(arg, value)
     logger.info(arguments_list)
     other_arguments_list=None
-    if other_args is not None:
-        other_arguments_list = '\n**** extra other arguments:\n'
+    if other_args is not None and len(other_args)>0:
+        other_arguments_list = '\n**** extra other arguments (please check if you are misspelling intended arguments):\n'
         for arg in sorted(other_args):
             other_arguments_list += "{}\n".format(arg)
-        logger.info(other_arguments_list)
+        logger.warning(other_arguments_list)
+        time.sleep(2)
     basename = os.path.basename(__main__.__file__)
     argsFilename = basename.strip('.py') + '-args.txt'
     filepath = os.path.join(path, argsFilename)

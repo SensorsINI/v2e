@@ -306,8 +306,8 @@ def main():
     dvs_text = args.dvs_text
     # signal noise output CSV file
     label_signal_noise=args.label_signal_noise
-    if label_signal_noise and dvs_text is None:
-        logger.error('if you specify --label_signal_noise you must specify --dvs_text')
+    if label_signal_noise and dvs_text is None and dvs_aedat2 is None:
+        logger.error('if you specify --label_signal_noise you must specify --dvs_text and/or --dvs_aedat2')
         v2e_quit(1)
     if label_signal_noise and args.photoreceptor_noise:
         logger.error('if you specify --label_signal_noise you cannot use --photoreceptor_noise option')
@@ -761,7 +761,7 @@ def main():
                     if cutoff_hz > 0:
                         logger.info('Using auto_timestamp_resolution. '
                                        'checking if cutoff hz is ok given '
-                                       'samplee rate {}'.format(1/avgTs))
+                                       'sample rate {}'.format(1/avgTs))
                         check_lowpass(cutoff_hz, 1/avgTs, logger)
 
                     # read back to memory

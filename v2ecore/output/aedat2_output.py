@@ -16,7 +16,7 @@ class AEDat2Output:
     outputs AEDAT-2.0 jAER format DVS data from v2e
     """
 
-    SUPPORTED_SIZES=((346,260),(240,180))
+    SUPPORTED_SIZES=((346,260),(240,180),(640,480))
 
     def __init__(self, filepath: str, output_width=346, output_height=240, label_signal_noise:bool=False):
         """
@@ -63,8 +63,22 @@ class AEDat2Output:
             self.sizey = output_height
             self.flipy = True  # v2e uses computer vision matrix printing convention of UL pixel being 0,0, but jAER uses original graphics and graphing convention that 0,0 is LL
             self.flipx = True # not 100% sure why this is needed. Observed for tennis example
+        elif output_width==640 and output_height==480: # jAER chip DVS640 final int XSHIFT = 1, XMASK = 0b11_1111_1111<<XSHIFT , YSHIFT = 11, YMASK = 0b11_1111_1111<<YSHIFT;
+            # DAVIS
+            # In the 32-bit address:
+            # bit 32 (1-based) being 1 indicates an APS sample
+            # bit 11 (1-based) being 1 indicates a special event
+            # bits 11 and 32 (1-based) both being zero signals a polarity event
+            self.yShiftBits = 11
+            self.xShiftBits = 1
+            self.polShiftBits = 0  # see jAER DVS640 class https://github.com/SensorsINI/jaer/blob/master/src/ch/unizh/ini/jaer/chip/retina/DVS640.java
+            self.sizex = output_width
+            self.sizey = output_height
+            self.flipy = True  # v2e uses computer vision matrix printing convention of UL pixel being 0,0, but jAER uses original graphics and graphing convention that 0,0 is LL
+            self.flipx = True # not 100% sure why this is needed. Observed for tennis example
         else:
-            raise ValueError(f'AEDAT-2.0 output width={output_width} height={output_height} not supported; add your camera to {__name__} or use one of the predefined DVS cameras, e.g. --dvs346 or --dvs240 that have sizes {self.SUPPORTED_SIZES}')
+            err_string=f'AEDAT-2.0 output width={output_width} height={output_height} not supported; add your camera to {__name__} or use one of the predefined DVS cameras, e.g. --dvs346 or --dvs240 that have sizes self.SUPPORTED_SIZES={self.SUPPORTED_SIZES}'
+            raise ValueError(err_string)
 
         self.numEventsWritten = 0
         self.numOnEvents=0
