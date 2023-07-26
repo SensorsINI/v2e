@@ -57,7 +57,7 @@ Install _v2e_ to a separate Python environment
 such as `conda` environment:
 
 ```bash
-conda create -n v2e python=3.9  # create a new environment
+conda create -n v2e python=3.10  # create a new environment
 conda activate v2e  # activate the environment
 ```
 ### Ensure you have CUDA enabled GPU-accelerated _pytorch_

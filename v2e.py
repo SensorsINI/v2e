@@ -529,7 +529,7 @@ def main():
     if output_width is None or output_height is None:
         logger.error("Either or both of output_width or output_height is None,\n"
                      "which means that they were not specified or could not be inferred from the input video. \n "
-                     "Please see options for DVS camera sizes.")
+                     "Please see options for DVS camera sizes. \nYou can try the option --dvs346 for DAVIS346 camera as one well-supported option.")
         v2e_quit(1)
     num_pixels=output_width*output_height
 
