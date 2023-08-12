@@ -303,11 +303,12 @@ def main():
     # Event saving options
     dvs_h5 = args.dvs_h5
     dvs_aedat2 = args.dvs_aedat2
+    dvs_aedat4 = args.dvs_aedat4
     dvs_text = args.dvs_text
     # signal noise output CSV file
     label_signal_noise=args.label_signal_noise
-    if label_signal_noise and dvs_text is None and dvs_aedat2 is None:
-        logger.error('if you specify --label_signal_noise you must specify --dvs_text and/or --dvs_aedat2')
+    if label_signal_noise and dvs_text is None and dvs_aedat2 is None and dvs_aedat4 is None:
+        logger.error('if you specify --label_signal_noise you must specify --dvs_text and/or --dvs_aedat2 and/or --dvs_aedat4')
         v2e_quit(1)
     if label_signal_noise and args.photoreceptor_noise:
         logger.error('if you specify --label_signal_noise you cannot use --photoreceptor_noise option')
@@ -549,7 +550,7 @@ def main():
         noise_rate_cov_decades=args.noise_rate_cov_decades,
         refractory_period_s=args.refractory_period,
         seed=args.dvs_emulator_seed,
-        output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2,
+        output_folder=output_folder, dvs_h5=dvs_h5, dvs_aedat2=dvs_aedat2, dvs_aedat4 = dvs_aedat4,
         dvs_text=dvs_text, show_dvs_model_state=args.show_dvs_model_state,
         save_dvs_model_state=args.save_dvs_model_state,
         output_width=output_width, output_height=output_height,
