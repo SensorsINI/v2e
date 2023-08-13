@@ -400,9 +400,13 @@ def v2e_args(parser):
         "--dvs_h5", type=output_file_check, default=None,
         help="Output DVS events as hdf5 event database.")
     dvsEventOutputGroup.add_argument(
-        "--dvs_aedat2", type=output_file_check, default='v2e-dvs-events.aedat',
+        "--dvs_aedat2", type=output_file_check, default=None,
         help="Output DVS events as DAVIS346 camera AEDAT-2.0 event file "
              "for jAER; one file for real and one file for v2e events. To suppress, supply argument None. ")
+    dvsEventOutputGroup.add_argument(
+        "--dvs_aedat4", type=output_file_check, default=None,
+        help="Output DV AEDAT-4.0 event file "
+             "To suppress, supply argument None. ")
     dvsEventOutputGroup.add_argument(
         "--dvs_text", type=output_file_check, default=None,
         help="Output DVS events as text file with one event per "

@@ -18,7 +18,7 @@ class AEDat2Output:
 
     SUPPORTED_SIZES=((346,260),(240,180),(640,480))
 
-    def __init__(self, filepath: str, output_width=346, output_height=240, label_signal_noise:bool=False):
+    def __init__(self, filepath: str, output_width=346, output_height=260, label_signal_noise:bool=False):
         """
 
         Parameters

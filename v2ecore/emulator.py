@@ -24,6 +24,7 @@ from v2ecore.emulator_utils import rescale_intensity_frame
 from v2ecore.emulator_utils import subtract_leak_current
 from v2ecore.output.ae_text_output import DVSTextOutput
 from v2ecore.output.aedat2_output import AEDat2Output
+from v2ecore.output.aedat4_output import AEDat4Output
 from v2ecore.v2e_utils import checkAddSuffix, v2e_quit, video_writer
 
 # import rosbag # not yet for python 3
@@ -98,6 +99,7 @@ class EventEmulator(object):
             output_folder: str = None,
             dvs_h5: str = None,
             dvs_aedat2: str = None,
+            dvs_aedat4: str = None,
             dvs_text: str = None,
             # change as you like to see 'baseLogFrame',
             # 'lpLogFrame', 'diff_frame'
@@ -134,7 +136,7 @@ class EventEmulator(object):
         seed: int, default=0
             seed for random threshold variations,
             fix it to nonzero value to get same mismatch every time
-        dvs_aedat2, dvs_h5, dvs_text: str
+        dvs_aedat2, dvs_aedat4, dvs_h5, dvs_text: str
             names of output data files or None
         show_dvs_model_state: List[str],
             None or 'new_frame','diff_frame' etc; see EventEmulator.MODEL_STATES
@@ -231,6 +233,7 @@ class EventEmulator(object):
 
         # aedat or text output
         self.dvs_aedat2 = dvs_aedat2
+        self.dvs_aedat4 = dvs_aedat4
         self.dvs_text = dvs_text
 
         # event stats
@@ -328,6 +331,14 @@ class EventEmulator(object):
                 self.dvs_aedat2 = AEDat2Output(
                     path, output_width=self.output_width,
                     output_height=self.output_height, label_signal_noise=self.label_signal_noise)
+
+            if dvs_aedat4:
+                path = os.path.join(self.output_folder, dvs_aedat4)
+                path = checkAddSuffix(path, '.aedat4')
+                logger.info('opening AEDAT-4.0 output file ' + path)
+                self.dvs_aedat4 = AEDat4Output(
+                    path)
+
             if dvs_text:
                 path = os.path.join(self.output_folder, dvs_text)
                 path = checkAddSuffix(path, '.txt')
@@ -400,6 +411,9 @@ class EventEmulator(object):
 
         if self.dvs_aedat2 is not None:
             self.dvs_aedat2.close()
+
+        if self.dvs_aedat4 is not None:
+            self.dvs_aedat4.close()
 
         if self.dvs_text is not None:
             try:
@@ -952,6 +966,10 @@ class EventEmulator(object):
 
             if self.dvs_aedat2 is not None:
                 self.dvs_aedat2.appendEvents(events, signnoise_label=signnoise_label)
+
+            if self.dvs_aedat4 is not None:
+                self.dvs_aedat4.appendEvents(events, signnoise_label=signnoise_label)
+                
             if self.dvs_text is not None:
                 if self.label_signal_noise:
                     self.dvs_text.appendEvents(events, signnoise_label=signnoise_label)
