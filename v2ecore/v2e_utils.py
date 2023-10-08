@@ -250,7 +250,7 @@ def _inputFileDialog(types):
     except FileNotFoundError:
         pass
     filename = easygui.fileopenbox(msg='Select file to convert',
-                                   title='DDD file',
+                                   title='v2e input video file',
                                    filetypes=[types],
                                    multiple=False,
                                    default=default
