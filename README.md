@@ -93,8 +93,10 @@ We use the excellent [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects
 However, since APS frames only record light intensity, we  retrained it on grayscale images.
 
 Download our pre-trained model checkpoint from Google Drive
-[[SuperSloMo39.ckpt]](https://drive.google.com/u/0/uc?id=17QSN207h05S_b2ndXjLrqPbBTnYIl0Vb&export=download) (151 MB) and save it to the _input_ folder. 
+[SuperSloMo39.ckpt](https://drive.google.com/file/d/1ETID_4xqLpRBrRo1aOT7Yphs3QqWR_fx/view?usp=sharing) (151 MB) and save it to the _input_ folder. 
 The default value of --slomo_model argument is set to this location.
+
+Special thanks to Zhe He for recovering the checkpoint file.
 
 ### Download sample input data
 The sample input videos to try _v2e_ with are in [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6UylAdxg5O1ko_GaIXz7wo?usp=sharing) on google drive.
