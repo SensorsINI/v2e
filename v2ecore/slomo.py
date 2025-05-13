@@ -222,7 +222,7 @@ class SuperSloMo(object):
         # dict1 = torch.load(self.checkpoint, map_location='cpu')
         # fails intermittently on windows
 
-        dict1 = torch.load(self.checkpoint, map_location=self.device)
+        dict1 = torch.load(self.checkpoint, map_location=self.device, weights_only=False)
         interpolator.load_state_dict(dict1['state_dictAT'])
         flow_estimator.load_state_dict(dict1['state_dictFC'])
 
