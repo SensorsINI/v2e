@@ -49,7 +49,8 @@ setup(
         'plyer',
         'screeninfo', # to get monitor sizes for cv2 window placement
         'easygui', # eacy open a file from no arg invocation
-        'scikit-image' # for some synthetic_input scripts
+        'scikit-image', # for some synthetic_input scripts
+	'dv_processing'
     ],
 
     scripts=['v2e.py', 'dataset_scripts/ddd/ddd_extract_data.py'],
