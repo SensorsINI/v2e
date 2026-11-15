@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# PYTHON_ARGCOMPLETE_OK
 """
 Python code for extracting frames from video file and synthesizing fake DVS
 events from this video after SuperSloMo has generated interpolated
@@ -82,10 +83,16 @@ except Exception as e:
 def get_args():
     """ proceses input arguments
     :returns: (args_namespace,other_args,command_line) """
+
     parser = argparse.ArgumentParser(
         description='v2e: generate simulated DVS events from video.',
         epilog='Run with no --input to open file dialog', allow_abbrev=True,
         formatter_class=SmartFormatter)
+
+    # https://kislyuk.github.io/argcomplete/#global-completion
+    # Shellcode (only necessary if global completion is not activated - see Global completion below), to be put in e.g. .bashrc:
+    # eval "$(register-python-argcomplete v2e.py)"
+    argcomplete.autocomplete(parser)
 
     parser = v2e_args(parser)
 

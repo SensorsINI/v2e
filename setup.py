@@ -8,16 +8,14 @@ Development Status :: 4 - Beta
 Intended Audience :: Science/Research
 Natural Language :: English
 Operating System :: OS Independent
-Programming Language :: Python :: 3.7
-Programming Language :: Python :: 3.8
-Programming Language :: Python :: 3.9
+Programming Language :: Python :: 3.10
 Topic :: Utilities
 Topic :: Scientific/Engineering
 Topic :: Software Development :: Libraries :: Python Modules
 License :: OSI Approved :: MIT License
 """
 
-version="1.5.1"
+version="1.5.2"
 package_name="v2e"
 
 setup(
@@ -50,7 +48,7 @@ setup(
         'screeninfo', # to get monitor sizes for cv2 window placement
         'easygui', # eacy open a file from no arg invocation
         'scikit-image', # for some synthetic_input scripts
-	'dv_processing'
+        'dv_processing', # for dealing with AEDAT-4.0 files
     ],
 
     scripts=['v2e.py', 'dataset_scripts/ddd/ddd_extract_data.py'],

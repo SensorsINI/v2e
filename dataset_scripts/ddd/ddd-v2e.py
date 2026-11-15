@@ -143,7 +143,7 @@ if __name__ == "__main__":
     if not stop_time: stop_time=davisData.durationS
 
     srcDurationToBeProcessed=stop_time-start_time
-    dvsNumFrames = int(np.math.floor(dvsFps * srcDurationToBeProcessed))
+    dvsNumFrames = int(np.floor(dvsFps * srcDurationToBeProcessed))
     if dvsNumFrames==0: dvsNumFrames=1                  # we need at least 1
     dvsDuration = srcDurationToBeProcessed
     dvsPlaybackDuration = dvsNumFrames / args.avi_frame_rate

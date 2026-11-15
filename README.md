@@ -62,9 +62,9 @@ conda activate v2e  # activate the environment
 ```
 ### Ensure you have CUDA enabled GPU-accelerated _pytorch_
 See https://pytorch.org/get-started/locally/ to generate the correct
-conda install command to enable GPU-accelerated CUDA. On windows 10, for example, this tool generated the following command. _v2e_ does not use _torchaudio_ so you can leave it out.
+conda install command to enable GPU-accelerated CUDA. On windows Sept 2024, for example, this tool generated the following command. _v2e_ does not use _torchaudio_ so you can leave it out.
 ```
-conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
 ```
 
 You may want to check this stackoverflow question:

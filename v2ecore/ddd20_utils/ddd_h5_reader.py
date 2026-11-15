@@ -208,7 +208,7 @@ class DDD20SimpleReader(object):
                     (data[:, 0][:, None] * 1e-6 + t_offset,
                      data[:, 1][:, None],
                      data[:, 2][:, None],
-                     data[:, 3].astype(np.int)[:, None] * 2 - 1)
+                     data[:, 3].astype(np.int64)[:, None] * 2 - 1)
                 )
                 events.append(data)
                 continue
@@ -304,7 +304,7 @@ class DDD20ReaderMultiProcessing(object):
                     (data[:, 0][:, None] * 1e-6 + t_offset,
                      data[:, 1][:, None],
                      data[:, 2][:, None],
-                     data[:, 3].astype(np.int)[:, None] * 2 - 1)
+                     data[:, 3].astype(np.int64)[:, None] * 2 - 1)
                 )
                 events.append(data)
                 continue
