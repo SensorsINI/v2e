@@ -314,8 +314,8 @@ def main():
     dvs_text = args.dvs_text
     # signal noise output CSV file
     label_signal_noise=args.label_signal_noise
-    if label_signal_noise and dvs_text is None and dvs_aedat2 is None and dvs_aedat4 is None:
-        logger.error('if you specify --label_signal_noise you must specify --dvs_text and/or --dvs_aedat2 and/or --dvs_aedat4')
+    if label_signal_noise and dvs_text is None and dvs_aedat2 is None:
+        logger.error('if you specify --label_signal_noise you must specify --dvs_text and/or --dvs_aedat2. AEDAT-4.0 does not store the noise label.')
         v2e_quit(1)
     if label_signal_noise and args.photoreceptor_noise:
         logger.error('if you specify --label_signal_noise you cannot use --photoreceptor_noise option')
@@ -665,11 +665,21 @@ def main():
             else:
                 inputWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                 inputHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                inputChannels = 1 if int(cap.get(cv2.CAP_PROP_MONOCHROME)) \
-                    else 3
+                # CAP_PROP_MONOCHROME is 1 for gray, 0 for color, and -1 when
+                # OpenCV does not know. -1 is true in Python, so it must not be
+                # used as a boolean or color video is left as RGB and SuperSloMo
+                # receives 6 channels instead of 2.
+                mono = int(cap.get(cv2.CAP_PROP_MONOCHROME))
+                if mono == 1:
+                    inputChannels = 1
+                elif mono == 0:
+                    inputChannels = 3
+                else:
+                    inputChannels = None
+            channel_desc = 'unknown' if inputChannels is None else str(inputChannels)
             logger.info(
                 'Input video {} has W={} x H={} frames each with {} channels'
-                .format(input_file, inputWidth, inputHeight, inputChannels))
+                .format(input_file, inputWidth, inputHeight, channel_desc))
 
             if (output_width is None) and (output_height is None):
                 output_width = inputWidth
@@ -726,14 +736,19 @@ def main():
                     inputVideoFrame = cv2.resize(
                         src=inputVideoFrame, dsize=dim, fx=fx, fy=fy,
                         interpolation=cv2.INTER_AREA)
-                if inputChannels == 3:  # color
+                frame_channels = 1 if inputVideoFrame.ndim < 3 else inputVideoFrame.shape[2]
+                if inputFrameIndex == 0 and inputChannels is None:
+                    inputChannels = frame_channels
+                    logger.info(
+                        'OpenCV did not report a channel count; '
+                        f'the first frame has {frame_channels} channels')
+                if frame_channels >= 3:  # BGR or BGRA; SuperSloMo needs luma
                     if inputFrameIndex == 0:  # print info once
                         logger.info(
                             '\nConverting input frames from RGB color to luma')
-                    # TODO would break resize if input is gray frames
-                    # convert RGB frame into luminance.
+                    conversion = cv2.COLOR_BGRA2GRAY if frame_channels == 4 else cv2.COLOR_BGR2GRAY
                     inputVideoFrame = cv2.cvtColor(
-                        inputVideoFrame, cv2.COLOR_BGR2GRAY)  # much faster
+                        inputVideoFrame, conversion)
 
                     # TODO add vid_orig output if not using slomo
 

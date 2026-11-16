@@ -404,8 +404,9 @@ def v2e_args(parser):
         help="Output DVS events as DAVIS346 camera AEDAT-2.0 event file "
              "for jAER; one file for real and one file for v2e events. To suppress, supply argument None. ")
     dvsEventOutputGroup.add_argument(
-        "--dvs_aedat4", type=output_file_check, default=None,
-        help="Output DV AEDAT-4.0 event file "
+        "--dvs_aedat4", type=output_file_check, default="events.aedat4",
+        help="Output AEDAT-4.0 events for jAER (default events.aedat4). "
+             "The file uses the selected output size and a camera name jAER can detect. "
              "To suppress, supply argument None. ")
     dvsEventOutputGroup.add_argument(
         "--dvs_text", type=output_file_check, default=None,

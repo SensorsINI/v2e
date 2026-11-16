@@ -1,111 +1,119 @@
-import numpy as np
 import logging
 
-import torch
-from engineering_notation import EngNumber  # only from pip
-import atexit
-import struct
-
-# check https://gitlab.com/inivation/dv/dv-processing to install dv-processing-python
 import dv_processing as dv
-
-from v2ecore.v2e_utils import v2e_quit
+import numpy as np
+from engineering_notation import EngNumber
 
 logger = logging.getLogger(__name__)
 
+# DV camera family names with a trailing serial. jAER's RecordingChipDetector
+# uses FAMILY_SERIAL to select the chip and treats those coordinates as
+# OpenCV (origin at the top left), which is v2e's convention.
+_JAER_SOURCES = {
+    (346, 260): "DAVIS346_v2e",
+    (240, 180): "DAVIS240C_v2e",
+    (128, 128): "DVS128_v2e",
+    (640, 480): "DVS640_v2e",
+}
+
+
+def jaer_aedat4_source(output_width: int, output_height: int) -> str:
+    """Camera name stored in the AEDAT-4 infoNode for jAER chip detection."""
+    source = _JAER_SOURCES.get((output_width, output_height))
+    if source is not None:
+        return source
+    return f"V2E_{output_width}x{output_height}"
+
 
 class AEDat4Output:
-    """
-    outputs AEDAT-4.0 jAER format DVS data from v2e
-    """
+    """Write DVS events as an iniVation AEDAT-4.0 file that jAER can play."""
 
-
-    def __init__(self, filepath: str, output_width=640, output_height=480):
+    def __init__(self, filepath: str, output_width: int, output_height: int):
+        if output_width is None or output_height is None:
+            raise ValueError(
+                "AEDAT-4.0 output needs output_width and output_height. "
+                "Set them or pass a camera size such as --dvs346.")
         self.filepath = filepath
+        self.sizex = int(output_width)
+        self.sizey = int(output_height)
         self.numEventsWritten = 0
-        self.numOnEvents=0
-        self.numOffEvents=0
-        logging.info('opening AEDAT-4.0 output file {} in binary mode'.format(filepath))
+        self.numOnEvents = 0
+        self.numOffEvents = 0
+        self.last_us = None
+        self._warned_noise_label = False
+        self.source = jaer_aedat4_source(self.sizex, self.sizey)
+        logger.info(
+            "opening AEDAT-4.0 output file {} ({}x{}, source {})".format(
+                filepath, self.sizex, self.sizey, self.source))
+        if self.source.startswith("V2E_"):
+            logger.warning(
+                "size {}x{} has no standard jAER chip. "
+                "Open the file in jAER and select the chip class yourself.".format(
+                    self.sizex, self.sizey))
 
-        self.flipy = False 
-        self.flipx = False 
-        self.sizex = output_width
-        self.sizey = output_height
-         
-        self.store = dv.EventStore()
-
-        resolution = (640, 480)
-        # Event only configuration
-        config = dv.io.MonoCameraWriter.EventOnlyConfig("DVXplorer_sample", resolution)
-
-        # Create the writer instance, it will only have a single event output stream.
+        config = dv.io.MonoCameraWriter.EventOnlyConfig(
+            self.source,
+            (self.sizex, self.sizey),
+            dv.CompressionType.LZ4)
         self.writer = dv.io.MonoCameraWriter(filepath, config)
 
     def cleanup(self):
         self.close()
 
     def close(self):
-        if self.writer:
-            logger.info("Closing {} after writing {} events ({} on, {} off)".
-                        format(self.filepath,
-                               EngNumber(self.numEventsWritten),
-                               EngNumber(self.numOnEvents),
-                               EngNumber(self.numOffEvents),
-                               ))
-            
-            self.writer.writeEvents(self.store)
-            self.writer = None
-
-    def appendEvents(self, events: np.ndarray, signnoise_label:np.ndarray=None ):
-        """Append events to AEDAT-4.0 output
-
-          Parameters
-          ----------
-          events: np.ndarray if any events, else None
-              [N, 4], each row contains [timestamp, x coordinate, y coordinate, sign of event (+1 ON, -1 OFF)].
-              NOTE x,y, NOT y,x.
-          signnoise: np.ndarray
-            [N] each entry is 1 for signal or 0 for noise
-
-          Returns
-          -------
-          None
-          """
-
         if self.writer is None:
             return
+        logger.info(
+            "Closing {} after writing {} events ({} on, {} off)".format(
+                self.filepath,
+                EngNumber(self.numEventsWritten),
+                EngNumber(self.numOnEvents),
+                EngNumber(self.numOffEvents)))
+        # Dropping the writer flushes the background IO thread.
+        self.writer = None
 
-        if len(events) == 0:
+    def appendEvents(self, events: np.ndarray, signnoise_label: np.ndarray = None):
+        """Append events to the AEDAT-4.0 file.
+
+        Parameters
+        ----------
+        events: np.ndarray
+            [N, 4] rows of [timestamp (s), x, y, sign (+1 ON, -1 OFF)].
+        signnoise_label: np.ndarray
+            Unused. AEDAT-4 polarity events have no noise bit.
+        """
+        if self.writer is None or events is None or len(events) == 0:
             return
-        n = events.shape[0]
-        for event in events:
-            t = int(event[0] * 1e6)
-            x = int(event[1])
-            if self.flipx: x = (self.sizex - 1) - x  # 0 goes to sizex-1
-            y = int(event[2])
-            if self.flipy: y = (self.sizey - 1) - y
-            p = int((event[3] + 1) / 2) # 0=off, 1=on
+        if signnoise_label is not None and not self._warned_noise_label:
+            logger.warning(
+                "AEDAT-4.0 does not store signal/noise labels. "
+                "Use --dvs_text or --dvs_aedat2 to keep them.")
+            self._warned_noise_label = True
 
-            try: 
-                 self.store.push_back(t, x, y, p)
-            except RuntimeError as e:
-                 logger.warning('caught exception event {} to store'.format(e))
+        timestamp_us = np.rint(events[:, 0].astype(np.float64) * 1e6).astype(np.int64)
+        x = events[:, 1].astype(np.int32)
+        y = events[:, 2].astype(np.int32)
+        on = events[:, 3] > 0
+        valid = (x >= 0) & (x < self.sizex) & (y >= 0) & (y < self.sizey)
+        if not np.any(valid):
+            return
+        timestamp_us = timestamp_us[valid]
+        x = x[valid]
+        y = y[valid]
+        on = on[valid]
+        if self.last_us is not None and timestamp_us[0] < self.last_us:
+            timestamp_us[0] = self.last_us
+        np.maximum.accumulate(timestamp_us, out=timestamp_us)
+        self.last_us = int(timestamp_us[-1])
 
-            if p==1: self.numOnEvents+=1
-            else: self.numOffEvents+=1
-            self.numEventsWritten += 1
-        
-        # logger.info('wrote {} events'.format(n))
+        store = dv.EventStore()
+        push = store.push_back
+        for timestamp, xe, ye, polarity in zip(
+                timestamp_us.tolist(), x.tolist(), y.tolist(), on.tolist()):
+            push(int(timestamp), int(xe), int(ye), bool(polarity))
+        self.writer.writeEvents(store)
 
-
-if __name__ == '__main__':
-    class AEDat4OutputTt():
-        f = AEDat4Output('aedattest.aedat4')
-        e = [[1, 400, 0, 0], [2, 0, 400, 0], [3, 300, 400, 0], [4, 400, 300, 1], [5, 400, 300, 0]]
-        ne = np.array(e)
-        eventsNum = 2000 * 5
-        nne = np.tile(ne, (int(eventsNum/5), 1))
-        nne[:, 0] = np.arange(1, eventsNum + 1)
-        f.appendEvents(nne)
-        print('wrote {} events'.format(nne.shape[0]))
-        f.close()
+        n_on = int(np.count_nonzero(on))
+        self.numOnEvents += n_on
+        self.numOffEvents += int(on.size - n_on)
+        self.numEventsWritten += int(on.size)

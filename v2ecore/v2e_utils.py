@@ -6,7 +6,7 @@ import tempfile
 import numpy as np
 import cv2
 import glob
-import easygui
+import tkinter as tk
 from tkinter import filedialog
 from numba import njit
 from engineering_notation import EngNumber as eng
@@ -240,6 +240,62 @@ def inputDDDFileDialog():
     return _inputFileDialog([("DDD recordings", ".hdf5"), ('Any type', '*')])
 
 
+def _checkout_root():
+    """Repository root when this v2e is the git checkout, not an installed copy.
+
+    A checkout has v2ecore next to v2e.py and .git. An installed copy lives
+    under site-packages and has no .git directory there.
+    """
+    root = Path(__file__).resolve().parent.parent
+    if (root / '.git').exists() and (root / 'v2e.py').is_file():
+        return str(root)
+    return None
+
+
+def _foreground_file_dialog(title, filetypes, initialdir, initialfile):
+    """Open a file chooser above the terminal.
+
+    easygui's chooser uses a withdrawn Tk root, and Windows then leaves the
+    dialog behind the console that launched v2e. A topmost parent keeps the
+    native dialog in front for as long as it is open.
+    """
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes('-topmost', True)
+    root.lift()
+    root.focus_force()
+    root.update()
+    if sys.platform == 'win32':
+        import ctypes
+        user32 = ctypes.windll.user32
+        kernel32 = ctypes.windll.kernel32
+        user32.AllowSetForegroundWindow(-1)
+        foreground = user32.GetForegroundWindow()
+        fg_thread = user32.GetWindowThreadProcessId(foreground, None)
+        this_thread = kernel32.GetCurrentThreadId()
+        attached = False
+        if fg_thread and fg_thread != this_thread:
+            attached = bool(user32.AttachThreadInput(fg_thread, this_thread, True))
+        user32.SetForegroundWindow(int(root.winfo_id()))
+        if attached:
+            user32.AttachThreadInput(fg_thread, this_thread, False)
+    options = dict(parent=root, title=title, filetypes=filetypes)
+    if initialdir:
+        options['initialdir'] = os.path.normpath(initialdir)
+    if initialfile:
+        options['initialfile'] = initialfile
+    # Windows remembers the last folder for this dialog and otherwise opens
+    # Documents. Starting in initialdir makes that folder win.
+    previous = os.getcwd()
+    try:
+        if initialdir and os.path.isdir(initialdir):
+            os.chdir(initialdir)
+        return filedialog.askopenfilename(**options)
+    finally:
+        os.chdir(previous)
+        root.destroy()
+
+
 def _inputFileDialog(types):
     LAST_FILE_NAME_FILE = 'v2e_last_file_chosen.txt'
     fn = os.path.join(tempfile.gettempdir(), LAST_FILE_NAME_FILE)
@@ -249,13 +305,36 @@ def _inputFileDialog(types):
             default = f.read()
     except FileNotFoundError:
         pass
-    filename = easygui.fileopenbox(msg='Select file to convert',
-                                   title='v2e input video file',
-                                   filetypes=[types],
-                                   multiple=False,
-                                   default=default
-                                   )
-    if filename is None:
+    initialdir = None
+    initialfile = None
+    if default:
+        folder = os.path.dirname(default)
+        if folder and os.path.isdir(folder):
+            initialdir = folder
+        if os.path.isfile(default):
+            initialfile = os.path.basename(default)
+    if initialdir is None:
+        initialdir = _checkout_root()
+    filetypes = []
+    for description, pattern in types:
+        masks = []
+        for token in pattern.split():
+            if token in ('*', '*.*'):
+                masks.append('*.*')
+            elif token.startswith('*'):
+                masks.append(token)
+            elif token.startswith('.'):
+                masks.append('*' + token)
+            else:
+                masks.append(token)
+        filetypes.append((description, ' '.join(masks)))
+    if initialdir:
+        logger.info(f'Select the input file in the dialog ({initialdir})')
+    else:
+        logger.info('Select the input file in the dialog')
+    filename = _foreground_file_dialog(
+        'v2e: Select file to convert', filetypes, initialdir, initialfile)
+    if not filename:
         logger.info('no file selected, quitting')
         quit(0)
     logger.info(f'selected {filename} with file dialog')

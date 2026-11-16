@@ -5,6 +5,7 @@
  - Package v2e for uv and PyPI. Requires Python 3.14. Python 3.15 is blocked because h5py has no 3.15 wheels.
  - Replace the conda plus pip install with `uv sync` for development and `uv tool install v2e` or `uv add v2e` for users.
  - Depend on NumPy 2 and dv-processing 2.1.1. Gooey is an optional `gui` extra.
+ - Default event output is AEDAT-4.0 (`events.aedat4`) written with dv-processing for jAER. `--dvs_aedat2` still writes AEDAT-2.0.
 
 # v1.6.2
 

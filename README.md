@@ -16,11 +16,52 @@ v2e development was supported by the Swiss National Competence Center for Roboti
 
 ## News
 
-See [changelog](https://github.com/SensorsINI/v2e/blob/master/CHANGELOG.md) for latest news
+**November 2026**
+
+* Install with [uv](https://docs.astral.sh/uv/) on Python 3.14. `uv sync` in a checkout, or `uv tool install v2e` once the package is on PyPI.
+* The default event file is AEDAT-4.0 (`events.aedat4`) for playback in [jAER](https://jaerproject.org). jAER reads the camera name and size from the file. `--dvs_aedat2` still writes AEDAT-2.0, and `--dvs_aedat4 None` skips the AEDAT-4 file.
+
+See the [changelog](https://github.com/SensorsINI/v2e/blob/master/CHANGELOG.md) for older news.
+
+## Quick start
+
+From the repository root, after `uv sync`. The tennis conversion also needs [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) and [SuperSloMo39.ckpt](https://drive.google.com/file/d/1ETID_4xqLpRBrRo1aOT7Yphs3QqWR_fx/view?usp=sharing) in the `input` folder. The synthetic examples do not. Each command writes `events.aedat4` in its output folder. Open that file in [jAER](https://jaerproject.org).
+
+### 1. Short tennis conversion
+
+One second of the tennis clip at DAVIS346 resolution (346×260).
+
+```bash
+uv run v2e -i input/tennis.mov --dvs346 --stop_time=1 --overwrite --no_preview --output_folder=output/tennis-quick
+```
+
+### 2. Moving dot
+
+A synthetic dot, half a second, with no SuperSloMo checkpoint.
+
+```bash
+uv run v2e --synthetic_input=scripts.moving_dot --disable_slomo --dvs346 --t_total=0.5 --overwrite --no_preview --output_folder=output/moving-dot
+```
+
+### 3. Particles
+
+Two bright particles for half a second.
+
+```bash
+uv run v2e --synthetic_input=scripts.particles --disable_slomo --dvs346 --total_time=0.5 --num_particles=2 --overwrite --no_preview --output_folder=output/particles
+```
+
+### 4. Flashing spots
+
+A synthetic spot field for half a second.
+
+```bash
+uv run v2e --synthetic_input=scripts.spots --disable_slomo --dvs346 --total_time=0.5 --overwrite --no_preview --output_folder=output/spots
+```
 
 ## Contact
-Yuhuang Hu (yuhuang.hu@ini.uzh.ch)
 Tobi Delbruck (tobi@ini.uzh.ch)
+Yuhuang Hu (yuhuang.hu@ini.uzh.ch)
 
 ### Citation
 If you use v2e, we appreciate a citation to the paper below. See the [v2e home page](https://sites.google.com/view/video2events/home) for futher background papers.
@@ -435,6 +476,7 @@ Run the command above, and the following files will be created in a folder calle
 ```
 dvs-video.avi
 dvs-video-frame_times.txt
+events.aedat4
 tennis.aedat
 v2e-args.txt
 video_orig.avi
@@ -443,7 +485,8 @@ video_slomo.avi
 
 * _dvs-video.avi_: DVS video (with playback rate 30Hz) but with frame rate (DVS timestamp resolution) set by source video frame rate times slowdown_factor.
 * _dvs-video-frame_times.txt_: The times of the DVS frames. Useful when _--dvs_exposure count_ or _--dvs_exposure area-count_ methods are used.
-* _tennis.aedat_: AEDAT-2.0 file for playback and algorithm experiments in [jAER](https://jaerproject.net) (use the AEChip _Davis346Blue_ to play this file.)
+* _events.aedat4_: AEDAT-4.0 file written by default for playback in [jAER](https://jaerproject.org). jAER selects the chip from the file size and camera name.
+* _tennis.aedat_: optional AEDAT-2.0 file from `--dvs_aedat2` (use the AEChip _Davis346Blue_ to play this file.)
 * _v2e-args.txt_: All the parameters and logging output from the run.
 * _video_orig.avi_: input video, but converted to luma and resized to output (width,height) and with repeated frames to allow comparison to _slomo.avi_.
 * _video_slomo.avi_: slow motion video (with playback rate 30Hz) but slowed down by slowdown_factor.
@@ -572,7 +615,7 @@ You can then synthesize events from the DDD APS video .avi file that is produced
 
 ## Working with jAER DAVIS recordings
 
-DAVIS cameras like the one that recorded DDD17 and DDD20 are often used with [jAER](https://jaerproject.net) (although DDD recordings were made with custom python wrapper around caer). _v2e_ will output a jAER-compatible .aedat file in [AEDAT-2.0 format](https://inivation.com/support/software/fileformat/#aedat-20), which jAER uses.
+DAVIS cameras like the one that recorded DDD17 and DDD20 are often used with [jAER](https://jaerproject.org) (although DDD recordings were made with custom python wrapper around caer). By default _v2e_ writes `events.aedat4`, an [AEDAT-4.0](https://docs.inivation.com/software/software-advanced-usage/file-formats/aedat-4.0.html) file that jAER plays. Coordinates stay in OpenCV order (origin at the top left), which is what jAER expects from a DV camera file. Pass `--dvs_aedat2` to also write the older AEDAT-2.0 file, or `--dvs_aedat4 None` to skip AEDAT-4.0.
 
 To work with existing jAER DAVIS .aedat, you can export the DAVIS APS frames using the jAER EventFilter [DavisFrameAVIWriter](https://github.com/SensorsINI/jaer/blob/master/src/ch/unizh/ini/jaer/projects/davis/frames/DavisFrameAviWriter.java); see the [jAER user guide](https://docs.google.com/document/d/1fb7VA8tdoxuYqZfrPfT46_wiT1isQZwTHgX8O22dJ0Q/edit?usp=sharing), in particular, the [section about using DavisFrameAVIWriter](https://docs.google.com/document/d/1fb7VA8tdoxuYqZfrPfT46_wiT1isQZwTHgX8O22dJ0Q/edit#heading=h.g4cschniofmo). In DavisFrameAVIWriter, **don't forget to set the frameRate to the actual frame rate of the DAVIS frames** (which you can see at the top of the jAER display). This will make the conversion have approximately the correct DVS event timing. (jAER can drop APS frames if there are too many DVS events, so don't count on this.) Once you have the AVI from jAER, you can generate v2e events from it with _v2e.py_ and see how they compare with the original DVS events in jAER, by playing the exported v2e .aedat file in jAER.
 

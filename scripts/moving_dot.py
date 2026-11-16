@@ -80,7 +80,7 @@ class moving_dot(base_synthetic_input): # the class name should be the same as t
         if (args.cycles is None and args.t_total is None) or (args.cycles is not None and args.t_total is not None):
             raise Exception('specify either one of --cycles or --t_total')
 
-        self.speed_pps = 1000  # final speed, pix/s
+        self.speed_pps = 10000  # final speed, pix/s
         self.dot_sigma: float = 1  # gaussian sigma of dot in pixels
 
         self.radius = args.radius  # of circular motion of dot
