@@ -42,50 +42,58 @@ of over 800X and the 220k frames that needed to be produced for DVS modeling.
 
 We advise using the _--stop_ option for trial run before starting a long conversion.
 ## Using v2e in Google CoLab
-If you don't want to install, try [opening v2e in google colab](https://colab.research.google.com/drive/1czx-GJnx-UkhFVBbfoACLVZs8cYlcr_M?usp=sharing).
+If you don't want to install, try [opening v2e in google colab](https://colab.research.google.com/drive/1czx-GJnx-UkhFVBbfoACLVZs8cYlcr_M?usp=sharing). This is an older version of v2e, at least for now.
 
 ## Local Installation
-There are 3 general steps
-1. Make a _conda_ environment
-2. Install _pytoch_ and other _conda_ distributed packages to this environment
-3. Install the rest of the packages and _v2e_ to the conda enviroment with _pip_.
 
-_pip_ is needed because some packages are not availble from the conda repositories. It is important to go in this order because _conda_ in general is not aware of _pip_ installs.
+v2e requires Python 3.14 and is installed with [uv](https://docs.astral.sh/uv/). Python 3.15 is the latest stable release, but h5py does not yet publish 3.15 wheels, so this package stays on 3.14 until that stack installs from wheels. PyPI wheels supply CUDA PyTorch on Linux, and CPU PyTorch on Windows and macOS.
 
-### Make conda environment
-Install _v2e_ to a separate Python environment
-such as `conda` environment:
+### Use the published package
+
+Install the command into its own environment:
 
 ```bash
-conda create -n v2e python=3.10  # create a new environment
-conda activate v2e  # activate the environment
-```
-### Ensure you have CUDA enabled GPU-accelerated _pytorch_
-See https://pytorch.org/get-started/locally/ to generate the correct
-conda install command to enable GPU-accelerated CUDA. On windows Sept 2024, for example, this tool generated the following command. _v2e_ does not use _torchaudio_ so you can leave it out.
-```
-conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+uv tool install v2e
+v2e --help
 ```
 
-You may want to check this stackoverflow question:
-https://stackoverflow.com/questions/57238344/i-have-a-gpu-and-cuda-installed-in-windows-10-but-pytorchs-torch-cuda-is-availa
+Or add v2e to another project:
 
-### Use pip to install rest of packages and v2e
-After installing pytorch to your CUDA environment, to install v2e in developer mode (so your edits to source take effect immediately), run the following command in your terminal inside the activated conda environment. The `python -m pip install -e .` command runs _setup.py_ which installs more packages and adds a script to run _v2e_ from the command line to the _conda_ enviroment python path; see https://stackoverflow.com/questions/39023758/what-does-pip-install-dot-mean:
 ```bash
-conda activate v2e # activate your env with pytoch already installed by conda
+uv add v2e
+uv run v2e --help
+```
+
+On Windows or macOS, that install uses CPU PyTorch. To use an NVIDIA GPU in the environment that should run v2e, install the matching CUDA build after the package:
+
+```bash
+uv pip install torch torchvision --torch-backend=auto
+```
+
+### Develop from a git checkout
+
+```bash
 git clone https://github.com/SensorsINI/v2e
 cd v2e
-python -m pip install -e . # use pip to install requirements from setup.py in user mode (so your edits to source files in v2e take effect immediately
+uv sync
+uv run v2e --help
 ```
 
-+ If you want an additional Windows GUI interface, you will need to install [Gooey](https://github.com/chriskiehl/Gooey) package. This package works the best on Windows:
-    ```bash
-    pip install Gooey
-    ```
-    On Linux, `Gooey` can be hard to install.
+`uv sync` creates `.venv` from the lockfile and installs an editable checkout, so edits to the source take effect immediately. The same CUDA command above applies inside that environment when you want a GPU build on Windows or macOS.
 
-    For a sample of conversion using the gooey GUI, see https://youtu.be/THJqRC_q2kY
+The optional Windows GUI uses [Gooey](https://github.com/chriskiehl/Gooey). It is not installed by default, and it is often difficult to install on Linux.
+
+```bash
+uv sync --extra gui
+```
+
+For a sample conversion using the Gooey GUI, see https://youtu.be/THJqRC_q2kY
+
+Dataset helpers stay in the repository. For example:
+
+```bash
+uv run python dataset_scripts/ddd/ddd_extract_data.py
+```
 
 ### Download SuperSloMo model
 

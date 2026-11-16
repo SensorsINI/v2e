@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "v2e"
+version = "1.8.0"
+description = "Generates synthetic DVS events from conventional video"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.14,<3.15"
+authors = [
+    { name = "Tobi Delbruck", email = "tobi@ini.uzh.ch" },
+    { name = "Yuhuang Hu", email = "yuhuang.hu@ini.uzh.ch" },
+    { name = "Zhe He" },
+]
+keywords = ["dvs", "event-camera", "video", "pytorch"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "numpy>=2,<2.6",
+    "torch>=2.15",
+    "torchvision",
+    "opencv-python",
+    "numba>=0.68",
+    "h5py",
+    "dv-processing>=2.1.1",
+    "argcomplete",
+    "engineering-notation",
+    "tqdm",
+    "easygui",
+    "screeninfo",
+    "plyer",
+    "matplotlib",
+    "pandas",
+    "scikit-image",
+]
+
+[project.optional-dependencies]
+gui = ["Gooey>=1.0.3"]
+
+[project.urls]
+Homepage = "https://github.com/SensorsINI/v2e"
+Changelog = "https://github.com/SensorsINI/v2e/blob/master/CHANGELOG.md"
+
+[project.scripts]
+v2e = "v2e:main"
+
+[tool.hatch.build]
+exclude = [
+    "v2ecore/.idea",
+    "v2ecore/**/*.ipynb",
+    ".gitignore",
+]
+
+[tool.hatch.build.targets.wheel]
+only-include = ["v2ecore", "v2e.py"]
+
+[tool.hatch.build.targets.sdist]
+ignore-vcs = true
+only-include = ["v2ecore", "v2e.py", "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"v2e.py" = "v2e.py"

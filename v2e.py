@@ -67,8 +67,8 @@ torch_device:str = torch.device('cuda' if torch.cuda.is_available() else 'cpu').
 logger.info(f'torch device is {torch_device}')
 if torch_device=='cpu':
     logger.warning('CUDA GPU acceleration of pytorch operations is not available; '
-                   'see https://pytorch.org/get-started/locally/ '
-                   'to generate the correct conda install command to enable GPU-accelerated CUDA.')
+                   'see the README for the uv CUDA install, '
+                   'uv pip install torch torchvision --torch-backend=auto')
 
 # may only apply to windows
 try:
@@ -77,7 +77,7 @@ try:
 except Exception as e:
     logger.info(f"{e}: Gooey GUI builder not available, "
                    f"will use command line arguments.\n"
-                   f"Install with 'pip install Gooey if you want a no-arg GUI to invoke v2e'. See README")
+                   f"Install with 'uv sync --extra gui' if you want a no-arg GUI to invoke v2e. See README")
 
 
 def get_args():
@@ -122,7 +122,7 @@ def main():
     except Exception as e:
         logger.info(
             f'{e}: Gooey package GUI not available, using command line arguments. \n'
-            f'You can try to install with "pip install Gooey"')
+            f'You can try to install with "uv sync --extra gui"')
 
     (args,other_args,command_line) = get_args()
 
