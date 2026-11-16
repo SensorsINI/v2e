@@ -325,3 +325,10 @@ output/tennis-quick/dvs-video.avi
 output/tennis-quick/events.aedat4
 output/tennis-quick/video_orig.avi
 output/tennis-quick/video_slomo.avi
+v2e-output/__main__-args.txt
+output/horse-quick/__main__-args.txt
+output/horse-quick/dvs-video-frame_times.txt
+output/horse-quick/dvs-video.avi
+output/horse-quick/events.aedat4
+output/horse-quick/video_orig.avi
+output/horse-quick/video_slomo.avi

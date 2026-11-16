@@ -38,7 +38,7 @@ from v2ecore.v2e_args import NO_SLOWDOWN
 from v2ecore.renderer import EventRenderer, ExposureMode
 from v2ecore.slomo import SuperSloMo
 from v2ecore.emulator import EventEmulator
-from v2ecore.v2e_utils import inputVideoFileDialog
+from v2ecore.v2e_utils import inputVideoFileDialog, _checkout_root
 import logging
 import time
 from typing import Optional, Any
@@ -86,7 +86,9 @@ def get_args():
 
     parser = argparse.ArgumentParser(
         description='v2e: generate simulated DVS events from video.',
-        epilog='Run with no --input to open file dialog', allow_abbrev=True,
+        epilog='Run with no options to choose a video and convert its first '
+               'second (or the whole video, if it is shorter) after you '
+               'confirm the options.', allow_abbrev=True,
         formatter_class=SmartFormatter)
 
     # https://kislyuk.github.io/argcomplete/#global-completion
@@ -110,6 +112,159 @@ def get_args():
     for a in sys.argv:
         command_line=command_line+' '+a
     return (args_namespace,other_args,command_line)
+
+
+def _invoked_with_no_options():
+    """True when v2e was started with only the program name."""
+    return not any(arg.strip() for arg in sys.argv[1:])
+
+
+def _probe_video(path):
+    """Read duration and size from a video file. None for a folder or a file that will not open."""
+    if os.path.isdir(path):
+        return None
+    cap = cv2.VideoCapture(path)
+    try:
+        if not cap.isOpened():
+            return None
+        fps = float(cap.get(cv2.CAP_PROP_FPS) or 0)
+        frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+    finally:
+        cap.release()
+    duration = (frames - 1) / fps if fps > 0 and frames >= 2 else None
+    return {'fps': fps, 'frames': frames, 'width': width, 'height': height, 'duration': duration}
+
+
+def _default_stop_time(duration_s, limit_s=1.0):
+    """Stop time for a no-option run.
+
+    None converts the whole source because it is already shorter than limit_s.
+    """
+    if duration_s is not None and duration_s <= limit_s:
+        return None
+    return limit_s
+
+
+def _shell_quote(text):
+    """Quote one argument for the shell that is running v2e."""
+    text = str(text)
+    if sys.platform == 'win32':
+        return "'" + text.replace("'", "''") + "'"
+    return "'" + text.replace("'", "'\\''") + "'"
+
+
+# Width, height, and the command-line flag for each DVS camera v2e can name.
+_DVS_CAMERAS = (
+    (128, 128, 'dvs128'),
+    (240, 180, 'dvs240'),
+    (346, 260, 'dvs346'),
+    (640, 480, 'dvs640'),
+    (1024, 768, 'dvs1024'),
+)
+
+
+def _camera_for_frame_size(width, height):
+    """Return (flag, width, height) for a frame size.
+
+    A size that matches a DVS camera is kept. Any other size, including a
+    size that could not be read, becomes DAVIS346 so jAER can select a chip
+    from the AEDAT-4 file.
+    """
+    for cam_w, cam_h, name in _DVS_CAMERAS:
+        if width == cam_w and height == cam_h:
+            return name, cam_w, cam_h
+    return 'dvs346', 346, 260
+
+
+def _frame_size_from_capture(cap):
+    """Return (width, height) from a folder reader or an OpenCV capture."""
+    if hasattr(cap, 'frame_width') and hasattr(cap, 'frame_height'):
+        width = int(cap.frame_width or 0)
+        height = int(cap.frame_height or 0)
+        if width > 0 and height > 0:
+            return width, height
+    if hasattr(cap, 'get'):
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+        if width > 0 and height > 0:
+            return width, height
+    return 0, 0
+
+
+def _minimal_conversion_command(input_file, stop_time, camera_flag):
+    """Shortest command that repeats this no-option conversion."""
+    program = 'uv run v2e' if _checkout_root() else 'v2e'
+    parts = [program, '-i', _shell_quote(os.path.abspath(input_file))]
+    if stop_time is not None:
+        parts.append(f'--stop_time={stop_time:g}')
+    parts.append(camera_flag)
+    return ' '.join(parts)
+
+
+def _confirm_default_conversion(args, input_file):
+    """Limit a no-option run to 1 second and ask before creating output."""
+    info = _probe_video(input_file)
+    duration = None if info is None else info['duration']
+    args.stop_time = _default_stop_time(duration)
+    if duration is None:
+        limit_note = 'source length could not be read; conversion stops at 1s'
+        stop_shown = args.stop_time
+    elif args.stop_time is None:
+        limit_note = f'source is {duration:.3f}s, shorter than 1s, so the whole video is converted'
+        stop_shown = f'end of video ({duration:.3f}s)'
+    else:
+        limit_note = f'source is {duration:.3f}s; conversion stops at 1s'
+        stop_shown = args.stop_time
+    frame_w = info['width'] if info else 0
+    frame_h = info['height'] if info else 0
+    camera_name, out_w, out_h = _camera_for_frame_size(frame_w, frame_h)
+    setattr(args, camera_name, True)
+    if frame_w == out_w and frame_h == out_h:
+        size = f'{out_w}x{out_h}'
+    elif frame_w and frame_h:
+        size = f'{out_w}x{out_h} (DAVIS346; input is {frame_w}x{frame_h})'
+    else:
+        size = f'{out_w}x{out_h} (DAVIS346; input size was not read)'
+    lines = [
+        'No command-line options were given.',
+        limit_note,
+        f'input:\t{input_file}',
+        f'start_time:\t{args.start_time}',
+        f'stop_time:\t{stop_shown}',
+        f'output_folder:\t{args.output_folder}',
+        f'unique_output_folder:\t{args.unique_output_folder}',
+        f'output_size:\t{size}',
+        f'dvs_aedat4:\t{args.dvs_aedat4}',
+        f'dvs_vid:\t{args.dvs_vid}',
+        f'vid_orig:\t{args.vid_orig}',
+        f'vid_slomo:\t{args.vid_slomo}',
+        f'disable_slomo:\t{args.disable_slomo}',
+        f'auto_timestamp_resolution:\t{args.auto_timestamp_resolution}',
+        f'slomo_model:\t{args.slomo_model}',
+        f'dvs_exposure:\t{args.dvs_exposure}',
+        f'pos_thres:\t{args.pos_thres}',
+        f'neg_thres:\t{args.neg_thres}',
+        f'sigma_thres:\t{args.sigma_thres}',
+        f'cutoff_hz:\t{args.cutoff_hz}',
+        f'leak_rate_hz:\t{args.leak_rate_hz}',
+        f'shot_noise_rate_hz:\t{args.shot_noise_rate_hz}',
+        f'no_preview:\t{args.no_preview}',
+    ]
+    logger.info('options that will be used:\n' + '\n'.join(lines))
+    print(_minimal_conversion_command(input_file, args.stop_time, f'--{camera_name}'))
+    while True:
+        try:
+            answer = input('Convert with these options? [y/n] ').strip().lower()
+        except EOFError:
+            answer = 'n'
+        if answer in ('y', 'yes'):
+            return
+        if answer in ('n', 'no'):
+            logger.info('conversion cancelled')
+            v2e_quit(0)
+        print('Enter y or n.')
 
 
 def main():
@@ -143,6 +298,8 @@ def main():
         except Exception as e:
             logger.error(f'no input file specified and cannot show input file dialog; are you running without graphical display? ({e})')
             v2e_quit(1)
+        if _invoked_with_no_options():
+            _confirm_default_conversion(args, input_file)
 
     # Set output folder
     output_folder = set_output_folder(
@@ -362,23 +519,20 @@ def main():
                 logger.info(f'Input video frame rate {srcFps}Hz is overridden by command line argument --input_frame_rate={args.input_frame_rate}')
                 srcFps=args.input_frame_rate
 
-        if cap is not None:
-            # set the output width and height from first image in folder, but only if they were not already set
-            set_size = False
-            if output_height is None and hasattr(cap,'frame_height'):
-                set_size = True
-                output_height = cap.frame_height
-            if output_width is None and hasattr(cap,'frame_width'):
-                set_size = True
-                output_width = cap.frame_width
-            if set_size:
-                logger.warning(
-                    f'From input frame automatically set DVS output_width={output_width} and/or output_height={output_height}. '
-                    f'This may not be desired behavior. \nCheck DVS camera sizes arguments.')
-                time.sleep(5);
-            elif output_height is None or output_width is None:
-                logger.warning(
-                    'Could not read video frame size from video input and so could not automatically set DVS output size. \nCheck DVS camera sizes arguments.')
+        if cap is not None and (output_width is None or output_height is None):
+            frame_w, frame_h = _frame_size_from_capture(cap)
+            camera_name, output_width, output_height = _camera_for_frame_size(frame_w, frame_h)
+            if frame_w == output_width and frame_h == output_height:
+                logger.info(
+                    f'Input frames are {frame_w}x{frame_h}, so the DVS output uses that camera size')
+            elif frame_w and frame_h:
+                logger.info(
+                    f'Input frames are {frame_w}x{frame_h}, which is not a DVS camera size. '
+                    f'Output is {camera_name} ({output_width}x{output_height}) so jAER can play the AEDAT-4 file')
+            else:
+                logger.info(
+                    f'Input frame size could not be read. '
+                    f'Output is {camera_name} ({output_width}x{output_height}) so jAER can play the AEDAT-4 file')
 
         # Check frame rate and number of frames
         if srcFps == 0:

@@ -223,13 +223,13 @@ def v2e_args(parser):
     camGroup.add_argument(
         "--output_height", type=int, default=None,
         help="Height of output DVS data in pixels. "
-             "If None, same as input video. "
-             "Use --output_height=260 for Davis346.")
+             "If None, use the input size when it is a DVS camera, "
+             "otherwise 260 (DAVIS346) so jAER can play the file.")
     camGroup.add_argument(
         "--output_width", type=int, default=None,
         help="Width of output DVS data in pixels. "
-             "If None, same as input video. "
-             "Use --output_width=346 for Davis346.")
+             "If None, use the input size when it is a DVS camera, "
+             "otherwise 346 (DAVIS346) so jAER can play the file.")
 
     camAction = camGroup.add_mutually_exclusive_group()
     camAction.add_argument(

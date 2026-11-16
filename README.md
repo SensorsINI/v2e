@@ -463,7 +463,7 @@ Center-Surround DVS:
 SCIDVS pixel:
   --scidvs              Simulate proposed SCIDVS pixel with nonlinear
                         adapatation and high gain
-Run with no --input to open file dialog
+Run with no options to choose a video and convert its first second (or the whole video, if it is shorter) after you confirm the options.
 ```
 You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.  Or leave out all options and just use the file chooser to select the movie.
 
@@ -606,7 +606,7 @@ optional arguments:
   --dvs240              Set size for 240x180 DVS (Davis240). Use for DDD17 recording. (default: False)
   --dvs346              Set size for 346x260 DVS (Davis346). Use for DDD20 recording. (default: False)
 
-Run with no --input to open file dialog
+Run with no options to choose a video and convert its first second (or the whole video, if it is shorter) after you confirm the options.
 
 ```
 
