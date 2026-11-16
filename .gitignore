@@ -170,4 +170,4 @@ v2e/output/log-normal.pdf
 v2e/output/lognoise.pdf
 v2e/output/lognormal.pdf
 v2e/output/noise-time.pdf
-v2e-output/__main__-args.txt
+v2e-output*/**
