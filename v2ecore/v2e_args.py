@@ -4,6 +4,7 @@ import logging
 import time
 from pathlib import Path
 from v2ecore.emulator import EventEmulator
+from v2ecore.v2e_utils import default_slomo_checkpoint
 
 from v2ecore.renderer import ExposureMode
 
@@ -73,10 +74,6 @@ def v2e_args(parser):
      the parser with all the standard v2e arguments
 
     """
-    v2ecore_path=os.path.dirname(__file__)
-
-
-
     # general arguments for output folder, overwriting, etc
     outGroupGeneral = parser.add_argument_group('Output: General')
     outGroupGeneral.add_argument(
@@ -259,8 +256,9 @@ def v2e_args(parser):
              "(which is perhaps modified by --input_slowmotion_factor).")
     sloMoGroup.add_argument(
         "--slomo_model", type=expandpath,
-        default=os.path.join(v2ecore_path,"../input/SuperSloMo39.ckpt"),
-        help="path of slomo_model checkpoint.")
+        default=default_slomo_checkpoint(),
+        help="path of slomo_model checkpoint. "
+             "If this default file is missing, v2e downloads it.")
     sloMoGroup.add_argument(
         "--batch_size", type=int, default=8,
         help="Batch size in frames for SuperSloMo. "

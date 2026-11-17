@@ -25,7 +25,7 @@ See the [changelog](https://github.com/SensorsINI/v2e/blob/master/CHANGELOG.md) 
 
 ## Quick start
 
-From the repository root, after `uv sync`. The tennis conversion also needs [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) and [SuperSloMo39.ckpt](https://drive.google.com/file/d/1ETID_4xqLpRBrRo1aOT7Yphs3QqWR_fx/view?usp=sharing) in the `input` folder. The synthetic examples do not. Each command writes `events.aedat4` in its output folder. Open that file in [jAER](https://jaerproject.org).
+From the repository root, after `uv sync`. The tennis conversion also needs [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the `input` folder. The SuperSloMo checkpoint is downloaded on first use. The synthetic examples do not need it. Each command writes `events.aedat4` in its output folder. Open that file in [jAER](https://jaerproject.org).
 
 ### 1. Short tennis conversion
 
@@ -141,9 +141,7 @@ uv run python dataset_scripts/ddd/ddd_extract_data.py
 We use the excellent [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects/superslomo/) framework to interpolate the APS frames.
 However, since APS frames only record light intensity, we  retrained it on grayscale images.
 
-Download our pre-trained model checkpoint from Google Drive
-[SuperSloMo39.ckpt](https://drive.google.com/file/d/1ETID_4xqLpRBrRo1aOT7Yphs3QqWR_fx/view?usp=sharing) (151 MB) and save it to the _input_ folder. 
-The default value of --slomo_model argument is set to this location.
+v2e downloads the pre-trained checkpoint [SuperSloMo39.ckpt](https://drive.google.com/file/d/1ETID_4xqLpRBrRo1aOT7Yphs3QqWR_fx/view?usp=sharing) (151 MB) the first time SuperSloMo runs. A git checkout saves it in the `input` folder. An installed copy saves it in the user v2e folder (`%LOCALAPPDATA%\v2e\input` on Windows, `~/.v2e/input` otherwise), so later runs find it from any working directory. Pass `--slomo_model` to use a checkpoint you downloaded yourself.
 
 Special thanks to Zhe He for recovering the checkpoint file.
 
@@ -336,7 +334,8 @@ SloMo upsampling (see also "DVS timestamp resolution" group):
                         source video (which is perhaps modified by
                         --input_slowmotion_factor).
   --slomo_model SLOMO_MODEL
-                        path of slomo_model checkpoint.
+                        path of slomo_model checkpoint. If this default file
+                        is missing, v2e downloads it.
   --batch_size BATCH_SIZE
                         Batch size in frames for SuperSloMo. Batch size 8-16
                         is recommended if your GPU has sufficient memory.

@@ -6,6 +6,7 @@
  - Replace the conda plus pip install with `uv sync` for development and `uv tool install v2e` or `uv add v2e` for users.
  - Depend on NumPy 2 and dv-processing 2.1.1. Gooey is an optional `gui` extra.
  - Default event output is AEDAT-4.0 (`events.aedat4`) written with dv-processing for jAER. `--dvs_aedat2` still writes AEDAT-2.0.
+ - Download SuperSloMo39.ckpt on first use. A checkout stores it in `input`. An installed copy stores it in the user v2e folder so it is found from any working directory.
 
 # v1.6.2
 

@@ -2,6 +2,8 @@ import logging
 import os
 import sys
 import tempfile
+import urllib.error
+import urllib.request
 
 import numpy as np
 import cv2
@@ -250,6 +252,144 @@ def _checkout_root():
     if (root / '.git').exists() and (root / 'v2e.py').is_file():
         return str(root)
     return None
+
+
+SLOMO_CHECKPOINT_NAME = "SuperSloMo39.ckpt"
+SLOMO_DRIVE_ID = "1ETID_4xqLpRBrRo1aOT7Yphs3QqWR_fx"
+SLOMO_DRIVE_PAGE = (
+    "https://drive.google.com/file/d/1ETID_4xqLpRBrRo1aOT7Yphs3QqWR_fx/view")
+# confirm=t skips the large-file interstitial. The second URL is the older
+# export endpoint, used when the first one returns a warning page.
+_SLOMO_DOWNLOAD_URLS = (
+    "https://drive.usercontent.google.com/download"
+    f"?id={SLOMO_DRIVE_ID}&export=download&confirm=t",
+    "https://docs.google.com/uc"
+    f"?export=download&id={SLOMO_DRIVE_ID}&confirm=t",
+)
+# The published checkpoint is 151 MB. A smaller body is the HTML warning page.
+_SLOMO_MIN_BYTES = 50 * 1024 * 1024
+
+
+def default_slomo_directory():
+    """Folder that holds SuperSloMo39.ckpt, independent of the process cwd.
+
+    A git checkout, or a shell whose working directory is that checkout, uses
+    ``input``. An installed copy uses a user data folder so the same file is
+    found when v2e is started from any directory.
+    """
+    checkout = _checkout_root()
+    if checkout:
+        return Path(checkout) / "input"
+    cwd = Path.cwd()
+    if (cwd / ".git").exists() and (cwd / "v2e.py").is_file():
+        return cwd / "input"
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA")
+        if not base:
+            base = str(Path.home() / "AppData" / "Local")
+        return Path(base) / "v2e" / "input"
+    data_home = os.environ.get("XDG_DATA_HOME")
+    if data_home:
+        return Path(data_home) / "v2e" / "input"
+    return Path.home() / ".v2e" / "input"
+
+
+def default_slomo_checkpoint():
+    """Absolute path of the SuperSloMo checkpoint v2e loads by default."""
+    return str((default_slomo_directory() / SLOMO_CHECKPOINT_NAME).resolve())
+
+
+def ensure_slomo_checkpoint(path=None):
+    """Return a readable checkpoint path, downloading the default if needed.
+
+    A path the user chose is returned as-is when the file exists, and raises
+    ``FileNotFoundError`` when it does not. The default path is downloaded
+    into :func:`default_slomo_directory` when that file is not there yet.
+    """
+    if path is None or path == "":
+        path = default_slomo_checkpoint()
+    path = Path(os.path.abspath(os.path.expanduser(str(path))))
+    if path.is_file():
+        return str(path)
+    default = Path(default_slomo_checkpoint())
+    if os.path.normcase(path) != os.path.normcase(default):
+        raise FileNotFoundError(
+            "SuperSloMo model checkpoint " + str(path) +
+            " does not exist or is not readable")
+    _download_slomo_checkpoint(default)
+    return str(default)
+
+
+def _slomo_download_failed(dest, reason):
+    raise FileNotFoundError(
+        f"Could not download {SLOMO_CHECKPOINT_NAME} to {dest} ({reason}). "
+        f"Download {SLOMO_DRIVE_PAGE} and save it as {dest}")
+
+
+def _download_slomo_checkpoint(dest: Path):
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    partial = dest.with_name(dest.name + ".partial")
+    logger.info(
+        "SuperSloMo checkpoint not found. Downloading %s to %s",
+        SLOMO_CHECKPOINT_NAME, dest)
+    last_reason = "no download URL could be reached"
+    for url in _SLOMO_DOWNLOAD_URLS:
+        try:
+            _download_slomo_once(url, partial)
+        except (OSError, urllib.error.URLError, RuntimeError) as exc:
+            last_reason = str(exc)
+            partial.unlink(missing_ok=True)
+            logger.warning("SuperSloMo download failed: %s", last_reason)
+            continue
+        if partial.stat().st_size < _SLOMO_MIN_BYTES:
+            last_reason = (
+                f"file is only {partial.stat().st_size} bytes; "
+                "expected the 151 MB checkpoint")
+            partial.unlink(missing_ok=True)
+            continue
+        partial.replace(dest)
+        logger.info(
+            "saved SuperSloMo checkpoint %s (%d bytes)",
+            dest, dest.stat().st_size)
+        return
+    _slomo_download_failed(dest, last_reason)
+
+
+def _download_slomo_once(url, partial: Path):
+    from tqdm import tqdm
+
+    request = urllib.request.Request(url, headers={"User-Agent": "v2e"})
+    with urllib.request.urlopen(request, timeout=120) as response:
+        total = int(response.headers.get("Content-Length") or 0)
+        content_type = (response.headers.get("Content-Type") or "").lower()
+        if "text/html" in content_type:
+            raise RuntimeError("server returned an HTML page")
+        with open(partial, "wb") as out, tqdm(
+                total=total or None,
+                unit="B",
+                unit_scale=True,
+                unit_divisor=1024,
+                desc=SLOMO_CHECKPOINT_NAME) as bar:
+            first = response.read(1024 * 1024)
+            if not _slomo_bytes_look_like_checkpoint(first):
+                raise RuntimeError("server returned a web page, not the checkpoint")
+            out.write(first)
+            bar.update(len(first))
+            while True:
+                chunk = response.read(1024 * 1024)
+                if not chunk:
+                    break
+                out.write(chunk)
+                bar.update(len(chunk))
+
+
+def _slomo_bytes_look_like_checkpoint(blob: bytes) -> bool:
+    """PyTorch checkpoints start with a pickle protocol byte or a zip header."""
+    if not blob:
+        return False
+    if blob.lstrip()[:1] == b"<":
+        return False
+    return blob[:1] == b"\x80" or blob[:2] == b"PK"
 
 
 def _foreground_file_dialog(title, filetypes, initialdir, initialfile):

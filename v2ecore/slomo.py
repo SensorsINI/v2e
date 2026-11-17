@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 import torchvision.transforms as transforms
 
-from v2ecore.v2e_utils import video_writer, v2e_quit
+from v2ecore.v2e_utils import ensure_slomo_checkpoint, video_writer, v2e_quit
 import v2ecore.dataloader as dataloader
 import v2ecore.model as model
 
@@ -86,7 +86,7 @@ class SuperSloMo(object):
         else:
             self.device = "cpu"
             logger.warning('CUDA not available, will be slow :-(')
-        self.checkpoint = model
+        self.checkpoint = ensure_slomo_checkpoint(model)
         self.batch_size = batch_size
         if not auto_upsample and (not isinstance(upsampling_factor, int) or upsampling_factor < 2):
             raise ValueError(
