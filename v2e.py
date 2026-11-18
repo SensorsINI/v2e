@@ -193,6 +193,37 @@ def _frame_size_from_capture(cap):
     return 0, 0
 
 
+def _write_davis_source_frames(emulator, source_frames_dir, raw_min, raw_max, scale):
+    """Write stage-1 luma frames into the AEDAT-4 file on the DVS clock.
+
+    Frame i is the converted source frame. Its time is source-frame index i
+    on the same scale as the event timestamps. The last source frame is the
+    endpoint of the last interpolation interval, so it is held at the last
+    event time when that index falls past the samples actually emitted.
+    """
+    src_files = sorted(glob.glob(os.path.join(source_frames_dir, "*.npy")))
+    if not src_files:
+        logger.warning("--davis346: no converted frames to write into AEDAT-4")
+        return
+    logger.info(
+        "--davis346: writing {} monochrome frames into the AEDAT-4 file"
+        .format(len(src_files)))
+    # Sorted npy order is the frame order SuperSloMo and the no-slomo path
+    # use, so index i is the same time unit as the event clock.
+    times = []
+    for i in range(len(src_files)):
+        raw_t = min(float(i), raw_max)
+        times.append((raw_t - raw_min) * scale)
+    for i, path in enumerate(src_files):
+        if i + 1 < len(times):
+            exposure = times[i + 1] - times[i]
+        elif i > 0:
+            exposure = times[i] - times[i - 1]
+        else:
+            exposure = 1.0 / 30.0
+        emulator.append_davis_frame(np.load(path), times[i], max(exposure, 1e-6))
+
+
 def _minimal_conversion_command(input_file, stop_time, camera_flag):
     """Shortest command that repeats this no-option conversion."""
     program = 'uv run v2e' if _checkout_root() else 'v2e'
@@ -313,7 +344,7 @@ def main():
     # Set output width and height based on the arguments
     output_width, output_height = set_output_dimension(
         args.output_width, args.output_height,
-        args.dvs128, args.dvs240, args.dvs346,
+        args.dvs128, args.dvs240, args.dvs346 or args.davis346,
         args.dvs640, args.dvs1024,
         logger)
 
@@ -469,6 +500,15 @@ def main():
     dvs_aedat2 = args.dvs_aedat2
     dvs_aedat4 = args.dvs_aedat4
     dvs_text = args.dvs_text
+    if args.davis346 and dvs_aedat4 is None:
+        dvs_aedat4 = "events.aedat4"
+        logger.info(
+            "--davis346 writes a DAVIS346 AEDAT-4 file (events.aedat4) "
+            "with DVS events and the converted monochrome frames")
+    elif args.davis346:
+        logger.info(
+            "--davis346 writes converted monochrome frames into {}"
+            .format(dvs_aedat4))
     # signal noise output CSV file
     label_signal_noise=args.label_signal_noise
     if label_signal_noise and dvs_text is None and dvs_aedat2 is None:
@@ -720,7 +760,8 @@ def main():
         hdr=hdr,
         scidvs=scidvs,
         record_single_pixel_states=record_single_pixel_states,
-        label_signal_noise=label_signal_noise
+        label_signal_noise=label_signal_noise,
+        davis_frames=args.davis346
     )
 
     if args.dvs_params is not None:
@@ -748,6 +789,8 @@ def main():
                   desc='dvs', unit='fr') as pbar:
             with torch.no_grad():
                 while fr is not None:
+                    if args.davis346:
+                        emulator.append_davis_frame(fr, fr_time)
                     newEvents = emulator.generate_events(fr, fr_time)
                     pbar.update(1)
                     i += 1
@@ -967,10 +1010,14 @@ def main():
                 nFrames = len(interpFramesFilenames)
                 # interpTimes is in units of 1 per input frame,
                 # normalize it to src video time range
-                f = srcVideoRealProcessedDuration/(
-                    np.max(interpTimes)-np.min(interpTimes))
+                raw_min = float(np.min(interpTimes))
+                raw_max = float(np.max(interpTimes))
+                f = srcVideoRealProcessedDuration / (raw_max - raw_min)
                 # compute actual times from video times
                 interpTimes = f*interpTimes
+                if args.davis346:
+                    _write_davis_source_frames(
+                        emulator, source_frames_dir, raw_min, raw_max, f)
                 # debug
                 if slomo_stats_plot:
                     from matplotlib import pyplot as plt  # TODO debug

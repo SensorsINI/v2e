@@ -484,7 +484,7 @@ video_slomo.avi
 
 * _dvs-video.avi_: DVS video (with playback rate 30Hz) but with frame rate (DVS timestamp resolution) set by source video frame rate times slowdown_factor.
 * _dvs-video-frame_times.txt_: The times of the DVS frames. Useful when _--dvs_exposure count_ or _--dvs_exposure area-count_ methods are used.
-* _events.aedat4_: AEDAT-4.0 file written by default for playback in [jAER](https://jaerproject.org). jAER selects the chip from the file size and camera name.
+* _events.aedat4_: AEDAT-4.0 file written by default for playback in [jAER](https://jaerproject.org). jAER selects the chip from the file size and camera name. Pass `--davis346` to make this a monochrome DAVIS346 recording: 346×260, with the converted grayscale frames stored in the same file as the DVS events.
 * _tennis.aedat_: optional AEDAT-2.0 file from `--dvs_aedat2` (use the AEChip _Davis346Blue_ to play this file.)
 * _v2e-args.txt_: All the parameters and logging output from the run.
 * _video_orig.avi_: input video, but converted to luma and resized to output (width,height) and with repeated frames to allow comparison to _slomo.avi_.

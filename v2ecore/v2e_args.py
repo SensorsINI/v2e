@@ -239,6 +239,12 @@ def v2e_args(parser):
         '--dvs346', action='store_true',
         help='Set size for 346x260 DVS (DAVIS346)')
     camAction.add_argument(
+        '--davis346', action='store_true',
+        help='346x260 monochrome DAVIS346 AEDAT-4 recording for jAER: '
+             'DVS events plus the converted grayscale frames in one file. '
+             'Turns on AEDAT-4 output (default events.aedat4) and uses '
+             'the same size as --dvs346.')
+    camAction.add_argument(
         '--dvs640', action='store_true',
         help='Set size for 640x480 DVS (DAVIS640)')
     camAction.add_argument(

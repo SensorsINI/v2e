@@ -43,6 +43,8 @@ dependencies = [
     "matplotlib",
     "pandas",
     "scikit-image",
+    "lz4>=4.4.5",
+    "flatbuffers>=25.12.19",
 ]
 
 [project.optional-dependencies]

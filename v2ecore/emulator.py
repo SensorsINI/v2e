@@ -113,7 +113,8 @@ class EventEmulator(object):
             hdr: bool = False,
             scidvs: bool = False,
             record_single_pixel_states=None,
-            label_signal_noise=False
+            label_signal_noise=False,
+            davis_frames: bool = False
     ):
         """
         Parameters
@@ -160,6 +161,9 @@ class EventEmulator(object):
             Record this pixel states to 'pixel_states.npy'
         label_signal_noise: bool
             Record signal and noise event labels to a CSV file
+        davis_frames: bool
+            Write converted monochrome frames into the AEDAT-4 file
+            (DAVIS346-style events + frames)
         """
 
         self.no_events_warning_count = 0
@@ -274,6 +278,7 @@ class EventEmulator(object):
 
         # label signal and noise events
         self.label_signal_noise=label_signal_noise
+        self.davis_frames = bool(davis_frames)
 
         # record pixel
         self.record_single_pixel_states=record_single_pixel_states
@@ -338,7 +343,8 @@ class EventEmulator(object):
                 logger.info('opening AEDAT-4.0 output file ' + path)
                 self.dvs_aedat4 = AEDat4Output(
                     path, output_width=self.output_width,
-                    output_height=self.output_height)
+                    output_height=self.output_height,
+                    write_frames=self.davis_frames)
 
             if dvs_text:
                 path = os.path.join(self.output_folder, dvs_text)
@@ -399,6 +405,16 @@ class EventEmulator(object):
             self.frame_h5_dataset = None
             self.frame_ts_dataset = None
             self.frame_ev_idx_dataset = None
+
+    def append_davis_frame(self, frame, timestamp_s: float, exposure_s: float = None):
+        """Write one converted grayscale frame into the AEDAT-4 DAVIS file.
+
+        exposure_s is the time until the next frame. When it is omitted, the
+        writer uses the gap to the next append_davis_frame call.
+        """
+        if self.dvs_aedat4 is None or not self.davis_frames:
+            return
+        self.dvs_aedat4.appendFrame(frame, timestamp_s, exposure_s)
 
     def cleanup(self):
         if len(self.cs_steps_taken) > 1:
