@@ -162,49 +162,52 @@ _v2e.py_ reads a standard video (e.g. in .avi, .mp4, .mov, or .wmv), or a folder
 
 Don't be intimidated by the huge number of options. Running _v2e.py_ with no arguments sets reasonable values and opens a file browser to let you select an input video. Inspect the logging output for hints.
 
-**Hint:** Note the options _[--dvs128 | --dvs240 | --dvs346 | --dvs640 | --dvs1024]_; they set output size and width to popular DVS cameras.
+**Hint:** Note the options _[--dvs128 | --dvs240 | --dvs346 | --davis346 | --dvs640 | --dvs1024]_; they set output size to popular DVS cameras. `--davis346` also stores the converted grayscale frames in the AEDAT-4 file.
 
 **On headless platforms**, with no graphics output, use --no_preview option to suppress the OpenCV windows.
 
 ```
-usage: v2e.py [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
-              [--output_in_place [OUTPUT_IN_PLACE]] [--overwrite]
-              [--unique_output_folder [UNIQUE_OUTPUT_FOLDER]]
-              [--skip_video_output]
-              [--auto_timestamp_resolution [AUTO_TIMESTAMP_RESOLUTION]]
-              [--timestamp_resolution TIMESTAMP_RESOLUTION]
-              [--dvs_params DVS_PARAMS] [--pos_thres POS_THRES]
-              [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
-              [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
-              [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ]
-              [--photoreceptor_noise]
-              [--leak_jitter_fraction LEAK_JITTER_FRACTION]
-              [--noise_rate_cov_decades NOISE_RATE_COV_DECADES]
-              [--refractory_period REFRACTORY_PERIOD]
-              [--dvs_emulator_seed DVS_EMULATOR_SEED]
-              [--show_dvs_model_state SHOW_DVS_MODEL_STATE [SHOW_DVS_MODEL_STATE ...]]
-              [--save_dvs_model_state]
-              [--record_single_pixel_states RECORD_SINGLE_PIXEL_STATES]
-              [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
-              [--dvs128 | --dvs240 | --dvs346 | --dvs640 | --dvs1024]
-              [--disable_slomo] [--slomo_model SLOMO_MODEL]
-              [--batch_size BATCH_SIZE] [--vid_orig VID_ORIG]
-              [--vid_slomo VID_SLOMO] [--slomo_stats_plot] [-i INPUT]
-              [--input_frame_rate INPUT_FRAME_RATE]
-              [--input_slowmotion_factor INPUT_SLOWMOTION_FACTOR]
-              [--start_time START_TIME] [--stop_time STOP_TIME] [--crop CROP]
-              [--hdr] [--synthetic_input SYNTHETIC_INPUT]
-              [--dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]]
-              [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
-              [--no_preview] [--ddd_output] [--dvs_h5 DVS_H5]
-              [--dvs_aedat2 DVS_AEDAT2] [--dvs_text DVS_TEXT]
-              [--label_signal_noise] [--cs_lambda_pixels CS_LAMBDA_PIXELS]
-              [--cs_tau_p_ms CS_TAU_P_MS] [--scidvs]
+usage: v2e [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
+           [--output_in_place [OUTPUT_IN_PLACE]] [--overwrite]
+           [--unique_output_folder [UNIQUE_OUTPUT_FOLDER]]
+           [--skip_video_output]
+           [--auto_timestamp_resolution [AUTO_TIMESTAMP_RESOLUTION]]
+           [--timestamp_resolution TIMESTAMP_RESOLUTION]
+           [--dvs_params DVS_PARAMS] [--pos_thres POS_THRES]
+           [--neg_thres NEG_THRES] [--sigma_thres SIGMA_THRES]
+           [--cutoff_hz CUTOFF_HZ] [--leak_rate_hz LEAK_RATE_HZ]
+           [--shot_noise_rate_hz SHOT_NOISE_RATE_HZ] [--photoreceptor_noise]
+           [--leak_jitter_fraction LEAK_JITTER_FRACTION]
+           [--noise_rate_cov_decades NOISE_RATE_COV_DECADES]
+           [--refractory_period REFRACTORY_PERIOD]
+           [--dvs_emulator_seed DVS_EMULATOR_SEED]
+           [--show_dvs_model_state SHOW_DVS_MODEL_STATE [SHOW_DVS_MODEL_STATE ...]]
+           [--save_dvs_model_state]
+           [--record_single_pixel_states RECORD_SINGLE_PIXEL_STATES]
+           [--output_height OUTPUT_HEIGHT] [--output_width OUTPUT_WIDTH]
+           [--dvs128 | --dvs240 | --dvs346 | --davis346 | --dvs640 |
+           --dvs1024] [--disable_slomo] [--slomo_model SLOMO_MODEL]
+           [--batch_size BATCH_SIZE] [--vid_orig VID_ORIG]
+           [--vid_slomo VID_SLOMO] [--slomo_stats_plot] [-i INPUT]
+           [--input_frame_rate INPUT_FRAME_RATE]
+           [--input_slowmotion_factor INPUT_SLOWMOTION_FACTOR]
+           [--start_time START_TIME] [--stop_time STOP_TIME] [--crop CROP]
+           [--hdr] [--synthetic_input SYNTHETIC_INPUT]
+           [--dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]]
+           [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
+           [--no_preview] [--ddd_output] [--dvs_h5 DVS_H5]
+           [--dvs_aedat2 DVS_AEDAT2] [--dvs_aedat4 DVS_AEDAT4]
+           [--dvs_text DVS_TEXT] [--label_signal_noise]
+           [--cs_lambda_pixels CS_LAMBDA_PIXELS] [--cs_tau_p_ms CS_TAU_P_MS]
+           [--scidvs]
+
 v2e: generate simulated DVS events from video.
-optional arguments:
+
+options:
   -h, --help            show this help message and exit
+
 Output: General:
-  -o OUTPUT_FOLDER, --output_folder OUTPUT_FOLDER
+  -o, --output_folder OUTPUT_FOLDER
                         folder to store outputs.
   --avi_frame_rate AVI_FRAME_RATE
                         frame rate of output AVI video files; only affects
@@ -221,6 +224,7 @@ Output: General:
   --skip_video_output   Skip producing video outputs, including the original
                         video, SloMo video, and DVS video. This mode also
                         prevents showing preview of output (cf --no_preview).
+
 DVS timestamp resolution:
   --auto_timestamp_resolution [AUTO_TIMESTAMP_RESOLUTION]
                         (Ignored by --disable_slomo or --synthetic_input.) If
@@ -241,6 +245,7 @@ DVS timestamp resolution:
                         will force high upsampling ratio. Can be combind with
                         --auto_timestamp_resolution to limit upsampling to a
                         maximum limit value.
+
 DVS model:
   --dvs_params DVS_PARAMS
                         Easy optional setting of parameters for DVS
@@ -315,19 +320,27 @@ DVS model:
                         pickled binary dict that has the state arrays over
                         time imcluding a time array.Pixel location can also be
                         specified as x,y without ()
+
 DVS camera sizes (selecting --dvs346, --dvs640, etc. overrides --output_width and --output_height:
   --output_height OUTPUT_HEIGHT
-                        Height of output DVS data in pixels. If None, same as
-                        input video. Use --output_height=260 for Davis346.
+                        Height of output DVS data in pixels. If None, use the
+                        input size when it is a DVS camera, otherwise 260
+                        (DAVIS346) so jAER can play the file.
   --output_width OUTPUT_WIDTH
-                        Width of output DVS data in pixels. If None, same as
-                        input video. Use --output_width=346 for Davis346.
+                        Width of output DVS data in pixels. If None, use the
+                        input size when it is a DVS camera, otherwise 346
+                        (DAVIS346) so jAER can play the file.
   --dvs128              Set size for 128x128 DVS (DVS128)
   --dvs240              Set size for 240x180 DVS (DAVIS240)
   --dvs346              Set size for 346x260 DVS (DAVIS346)
+  --davis346            346x260 monochrome DAVIS346 AEDAT-4 recording for
+                        jAER: DVS events plus the converted grayscale frames
+                        in one file. Turns on AEDAT-4 output (default
+                        events.aedat4) and uses the same size as --dvs346.
   --dvs640              Set size for 640x480 DVS (DAVIS640)
   --dvs1024             Set size for 1024x768 DVS (not supported for AEDAT-2.0
                         output since there is no jAER DVS1024 camera
+
 SloMo upsampling (see also "DVS timestamp resolution" group):
   --disable_slomo       Disables slomo interpolation; the output DVS events
                         will have exactly the timestamp resolution of the
@@ -347,9 +360,9 @@ SloMo upsampling (see also "DVS timestamp resolution" group):
                         slowdown_factor.Specify emtpy string or 'None' to skip
                         output.
   --slomo_stats_plot    show a plot of slomo statistics
+
 Input file handling:
-  -i INPUT, --input INPUT
-                        Input video file or a image folder; leave empty for
+  -i, --input INPUT     Input video file or a image folder; leave empty for
                         file chooser dialog.If the input is a folder, the
                         folder should contain a ordered list of image files.In
                         addition, the user has to set the frame rate manually.
@@ -390,6 +403,7 @@ Input file handling:
                         --hdr for HDR input with floating point gray scale
                         input videos. Units of log input are based on white
                         255 pixels have values ln(255)=5.5441
+
 Synthetic input:
   --synthetic_input SYNTHETIC_INPUT
                         Input from class SYNTHETIC_INPUT that has methods
@@ -404,6 +418,7 @@ Synthetic input:
                         seconds. SYNTHETIC_INPUT must be resolvable from the
                         classpath. SYNTHETIC_INPUT is the module name without
                         .py suffix. See example moving_dot.py.
+
 Output: DVS video:
   --dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]
                         Mode to finish DVS frame event integration:
@@ -421,6 +436,7 @@ Output: DVS video:
                         videos to be this many ON or OFF events for full white
                         or black.
   --no_preview          disable preview in cv2 windows for faster processing.
+
 Output: DVS events:
   --ddd_output          Save frames, frame timestamp and corresponding event
                         index in HDF5 format used for DDD17 and DDD20
@@ -430,6 +446,11 @@ Output: DVS events:
                         Output DVS events as DAVIS346 camera AEDAT-2.0 event
                         file for jAER; one file for real and one file for v2e
                         events. To suppress, supply argument None.
+  --dvs_aedat4 DVS_AEDAT4
+                        Output AEDAT-4.0 events for jAER (default
+                        events.aedat4). The file uses the selected output size
+                        and a camera name jAER can detect. To suppress, supply
+                        argument None.
   --dvs_text DVS_TEXT   Output DVS events as text file with one event per line
                         [timestamp (float s), x, y, polarity (0,1)].
   --label_signal_noise  append to the --dvs_text file a column,containing list
@@ -442,6 +463,7 @@ Output: DVS events:
                         labels shot noise events (because leak noise events
                         arise from leak and cannot be distinguished from
                         photoreceptor input).
+
 Center-Surround DVS:
   --cs_lambda_pixels CS_LAMBDA_PIXELS
                         space constant of surround in pixels, None to disable.
@@ -459,10 +481,13 @@ Center-Surround DVS:
                         simulation of diffuser runs until it converges, i.e.
                         until the maximum change between timesteps is smaller
                         than a threshold value
+
 SCIDVS pixel:
   --scidvs              Simulate proposed SCIDVS pixel with nonlinear
                         adapatation and high gain
-Run with no options to choose a video and convert its first second (or the whole video, if it is shorter) after you confirm the options.
+
+Run with no options to choose a video and convert its first second (or the
+whole video, if it is shorter) after you confirm the options.
 ```
 You can put [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) in the _input_ folder to try it out with the command line below.  Or leave out all options and just use the file chooser to select the movie.
 
