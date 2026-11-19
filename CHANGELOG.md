@@ -1,3 +1,9 @@
+# v1.8.3
+
+## Packaging
+
+ - The PyPI page is a short description in `packaging/README.md`. It links to the GitHub README, shows the tennis example from a raw image URL, and gives the tennis.mov download for a no-argument `v2e` run.
+
 # v1.8.2
 
 ## Bug fixes

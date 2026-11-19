@@ -4,9 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "v2e"
-version = "1.8.2"
+version = "1.8.3"
 description = "Generates synthetic DVS events from conventional video"
-readme = "README.md"
+readme = "packaging/README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.14,<3.15"
 authors = [
@@ -69,7 +69,7 @@ only-include = ["v2ecore", "v2e.py"]
 
 [tool.hatch.build.targets.sdist]
 ignore-vcs = true
-only-include = ["v2ecore", "v2e.py", "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml"]
+only-include = ["v2ecore", "v2e.py", "README.md", "packaging/README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "v2e.py" = "v2e.py"
