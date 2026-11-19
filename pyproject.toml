@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "v2e"
-version = "1.8.0"
+version = "1.8.2"
 description = "Generates synthetic DVS events from conventional video"
 readme = "README.md"
 license = { file = "LICENSE" }

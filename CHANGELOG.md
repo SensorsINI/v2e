@@ -1,3 +1,18 @@
+# v1.8.2
+
+## Bug fixes
+
+ - `v2e --version` and `v2e -V` print the version and exit before the rest of startup.
+ - Suggested commands use double quotes so PowerShell and cmd do not keep the quote marks in the path.
+ - The missing-Gooey notice is shown only the first time.
+
+# v1.8.1
+
+## New features
+
+ - `--davis346` writes one monochrome DAVIS346 AEDAT-4 file for jAER: 346×260 DVS events plus the converted grayscale frames, with packet times so jAER keeps frames and events on one clock.
+ - Download SuperSloMo39.ckpt on first use. A checkout stores it in `input`. An installed copy stores it in the user v2e folder so it is found from any working directory.
+
 # v1.8.0
 
 ## Installation
@@ -6,7 +21,6 @@
  - Replace the conda plus pip install with `uv sync` for development and `uv tool install v2e` or `uv add v2e` for users.
  - Depend on NumPy 2 and dv-processing 2.1.1. Gooey is an optional `gui` extra.
  - Default event output is AEDAT-4.0 (`events.aedat4`) written with dv-processing for jAER. `--dvs_aedat2` still writes AEDAT-2.0.
- - Download SuperSloMo39.ckpt on first use. A checkout stores it in `input`. An installed copy stores it in the user v2e folder so it is found from any working directory.
 
 # v1.6.2
 

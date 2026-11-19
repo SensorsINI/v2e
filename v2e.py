@@ -10,10 +10,30 @@ frames from the original video frames.
 """
 # todo refractory period for pixel
 
+import sys
+
+
+def _package_version():
+    """Installed distribution version, or unknown in an unpackaged tree."""
+    from importlib.metadata import PackageNotFoundError, version
+    try:
+        return version("v2e")
+    except PackageNotFoundError:
+        return "unknown"
+
+
+def _print_version_and_exit():
+    """Leave before torch and the rest of startup."""
+    if any(arg in ("-V", "--version") for arg in sys.argv[1:]):
+        print("v2e " + _package_version())
+        raise SystemExit(0)
+
+
+_print_version_and_exit()
+
 import glob
 import argparse
 import importlib
-import sys
 
 import argcomplete
 import cv2
@@ -70,14 +90,12 @@ if torch_device=='cpu':
                    'see the README for the uv CUDA install, '
                    'uv pip install torch torchvision --torch-backend=auto')
 
-# may only apply to windows
 try:
-    #  from scripts.regsetup import description
     from gooey import Gooey  # pip install Gooey
-except Exception as e:
-    logger.info(f"{e}: Gooey GUI builder not available, "
-                   f"will use command line arguments.\n"
-                   f"Install with 'uv sync --extra gui' if you want a no-arg GUI to invoke v2e. See README")
+    _GOOEY_AVAILABLE = True
+except Exception:
+    Gooey = None
+    _GOOEY_AVAILABLE = False
 
 
 def get_args():
@@ -90,6 +108,10 @@ def get_args():
                'second (or the whole video, if it is shorter) after you '
                'confirm the options.', allow_abbrev=True,
         formatter_class=SmartFormatter)
+    parser.add_argument(
+        "-V", "--version", action="version",
+        version="v2e " + _package_version(),
+        help="Print the v2e version and exit.")
 
     # https://kislyuk.github.io/argcomplete/#global-completion
     # Shellcode (only necessary if global completion is not activated - see Global completion below), to be put in e.g. .bashrc:
@@ -108,9 +130,7 @@ def get_args():
     argcomplete.autocomplete(parser)
 
     (args_namespace,other_args) = parser.parse_known_args() # change to known arguments so that synthetic input module can take arguments
-    command_line=''
-    for a in sys.argv:
-        command_line=command_line+' '+a
+    command_line = " ".join(_shell_quote(a) for a in sys.argv)
     return (args_namespace,other_args,command_line)
 
 
@@ -148,11 +168,42 @@ def _default_stop_time(duration_s, limit_s=1.0):
 
 
 def _shell_quote(text):
-    """Quote one argument for the shell that is running v2e."""
+    """Quote one argument for the shell that is running v2e.
+
+    PowerShell and cmd both treat double quotes as argument quotes. A single
+    quote is ordinary text there, so a copied command kept the quote marks as
+    part of the path.
+    """
     text = str(text)
     if sys.platform == 'win32':
-        return "'" + text.replace("'", "''") + "'"
+        escaped = text.replace("`", "``").replace('"', '`"').replace("$", "`$")
+        return '"' + escaped + '"'
     return "'" + text.replace("'", "'\\''") + "'"
+
+
+def _user_v2e_dir():
+    """Per-user v2e folder, the same place an installed copy stores its checkpoint."""
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA") or os.path.join(
+            os.path.expanduser("~"), "AppData", "Local")
+        return os.path.join(base, "v2e")
+    data_home = os.environ.get("XDG_DATA_HOME")
+    if data_home:
+        return os.path.join(data_home, "v2e")
+    return os.path.join(os.path.expanduser("~"), ".v2e")
+
+
+def _note_missing_gooey():
+    """Tell the user once that the optional GUI is not installed."""
+    marker = os.path.join(_user_v2e_dir(), "gooey-hint-shown")
+    if os.path.isfile(marker):
+        return
+    logger.info(
+        "Gooey is not installed, so v2e is using the command line. "
+        "Install the optional GUI once with: uv sync --extra gui")
+    os.makedirs(os.path.dirname(marker), exist_ok=True)
+    with open(marker, "w", encoding="utf-8") as hint:
+        hint.write("shown\n")
 
 
 # Width, height, and the command-line flag for each DVS camera v2e can name.
@@ -299,16 +350,17 @@ def _confirm_default_conversion(args, input_file):
 
 
 def main():
-    try:
-        ga = Gooey(get_args, program_name="v2e", default_size=(575, 600))
-        logger.info(
-            "Use --ignore-gooey to disable GUI and "
-            "run with command line arguments")
-        ga()
-    except Exception as e:
-        logger.info(
-            f'{e}: Gooey package GUI not available, using command line arguments. \n'
-            f'You can try to install with "uv sync --extra gui"')
+    if _GOOEY_AVAILABLE:
+        try:
+            ga = Gooey(get_args, program_name="v2e", default_size=(575, 600))
+            logger.info(
+                "Use --ignore-gooey to disable GUI and "
+                "run with command line arguments")
+            ga()
+        except Exception as e:
+            logger.info(f"Gooey failed to open ({e}); using the command line")
+    else:
+        _note_missing_gooey()
 
     (args,other_args,command_line) = get_args()
 

@@ -1069,7 +1069,7 @@ wheels = [
 
 [[package]]
 name = "v2e"
-version = "1.8.0"
+version = "1.8.2"
 source = { editable = "." }
 dependencies = [
     { name = "argcomplete" },
