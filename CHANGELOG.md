@@ -1,3 +1,10 @@
+# v1.8.4
+
+## Packaging
+
+- tennis example video link fixed
+- maintaining author Tobi Delbruck
+
 # v1.8.3
 
 ## Packaging

@@ -10,9 +10,7 @@ readme = "packaging/README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.14,<3.15"
 authors = [
-    { name = "Tobi Delbruck", email = "tobi@ini.uzh.ch" },
-    { name = "Yuhuang Hu", email = "yuhuang.hu@ini.uzh.ch" },
-    { name = "Zhe He" },
+    { name = "Tobi Delbruck tobi@ini.uzh.ch" },
 ]
 keywords = ["dvs", "event-camera", "video", "pytorch"]
 classifiers = [

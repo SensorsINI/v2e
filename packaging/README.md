@@ -2,7 +2,7 @@
 
 v2e turns conventional video into realistic synthetic DVS event streams. It models photoreceptor bandwidth, pixel-to-pixel threshold variation, and leak noise.
 
-![v2e tennis example](https://raw.githubusercontent.com/SensorsINI/v2e/v2e-1.8.3/media/v2e-tennis-split-screen.gif)
+![v2e tennis example](https://cdn.jsdelivr.net/gh/SensorsINI/v2e@v2e-1.8.3/media/v2e-tennis-split-screen.gif)
 
 The full guide, quick start, and option list are in the [v2e README](https://github.com/SensorsINI/v2e#readme).
 
