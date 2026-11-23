@@ -63,11 +63,11 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
-only-include = ["v2ecore", "v2e.py"]
+only-include = ["v2ecore", "v2e.py", "scripts/__init__.py", "scripts/pipe_frames.py"]
 
 [tool.hatch.build.targets.sdist]
 ignore-vcs = true
-only-include = ["v2ecore", "v2e.py", "README.md", "packaging/README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml"]
+only-include = ["v2ecore", "v2e.py", "README.md", "packaging/README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml", "scripts/__init__.py", "scripts/pipe_frames.py"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "v2e.py" = "v2e.py"

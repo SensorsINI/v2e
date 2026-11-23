@@ -22,6 +22,7 @@ v2e development was supported by the Swiss National Competence Center for Roboti
 
 * Install with [uv](https://docs.astral.sh/uv/) on Python 3.14. `uv sync` in a checkout, or `uv tool install v2e` once the package is on PyPI.
 * The default event file is AEDAT-4.0 (`events.aedat4`) for playback in [jAER](https://jaerproject.org). jAER reads the camera name and size from the file. `--dvs_aedat2` still writes AEDAT-2.0, and `--dvs_aedat4 None` skips the AEDAT-4 file.
+* `--pipeframes` reads high-rate frames from a 3D engine on stdin. The default photoreceptor cutoff is 200 Hz, which needs at least 4189 frames per second of simulated time. See [Pipe frames from a 3d engine](#pipe-frames-from-a-3d-engine).
 
 See the [changelog](https://github.com/SensorsINI/v2e/blob/master/CHANGELOG.md) for older news.
 
@@ -60,6 +61,10 @@ A synthetic spot field for half a second.
 ```bash
 uv run v2e --synthetic_input=scripts.spots --disable_slomo --dvs346 --total_time=0.5 --overwrite --no_preview --output_folder=output/spots
 ```
+
+### 5. Frames from a 3D engine
+
+`--pipeframes` reads high-rate frames from a renderer on stdin, with SuperSloMo left off. See [Pipe frames from a 3d engine](#pipe-frames-from-a-3d-engine).
 
 ## Contact
 Tobi Delbruck (tobi@ini.uzh.ch)
@@ -194,7 +199,7 @@ usage: v2e [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
            [--input_frame_rate INPUT_FRAME_RATE]
            [--input_slowmotion_factor INPUT_SLOWMOTION_FACTOR]
            [--start_time START_TIME] [--stop_time STOP_TIME] [--crop CROP]
-           [--hdr] [--synthetic_input SYNTHETIC_INPUT]
+           [--hdr] [--synthetic_input SYNTHETIC_INPUT] [--pipeframes]
            [--dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]]
            [--dvs_vid DVS_VID] [--dvs_vid_full_scale DVS_VID_FULL_SCALE]
            [--no_preview] [--ddd_output] [--dvs_h5 DVS_H5]
@@ -269,11 +274,13 @@ DVS model:
   --cutoff_hz CUTOFF_HZ
                         photoreceptor IIR lowpass filter cutoff-off 3dB
                         frequency in Hz - see
-                        https://ieeexplore.ieee.org/document/4444573.CAUTION:
-                        See interaction with timestamp_resolution and
+                        https://ieeexplore.ieee.org/document/4444573. Default
+                        is 200 Hz. The input sample rate (frame rate) must be
+                        at least (2*pi*cutoff_hz)/0.3 (4189 Hz at the default)
+                        or the IIR update is too coarse. CAUTION: See
+                        interaction with timestamp_resolution and
                         auto_timestamp_resolution; check output logger
-                        warnings. The input sample rate (frame rate) must be
-                        fast enough to for accurate IIR lowpass filtering.
+                        warnings.
   --leak_rate_hz LEAK_RATE_HZ
                         leak event rate per pixel in Hz - see
                         https://ieeexplore.ieee.org/abstract/document/7962235
@@ -419,7 +426,16 @@ Synthetic input:
                         and pixel values 0-255. The time is a float in
                         seconds. SYNTHETIC_INPUT must be resolvable from the
                         classpath. SYNTHETIC_INPUT is the module name without
-                        .py suffix. See example moving_dot.py.
+                        .py suffix. See example moving_dot.py. The default
+                        --cutoff_hz of 200 needs a source rate of at least
+                        4189 Hz.
+  --pipeframes          Read frames from stdin and disable SuperSloMo. Same as
+                        --synthetic_input=scripts.pipe_frames --disable_slomo.
+                        Records are little-endian float64 time (s), uint32
+                        byte count, then that many PNG, JPEG, or BMP bytes.
+                        Close stdin to finish. At the default --cutoff_hz of
+                        200, send at least 4189 frames per second of simulated
+                        time.
 
 Output: DVS video:
   --dvs_exposure DVS_EXPOSURE [DVS_EXPOSURE ...]
@@ -532,12 +548,54 @@ v2e --synthetic_input scripts.particles ...
 ````
 You synthetic input class should subclass _base_synthetic_class.py_. You should override the constructor and the _next_frame()_ method.
 
-  * See [base_synthetic_input.py](https://github.com/SensorsINI/v2e/blob/master/scripts/base_synthetic_input.py) for more information.
+  * See [base_synthetic_input.py](https://github.com/SensorsINI/v2e/blob/master/v2ecore/base_synthetic_input.py) for more information.
   * You can pass command line arguments into your class; see [particles.py](https://github.com/SensorsINI/v2e/blob/master/scripts/particles.py) for example.
+
+`next_frame()` times are the DVS sample clock. This path keeps the frames you supply.
+
+The default photoreceptor cutoff is 200 Hz. Its time constant is τ = 1/(2π × 200 Hz) ≈ 0.80 ms. The lowpass stays accurate when each frame interval is at most 0.3τ, so the source rate must be at least (2π × cutoff_hz) / 0.3. At 200 Hz that is 4189 frames per second. The generators in this folder default to `--dt=100e-6` (10 kHz), which meets that bound. A slower step still runs, and v2e warns that the filter is undersampled. `--cutoff_hz=0` turns the filter off. `--dvs_params clean` also turns it off, and `--dvs_params noisy` replaces it with 30 Hz (a bound of 629 Hz).
+
+### Pipe frames from a 3d engine
+
+`--pipeframes` reads a live frame stream from stdin and disables SuperSloMo. It is the shortcut for `--synthetic_input=scripts.pipe_frames --disable_slomo`. Event timestamps are the times in the stream, and those frames go straight into the emulator.
+
+Use it when a renderer such as Unity already produces slow-motion frames at a high simulation rate. v2e consumes that stream and writes `events.aedat4` in the output folder. The renderer blocks when the pipe fills, because conversion is slower than rendering. That matches an offline capture (`Time.captureFramerate`, or stepping the editor). An interactive play mode waits while v2e catches up.
+
+Pass a DVS size, for example `--dvs346`. Each image is converted to grayscale and resized to that size. The first frame only initializes the pixel state. Later times must increase.
+
+The cutoff bound is the same as for other synthetic input. At the default `--cutoff_hz=200`, send at least 4189 frames per second of simulated time. Render linear intensity into the image bytes. v2e applies its own linlog to those 0–255 values, so the bytes should come from a linear render target.
+
+Each record is little-endian:
+
+1. `float64` simulated time in seconds
+2. `uint32` number of payload bytes
+3. that many bytes of a PNG, JPEG, or BMP (gray or color)
+
+Close stdin after the last frame. Flush each record so v2e can start before the stream ends.
+
+```bash
+uv run v2e --pipeframes --dvs346 --overwrite --no_preview --output_folder=output/pipe-frames
+```
+
+A Unity writer. `BitConverter` follows the host, which is little-endian on Windows:
+
+```csharp
+void WriteFrame(Stream stream, double timeSeconds, byte[] png)
+{
+    stream.Write(BitConverter.GetBytes(timeSeconds), 0, 8);
+    stream.Write(BitConverter.GetBytes(png.Length), 0, 4);
+    stream.Write(png, 0, png.Length);
+    stream.Flush();
+}
+```
+
+Start v2e as a child process and write those records to its standard input. `Texture2D.EncodeToPNG()` on a linear render target keeps the byte values v2e expects.
+
+`pack_frame(time_s, image)` in [scripts/pipe_frames.py](scripts/pipe_frames.py) builds the same record from a NumPy image, so a Python source can feed v2e through a pipe.
 
 ## Model parameters
 
-The DVS ON and OFF threshold nominal values are set by _pos_thres_ and _neg_thres_. The pixel to pixel variation is set by _sigma_thres_. The pixel cutoff frequency in Hz is set by _cutoff_hz_. The leak event rate is set by _leak_rate_hz_. 
+The DVS ON and OFF threshold nominal values are set by _pos_thres_ and _neg_thres_. The pixel to pixel variation is set by _sigma_thres_. The pixel cutoff frequency in Hz is set by _cutoff_hz_. The default is 200 Hz. The leak event rate is set by _leak_rate_hz_. 
 
 The _-dvs_params_ argument sets reasonable DVS model parameters for high and low light conditions.
 
@@ -556,8 +614,9 @@ See our technical paper for futher information about these parameters.
  
 ### Photoreceptor lowpass filtering
 _v2e_ includes an intensity-dependent 1st-order lowpass filtering of light intensity; see the paper for details. 
-If you set a nonzero --cutofffreq_hz, then it is important that the sample rate be high enough to allow the IIR lowpass filters to update properly, i.e.
-the time constant tau of the lowpass filters must be at least 3 times larger than the frame interval.
+If you set a nonzero --cutoff_hz, then it is important that the sample rate be high enough to allow the IIR lowpass filters to update properly, i.e.
+the time constant tau of the lowpass filters must be at least 3.3 times the frame interval (the check uses a frame interval of at most 0.3τ).
+With the default cutoff of 200 Hz, tau is about 0.80 ms, so the source rate must be at least 4189 Hz. See [Synthetic input](#synthetic-input) and [Pipe frames from a 3d engine](#pipe-frames-from-a-3d-engine).
 Check the console output for warnings about undersampling for lowpass filtering.
 
 

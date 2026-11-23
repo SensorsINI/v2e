@@ -198,6 +198,21 @@ def set_output_dimension(output_width, output_height,
     return output_width, output_height
 
 
+# IIR mixing factor dt/tau above this updates the lowpass from too few samples.
+LOWPASS_MAX_EPS = 0.3
+
+
+def min_lowpass_sample_rate_hz(cutoff_hz: float) -> float:
+    """Lowest sample rate that keeps dt/tau at LOWPASS_MAX_EPS.
+
+    tau = 1/(2*pi*cutoff_hz), so fs >= (2*pi*cutoff_hz)/LOWPASS_MAX_EPS.
+    Returns 0 when the lowpass is off.
+    """
+    if cutoff_hz <= 0:
+        return 0.0
+    return (2 * np.pi * cutoff_hz) / LOWPASS_MAX_EPS
+
+
 def check_lowpass(cutoffhz, fs, logger):
     """ checks if cutoffhz is ok given sample rate fs
 
@@ -205,12 +220,13 @@ def check_lowpass(cutoffhz, fs, logger):
     if cutoffhz == 0 or fs == 0:
         logger.info('lowpass filter is disabled, no need for check')
         return
-    maxeps = 0.3
+    maxeps = LOWPASS_MAX_EPS
     tau = 1/(2*np.pi*cutoffhz)
     dt = 1/fs
     eps = dt/tau
     maxdt = tau*maxeps
     maxcutoff = maxeps/(2*np.pi*dt)
+    min_fs = min_lowpass_sample_rate_hz(cutoffhz)
     if eps > maxeps:
         logger.warning(
             'Lowpass 3dB cutoff is f_3dB={}Hz (time constant tau={}s) with '
@@ -221,9 +237,10 @@ def check_lowpass(cutoffhz, fs, logger):
             'last sample, i.e. you will not be lowpassing as expected.'
             '\nWe recommend either'
             '\n -decreasing --timestamp_resolution of DVS events below {}s'
-            '\n -decreasing --cutoff_frequency_hz below {}Hz'.format(
+            '\n -decreasing --cutoff_hz below {}Hz'
+            '\n -raising the source frame rate above {}Hz'.format(
                 eng(cutoffhz), eng(tau), eng(fs), eng(dt), eps,
-                maxeps, eng(maxdt), eng(maxcutoff)))
+                maxeps, eng(maxdt), eng(maxcutoff), eng(min_fs)))
     else:
         logger.info(
             'Lowpass cutoff is f_3dB={}Hz with tau={}s and '

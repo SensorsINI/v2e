@@ -1,5 +1,9 @@
 # v1.8.5
 
+## New features
+
+- `--pipeframes` reads high-rate frames from stdin (`scripts.pipe_frames`) and disables SuperSloMo. The default `--cutoff_hz` is 200 Hz, which needs a source rate of at least 4189 Hz.
+
 ## Packaging
 
 - tennis example video link fixed

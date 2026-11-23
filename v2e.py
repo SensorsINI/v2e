@@ -364,6 +364,21 @@ def main():
 
     (args,other_args,command_line) = get_args()
 
+    if args.pipeframes:
+        if args.input is not None:
+            logger.error(
+                "--pipeframes reads frames from stdin, so --input cannot also be set")
+            v2e_quit(1)
+        if args.synthetic_input not in (None, "scripts.pipe_frames"):
+            logger.error(
+                "--pipeframes uses scripts.pipe_frames, "
+                f"but --synthetic_input={args.synthetic_input} was also set")
+            v2e_quit(1)
+        args.synthetic_input = "scripts.pipe_frames"
+        args.disable_slomo = True
+        logger.info(
+            "pipeframes: reading stdin with scripts.pipe_frames, SuperSloMo disabled")
+
     # set input file
     input_file = args.input
     synthetic_input:str = args.synthetic_input
@@ -416,6 +431,10 @@ def main():
     synthetic_input_next_frame_method = None
     if synthetic_input is not None:
         try:
+            if synthetic_input.startswith("scripts."):
+                checkout = _checkout_root()
+                if checkout and checkout not in sys.path:
+                    sys.path.insert(0, checkout)
             synthetic_input_module = importlib.import_module(synthetic_input)
             if '.' in synthetic_input:
                 classname=synthetic_input[synthetic_input.rindex('.')+1:]
@@ -835,12 +854,22 @@ def main():
         # array to batch events for rendering to DVS frames
         events = np.zeros((0, 4), dtype=np.float32)
         (fr, fr_time) = synthetic_input_instance.next_frame()
-        num_frames+=1
+        if fr is not None:
+            num_frames += 1
         i = 0
+        checked_frame_rate = False
+        previous_frame_time = None
         with tqdm(total=synthetic_input_instance.total_frames(),
                   desc='dvs', unit='fr') as pbar:
             with torch.no_grad():
                 while fr is not None:
+                    if previous_frame_time is not None and not checked_frame_rate:
+                        frame_dt = fr_time - previous_frame_time
+                        if frame_dt > 0:
+                            check_lowpass(
+                                emulator.cutoff_hz, 1.0 / frame_dt, logger)
+                        checked_frame_rate = True
+                    previous_frame_time = fr_time
                     if args.davis346:
                         emulator.append_davis_frame(fr, fr_time)
                     newEvents = emulator.generate_events(fr, fr_time)
@@ -856,7 +885,8 @@ def main():
                                 width=output_width)
                             events = np.zeros((0, 4), dtype=np.float32)
                     (fr, fr_time) = synthetic_input_instance.next_frame()
-                    num_frames+=1
+                    if fr is not None:
+                        num_frames += 1
             # process leftover events
             if len(events) > 0 and not args.skip_video_output:
                 eventRenderer.render_events_to_frames(
@@ -1149,16 +1179,19 @@ def main():
                         eng(emulator.num_events_on),
                         eng(emulator.num_events_off)))
     total_time = emulator.t_previous
-    rate_total= emulator.num_events_total / total_time
-    rate_on_total= emulator.num_events_on / total_time
-    rate_off_total= emulator.num_events_off / total_time
-    rate_per_pixel=rate_total/num_pixels
-    rate_on_per_pixel=rate_on_total/num_pixels
-    rate_off_per_pixel=rate_off_total/num_pixels
-    logger.info(
-        f'Avg event rate for N={num_pixels} px and total time ={total_time:.3f} s'
-        f'\n\tTotal: {eng(rate_total)}Hz ({eng(rate_on_total)}Hz on, {eng(rate_off_total)}Hz off)'
-        f'\n\tPer pixel:  {eng(rate_per_pixel)}Hz ({eng(rate_on_per_pixel)}Hz on, {eng(rate_off_per_pixel)}Hz off)')
+    if total_time > 0:
+        rate_total= emulator.num_events_total / total_time
+        rate_on_total= emulator.num_events_on / total_time
+        rate_off_total= emulator.num_events_off / total_time
+        rate_per_pixel=rate_total/num_pixels
+        rate_on_per_pixel=rate_on_total/num_pixels
+        rate_off_per_pixel=rate_off_total/num_pixels
+        logger.info(
+            f'Avg event rate for N={num_pixels} px and total time ={total_time:.3f} s'
+            f'\n\tTotal: {eng(rate_total)}Hz ({eng(rate_on_total)}Hz on, {eng(rate_off_total)}Hz off)'
+            f'\n\tPer pixel:  {eng(rate_per_pixel)}Hz ({eng(rate_on_per_pixel)}Hz on, {eng(rate_off_per_pixel)}Hz off)')
+    else:
+        logger.info('input produced no DVS time span, so event rates are not reported')
     if totalTime>60:
         try:
             from plyer import notification

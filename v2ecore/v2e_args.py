@@ -156,13 +156,17 @@ def v2e_args(parser):
         help="1-std deviation threshold variation in log_e intensity change.")
 
     modelGroup.add_argument(
-        "--cutoff_hz", type=float, default=300,
+        "--cutoff_hz", type=float, default=200,
         help="photoreceptor IIR lowpass filter "
              "cutoff-off 3dB frequency in Hz - "
-             "see https://ieeexplore.ieee.org/document/4444573."
+             "see https://ieeexplore.ieee.org/document/4444573. "
+             "Default is 200 Hz. "
+             "The input sample rate (frame rate) must be at least "
+             "(2*pi*cutoff_hz)/0.3 "
+             "(4189 Hz at the default) or the IIR update is too coarse. "
              "CAUTION: See interaction with timestamp_resolution "
              "and auto_timestamp_resolution; "
-             "check output logger warnings. The input sample rate (frame rate) must be fast enough to for accurate IIR lowpass filtering."
+             "check output logger warnings."
     )
     modelGroup.add_argument(
         "--leak_rate_hz", type=float, default=0.01,
@@ -361,7 +365,18 @@ def v2e_args(parser):
              "\npixel [0][0] at upper left corner and pixel values 0-255. The time is a float in seconds."
              "\nSYNTHETIC_INPUT must be resolvable from the classpath. "
              "\nSYNTHETIC_INPUT is the module name without .py suffix."
-             "\nSee example moving_dot.py."
+             "\nSee example moving_dot.py. "
+             "\nThe default --cutoff_hz of 200 needs a source rate of at least 4189 Hz."
+    )
+    syntheticInputGroup.add_argument(
+        "--pipeframes", action="store_true",
+        help="Read frames from stdin and disable SuperSloMo. "
+             "Same as --synthetic_input=scripts.pipe_frames --disable_slomo. "
+             "Records are little-endian float64 time (s), uint32 byte count, "
+             "then that many PNG, JPEG, or BMP bytes. "
+             "Close stdin to finish. "
+             "At the default --cutoff_hz of 200, send at least 4189 frames "
+             "per second of simulated time."
     )
 
     # DVS output video
