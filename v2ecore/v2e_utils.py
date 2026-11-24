@@ -88,6 +88,23 @@ class ImageFolderReader(object):
         return s
 
 
+def normalize_dvs_params(value):
+    """Return 'clean' or 'noisy', or None when the preset is off.
+
+    Windows passes --dvs_params='noisy' with the quote marks still in the
+    value, because single quotes are not argument quotes there. Strip one
+    matching pair of quotes so that form selects the preset.
+    """
+    if value is None:
+        return None
+    text = str(value).strip()
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in "'\"":
+        text = text[1:-1].strip()
+    if text.lower() in ("", "none"):
+        return None
+    return text.lower()
+
+
 def v2e_quit(code=0):
     try:
         quit(code)  # not defined in pydev console, e.g. running in pycharm

@@ -25,7 +25,7 @@ from v2ecore.emulator_utils import subtract_leak_current
 from v2ecore.output.ae_text_output import DVSTextOutput
 from v2ecore.output.aedat2_output import AEDat2Output
 from v2ecore.output.aedat4_output import AEDat4Output
-from v2ecore.v2e_utils import checkAddSuffix, v2e_quit, video_writer
+from v2ecore.v2e_utils import checkAddSuffix, normalize_dvs_params, v2e_quit, video_writer
 
 # import rosbag # not yet for python 3
 
@@ -528,6 +528,7 @@ class EventEmulator(object):
                 device=self.device) - self.refractory_period_s
 
     def set_dvs_params(self, model: str):
+        model = normalize_dvs_params(model)
         if model == 'clean':
             self.pos_thres = 0.2
             self.neg_thres = 0.2
@@ -551,13 +552,14 @@ class EventEmulator(object):
             self.leak_jitter_fraction = 0.1
             self.noise_rate_cov_decades = 0.1
         else:
-            #  logger.error(
-            #      "dvs_params {} not known: "
-            #      "use 'clean' or 'noisy'".format(model))
             logger.warning(
-                "dvs_params {} not known: "
-                "Using commandline assigned options".format(model))
-            #  sys.exit(1)
+                "dvs_params %r is not known: "
+                "using the command line threshold, cutoff, leak, and shot noise values. "
+                "Use clean or noisy.",
+                model)
+            return
+        self.pos_thres_nominal = self.pos_thres
+        self.neg_thres_nominal = self.neg_thres
         logger.info("set DVS model params with option '{}' "
                     "to following values:\n"
                     "pos_thres={}\n"

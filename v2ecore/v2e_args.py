@@ -4,7 +4,7 @@ import logging
 import time
 from pathlib import Path
 from v2ecore.emulator import EventEmulator
-from v2ecore.v2e_utils import default_slomo_checkpoint
+from v2ecore.v2e_utils import default_slomo_checkpoint, normalize_dvs_params
 
 from v2ecore.renderer import ExposureMode
 
@@ -135,14 +135,16 @@ def v2e_args(parser):
     modelGroup = parser.add_argument_group('DVS model')
 
     modelGroup.add_argument(
-        "--dvs_params", type=str, default=None,
-        help="Easy optional setting of parameters for DVS model:"
-             "None, 'clean', 'noisy'; 'clean' turns off noise, sets unlimited bandwidth and "
-             "makes threshold variation small. 'noisy' sets "
-             "limited bandwidth and adds leak events and shot noise."
-             "This option by default will disable user set "
-             "DVS parameters. To use custom DVS paramters, "
-             "use None here.")
+        "--dvs_params", type=normalize_dvs_params, default=None,
+        help="Preset for the DVS model: None, clean, or noisy. "
+             "clean turns off noise, sets unlimited bandwidth "
+             "(--cutoff_hz=0), and makes threshold variation small. "
+             "noisy sets photoreceptor bandwidth to 30 Hz "
+             "(--cutoff_hz=30), leak events to 0.1 Hz per pixel "
+             "(--leak_rate_hz=0.1), and shot noise to 5 Hz per pixel "
+             "in the darkest parts (--shot_noise_rate_hz=5). "
+             "This option overrides the individual DVS parameter options. "
+             "Omit --dvs_params or pass None to keep those options.")
     modelGroup.add_argument(
         "--pos_thres", type=float, default=0.2,
         help="threshold in log_e intensity change to "

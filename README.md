@@ -64,7 +64,7 @@ uv run v2e --synthetic_input=scripts.spots --disable_slomo --dvs346 --total_time
 
 ### 5. Frames from a 3D engine
 
-`--pipeframes` reads high-rate frames from a renderer on stdin, with SuperSloMo left off. See [Pipe frames from a 3d engine](#pipe-frames-from-a-3d-engine).
+`--pipeframes` reads high-rate frames from a renderer on stdin, with SuperSloMo left off. See [Pipe frames from a 3d engine](#pipe-frames-from-a-3d-engine) and the Unity scene in [README-unity.md](README-unity.md).
 
 ## Contact
 Tobi Delbruck (tobi@ini.uzh.ch)
@@ -174,7 +174,7 @@ Don't be intimidated by the huge number of options. Running _v2e.py_ with no arg
 **On headless platforms**, with no graphics output, use --no_preview option to suppress the OpenCV windows.
 
 ```
-usage: v2e [-h] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
+usage: v2e [-h] [-V] [-o OUTPUT_FOLDER] [--avi_frame_rate AVI_FRAME_RATE]
            [--output_in_place [OUTPUT_IN_PLACE]] [--overwrite]
            [--unique_output_folder [UNIQUE_OUTPUT_FOLDER]]
            [--skip_video_output]
@@ -212,6 +212,7 @@ v2e: generate simulated DVS events from video.
 
 options:
   -h, --help            show this help message and exit
+  -V, --version         Print the v2e version and exit.
 
 Output: General:
   -o, --output_folder OUTPUT_FOLDER
@@ -255,13 +256,15 @@ DVS timestamp resolution:
 
 DVS model:
   --dvs_params DVS_PARAMS
-                        Easy optional setting of parameters for DVS
-                        model:None, 'clean', 'noisy'; 'clean' turns off noise,
-                        sets unlimited bandwidth and makes threshold variation
-                        small. 'noisy' sets limited bandwidth and adds leak
-                        events and shot noise.This option by default will
-                        disable user set DVS parameters. To use custom DVS
-                        paramters, use None here.
+                        Preset for the DVS model: None, clean, or noisy. clean
+                        turns off noise, sets unlimited bandwidth
+                        (--cutoff_hz=0), and makes threshold variation small.
+                        noisy sets photoreceptor bandwidth to 30 Hz
+                        (--cutoff_hz=30), leak events to 0.1 Hz per pixel
+                        (--leak_rate_hz=0.1), and shot noise to 5 Hz per pixel
+                        in the darkest parts (--shot_noise_rate_hz=5). This
+                        option overrides the individual DVS parameter options.
+                        Omit --dvs_params or pass None to keep those options.
   --pos_thres POS_THRES
                         threshold in log_e intensity change to trigger a
                         positive event.
@@ -589,7 +592,7 @@ void WriteFrame(Stream stream, double timeSeconds, byte[] png)
 }
 ```
 
-Start v2e as a child process and write those records to its standard input. `Texture2D.EncodeToPNG()` on a linear render target keeps the byte values v2e expects.
+Start v2e as a child process and write those records to its standard input. `Texture2D.EncodeToPNG()` on a linear render target keeps the byte values v2e expects. The Unity scene in [README-unity.md](README-unity.md) does this: press Play, and the Console line `v2e exit 0, 0.050/0.050 s` means that short capture is finished.
 
 `pack_frame(time_s, image)` in [scripts/pipe_frames.py](scripts/pipe_frames.py) builds the same record from a NumPy image, so a Python source can feed v2e through a pipe.
 
