@@ -2,7 +2,7 @@
 
 Python torch + opencv code to go from conventional stroboscopic video frames with low frame rate into realistic synthetic DVS event streams with much higher effective timing precision. v2e includes finite intensity-depenedent photoreceptor bandwidth, Gaussian pixel to pixel event threshold variation, and noise 'leak' events.
 
-See the [v2e home page](https://sites.google.com/view/video2events/home) for videos and further information. 
+See the [v2e home page](https://sites.google.com/view/video2events/home) for videos and further information.
 
 Install from PyPi at https://pypi.org/project/v2e/.
 
@@ -15,6 +15,30 @@ See [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6U
 Vote for [new v2e features](https://docs.google.com/forms/d/e/1FAIpQLSdJoIH3wBkPANWTng56VeXiItkh_fl5Lz3QwZIpQ6ut1AMFCw/viewform?usp=sf_link).
 
 v2e development was supported by the Swiss National Competence Center for Robotics [(NCCR Robotics)](https://nccr-robotics.ch/).
+
+## Feature comparison
+
+Public event-camera simulators, ordered by how many checks they have, then by the last GitHub push, newest first. Hover a mark or a short label for the detail. Notes, sources, and the simulators left off this table are in [README-comparison-table.md](README-comparison-table.md).
+
+| Feature | v2e | [EssacSim](https://github.com/spikelab-jhu/isaac-sim-event-camera-plugin) | [Prophesee](https://github.com/prophesee-ai/openeb) | [IEBCS](https://github.com/neuromorphicsystems/IEBCS) | [ESIM](https://github.com/uzh-rpg/rpg_esim) | [vid2e](https://github.com/uzh-rpg/rpg_vid2e) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Version | <abbr title="pyproject.toml and GitHub release v2e-1.8.5, published 2026-11-20.">1.8.5</abbr> | <abbr title="pyproject.toml is 0.1.0. The README news calls the July 2026 feature drop v1.0.">0.1.0</abbr> | <abbr title="CMake project version and GitHub release 5.2.0, published 2026-01-13.">5.2.0</abbr> | — | — | — |
+| Updated | <abbr title="Release 1.8.5 on 2026-11-20. Last push 2026-11-24.">2026</abbr> | <abbr title="Last push 2026-07-10. No GitHub release.">2026</abbr> | <abbr title="Release 5.2.0 on 2026-01-13. Last push 2026-05-15.">2026</abbr> | <abbr title="Last push 2025-04-28. No GitHub release.">2025</abbr> | <abbr title="Last push 2023-12-25. No GitHub release.">2023</abbr> | <abbr title="Last push 2024-03-04. No GitHub release.">2024</abbr> |
+| Shot noise | <abbr title="Rate is set in the darkest pixels and falls as intensity rises. --photoreceptor_noise builds that rate from noise added at the lowpass.">✅</abbr> | <abbr title="shot_rate_hz, denser in the dark. Off unless a noise config is set.">✅</abbr> | <abbr title="shot_noise_rate_hz on CPU and shot_noise_hz on GPU. Highest in the dark, lower at high intensity. Default 0.">✅</abbr> | <abbr title="Background activity is a fixed ON and OFF rate, or a measured histogram. The example uses a recording at 161 lux.">❌</abbr> | ❌ | ❌ |
+| Photoreceptor bandwidth | <abbr title="Intensity-dependent IIR lowpass. --cutoff_hz defaults to 200 Hz.">✅</abbr> | <abbr title="Intensity-dependent cutoff_hz, with a floor. 0 turns it off. Off unless a noise config is set.">✅</abbr> | <abbr title="cutoff_hz. A 2nd-order lowpass (two cascaded RC stages) whose time constant scales with intensity. Default 0 turns it off.">✅</abbr> | <abbr title="Intensity-dependent time constant of the log front end. The example uses 40 us at 1 klux.">✅</abbr> | ❌ | ❌ |
+| Leak events | <abbr title="--leak_rate_hz, plus timing jitter and per-pixel rate variation.">✅</abbr> | <abbr title="leak_rate_hz. Off unless a noise config is set.">✅</abbr> | <abbr title="leak_rate_hz. ON leak of the differencing-amp reference. Default 0.">✅</abbr> | <abbr title="No separate leak parameter. Background activity is listed under shot noise.">❌</abbr> | ❌ | ❌ |
+| Threshold mismatch | <abbr title="Gaussian --sigma_thres on the ON and OFF thresholds.">✅</abbr> | <abbr title="sigma_threshold and an ON/OFF ratio. Off unless a noise config is set.">✅</abbr> | <abbr title="sigma_threshold on CPU. GPU uses c_std, default 0.022.">✅</abbr> | <abbr title="Gaussian threshold noise.">✅</abbr> | <abbr title="Gaussian noise on C+ and C-.">✅</abbr> | <abbr title="The documented esim_torch API takes C+, C-, and a refractory period. It does not expose the C++ threshold noise.">❌</abbr> |
+| Timestamp resolution | <abbr title="--timestamp_resolution sets the upsampled frame interval, or automatic mode limits motion to 1 pixel. Inside that interval, events sit on equal steps of interval / N, where N is the most events any pixel produces.">User-set interval</abbr> | <abbr title="The warp step is 1/(render_hz x K). Events use those frame times, in float64 seconds. An example is 50 Hz rendered and warped 8x, so 2.5 ms.">Warp step</abbr> | <abbr title="Integer microseconds. The caller passes each frame time. Several crossings in one gap are linearly interpolated across that gap. No separate resolution argument.">Interpolated, µs</abbr> | <abbr title="Crossing time is solved inside the frame from the front-end waveform, then latency and jitter are added, in microseconds. The example steps frames by 1 ms.">In-frame, µs</abbr> | <abbr title="Linear interpolation between renderer sample times, stored in nanoseconds. The gap is the adaptive-sampling interval.">Interpolated, ns</abbr> | <abbr title="Same interpolation as ESIM. The gap is the SuperSloMo or FILM frame interval.">Upsampled interval</abbr> |
+| Readout nonideality | <abbr title="Timestamps are the pixel decision times. There is no AER arbiter, row clock, or finite bus time.">❌</abbr> | <abbr title="Motion blur is an exposure average of warped frames, not an AER readout.">❌</abbr> | <abbr title="cutoff_hz is photodiode latency. The API has no arbiter or row clock.">❌</abbr> | <abbr title="src/arbiter.py has a bottleneck, a row arbiter, and a DAVIS346-style synchronous row clock. The video example builds the synchronous arbiter and leaves the process call commented out.">✅</abbr> | ❌ | ❌ |
+| Upsampling | <abbr title="SuperSloMo. The factor is automatic from optical flow, or set by a timestamp resolution. --disable_slomo leaves source timestamps. Synthetic input and --pipeframes do not use it.">✅</abbr> | <abbr title="Motion-vector warp between Isaac Sim keyframes. Example: render at 50 Hz and warp 8x to 400 Hz.">✅</abbr> | <abbr title="No video interpolator inside the simulator. The dataset tutorial uses SuperSloMo separately. PlanarMotionStream can insert up to max_interp_consecutive_frames between homographies.">❌</abbr> | <abbr title="No interpolator. The README says to supply high-rate video or frames interpolated elsewhere.">❌</abbr> | <abbr title="Adaptive rendering. The next sample time comes from predicted brightness change or optic flow, then log intensity is interpolated between samples.">✅</abbr> | <abbr title="SuperSloMo, and optionally FILM. The upsampled frames are passed to ESIM.">✅</abbr> |
+| Input | <abbr title="Video file, ordered image folder, synthetic generators, or frames piped on stdin from a 3D engine.">Video, images, synthetic, pipe</abbr> | <abbr title="NVIDIA Isaac Sim scene. Events can be taken from linear HDR color or from tone-mapped RGB.">Isaac Sim scene</abbr> | <abbr title="Video (mp4, avi), an image folder, or one picture animated by a planar homography. Frame times come from the file, a .npy timestamp file, or a fixed fps.">Video, images, or one picture</abbr> | <abbr title="Video frames. The current tree no longer includes the Blender path.">Video frames</abbr> | <abbr title="Online 3D render (OpenGL, UnrealCV, planar, panorama) or a timestamped image folder (images.csv).">3D render or image folder</abbr> | <abbr title="Image folder plus timestamps.">Image folder</abbr> |
+| Output formats | <abbr title="Default writes events.aedat4 (AEDAT-4.0) and dvs-video.avi. Also writes video_orig.avi and video_slomo.avi unless --skip_video_output. Optional: AEDAT-2.0 (--dvs_aedat2), HDF5 (--dvs_h5), one-event-per-line text (--dvs_text), and DDD17/DDD20 HDF5 (--ddd_output).">AEDAT-4, AVI, AEDAT-2, HDF5, text</abbr> | <abbr title="Default event file is env{e}_ep{ep}.h5 with x, y, t, p per camera. simulate_warp.py also writes H.264 RGB as an mp4 unless --no_rgb, plus a JSON pose annotation. Motion-blurred RGB is off unless MotionBlurCfg is set.">HDF5, MP4</abbr> | <abbr title="Returns numpy EventCD arrays. viz_video_to_event_simulator.py displays them and, with --output, writes a Prophesee DAT file through DatWriter.">EventCD, DAT</abbr> | <abbr title="EventBuffer.write saves a Prophesee-style DAT, version 2, 8-byte events, timestamps in microseconds. The video example then writes an MJPG AVI from that file.">DAT, AVI</abbr> | <abbr title="Default is ROS: dvs_msgs/EventArray on events, sensor_msgs/Image on image_raw and image_corrupted at 30 Hz, plus IMU and pose. Depth, optic flow, point cloud, and camera info publish when their rates are non-zero. The example config sets those to 10 Hz. A rosbag of the same topics is written only when --path_to_output_bag is set.">ROS, rosbag</abbr> | <abbr title="esim_torch/scripts/generate_events.py writes one NPZ per upsampled frame, arrays x, y, t, p. esim_torch.forward returns that same dict.">NPZ</abbr> |
+| GPU | <abbr title="PyTorch. CUDA is used for SuperSloMo and the emulator when it is available. CPU is the fallback.">✅</abbr> | <abbr title="Isaac Sim rendering and a PyTorch warp.">✅</abbr> | <abbr title="CPU EventSimulator and CUDA GPUEventSimulator.">✅</abbr> | <abbr title="NumPy.">❌</abbr> | <abbr title="The C++ event loop is CPU. The GPU path is the esim_torch binding shipped with vid2e.">❌</abbr> | <abbr title="CUDA for frame interpolation and for esim_torch.">✅</abbr> |
+| HVS/DAVIS output | <abbr title="--davis346 writes the converted monochrome frames and the events in one AEDAT-4 file. Each frame's exposure is the gap until the next frame. The samples are those converted frames, not a second integration of the photoreceptor.">✅</abbr> | <abbr title="Writes the rendered RGB, optionally averaged over an exposure, and the events.">✅</abbr> | <abbr title="The simulator returns events. The sample window shows the source video beside them. That video is the input, not an APS readout.">❌</abbr> | <abbr title="Writes an event .dat file.">❌</abbr> | <abbr title="Publishes the rendered images, a separate exposure-blurred image timestamped at mid-exposure, and the events.">✅</abbr> | <abbr title="Writes events. Upsampled frames saved on disk are the interpolator output, not an APS readout.">❌</abbr> |
+
+Readout nonideality means the address-event bus: a finite time per event, row arbitration, or a clocked row scan that moves the timestamp away from the pixel's decision time.
+
+HVS/DAVIS output means the simulator emits intensity frames and events together, as a hybrid sensor does. A check here is not given for showing the input video next to the events.
 
 ## News
 
@@ -78,17 +102,13 @@ If you use v2e, we appreciate a citation to the paper below. See the [v2e home p
 To reproduce the experiments of the paper, please find [this repository](https://github.com/SensorsINI/v2e_exps_public).
 
 ### Advice about conversion time
-We recommend running _v2e_ on a CUDA GPU or it will be very slow, particularly when using SuperSloMo upsampling. 
-Even with a low-end GTX-1050, _v2e_ runs about 50-200X slower than real time 
-using 10X slowdown factor and 346x260 video.
 
-Conversion speed depends linearly on the reciprocal of the desired DVS timestamp resolution.
-If you demand fine resolution of e.g. 100us, 
-then expect many minutes of computing per second of source video. Running on Google colab
-with GPU, it took 500s per second of 12FPS source video, because of the very high upsampling ratio
-of over 800X and the 220k frames that needed to be produced for DVS modeling.
+We recommend running _v2e_ on a CUDA GPU or it will be very slow, particularly when using SuperSloMo upsampling. Even with a low-end GTX-1050, _v2e_ runs about 50-200X slower than real time using 10X slowdown factor and 346x260 video.
+
+Conversion speed depends linearly on the reciprocal of the desired DVS timestamp resolution. If you demand fine resolution of e.g. 100us, then expect many minutes of computing per second of source video. Running on Google colab with GPU, it took 500s per second of 12FPS source video, because of the very high upsampling ratio of over 800X and the 220k frames that needed to be produced for DVS modeling.
 
 We advise using the _--stop_ option for trial run before starting a long conversion.
+
 ## Using v2e in Google CoLab
 If you don't want to install, try [opening v2e in google colab](https://colab.research.google.com/drive/1czx-GJnx-UkhFVBbfoACLVZs8cYlcr_M?usp=sharing). This is an older version of v2e, at least for now.
 
@@ -145,19 +165,17 @@ uv run python dataset_scripts/ddd/ddd_extract_data.py
 
 ### Download SuperSloMo model
 
-We use the excellent [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects/superslomo/) framework to interpolate the APS frames.
-However, since APS frames only record light intensity, we  retrained it on grayscale images.
+We use the excellent [Super SloMo](https://people.cs.umass.edu/~hzjiang/projects/superslomo/) framework to interpolate the APS frames. However, since APS frames only record light intensity, we  retrained it on grayscale images.
 
 v2e downloads the pre-trained checkpoint [SuperSloMo39.ckpt](https://drive.google.com/file/d/1ETID_4xqLpRBrRo1aOT7Yphs3QqWR_fx/view?usp=sharing) (151 MB) the first time SuperSloMo runs. A git checkout saves it in the `input` folder. An installed copy saves it in the user v2e folder (`%LOCALAPPDATA%\v2e\input` on Windows, `~/.v2e/input` otherwise), so later runs find it from any working directory. Pass `--slomo_model` to use a checkpoint you downloaded yourself.
 
 Special thanks to Zhe He for recovering the checkpoint file.
 
 ### Download sample input data
+
 The sample input videos to try _v2e_ with are in [v2e-sample-input-data](https://drive.google.com/drive/folders/1oWxTB9sMPp6UylAdxg5O1ko_GaIXz7wo?usp=sharing) on google drive.
 
-Download the [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing)
-video and put in the _input_ folder
-to run the example below.
+Download the [tennis.mov](https://drive.google.com/file/d/1dNUXJGlpEM51UVYH4-ZInN9pf0bHGgT_/view?usp=sharing) video and put in the _input_ folder to run the example below.
 
 ## Usage
 
@@ -542,8 +560,7 @@ See the [scripts folder](https://github.com/SensorsINI/v2e/blob/master/scripts) 
 
 ### Synthetic input
 
-There are also samples in the [scripts folder](https://github.com/SensorsINI/v2e/blob/master/scripts) of 
-python modules to generate synthetic input to v2e, e.g. [particles.py](https://github.com/SensorsINI/v2e/blob/master/scripts/particles.py)
+There are also samples in the [scripts folder](https://github.com/SensorsINI/v2e/blob/master/scripts) of python modules to generate synthetic input to v2e, e.g. [particles.py](https://github.com/SensorsINI/v2e/blob/master/scripts/particles.py)
 
 You can specify particles as the class that generates input frames to generate DVS events from using the command line option
 ````shell
@@ -598,69 +615,58 @@ Start v2e as a child process and write those records to its standard input. `Tex
 
 ## Model parameters
 
-The DVS ON and OFF threshold nominal values are set by _pos_thres_ and _neg_thres_. The pixel to pixel variation is set by _sigma_thres_. The pixel cutoff frequency in Hz is set by _cutoff_hz_. The default is 200 Hz. The leak event rate is set by _leak_rate_hz_. 
+The DVS ON and OFF threshold nominal values are set by _pos_thres_ and _neg_thres_. The pixel to pixel variation is set by _sigma_thres_. The pixel cutoff frequency in Hz is set by _cutoff_hz_. The default is 200 Hz. The leak event rate is set by _leak_rate_hz_.
 
 The _-dvs_params_ argument sets reasonable DVS model parameters for high and low light conditions.
 
 See our technical paper for futher information about these parameters.
- 
- ### Automatic vs manual DVS timestamp resolution
- The output DVS timestamps will be quantized to some value depending on options chosen.
- 
+
+### Automatic vs manual DVS timestamp resolution
+
+The output DVS timestamps will be quantized to some value depending on options chosen.
+
   *  _--disable_slomo_ will disable slomo interpolation and the DVS events will have exactly the times of the input video, perhaps modified by --input_slowmotion_factor
   *  _--timestamp_resolution=X_ will upsample as needed to obtain this desired timestamp resolution _X_ in seconds. If auto_timestamp_resolution is set, then timestamp_resolution will still set the minimum timestamp resolution, i.e. if automatic timestamping would result in 5ms timestamps but timestamp_resolution is 1ms, then 1ms will still be the timestamp resolution.
   *  _--auto_timestamp_resolution_ will upsample in each _--batch_size_ frames using the computed optical flow to limit motion per frame to at most 1 pixel. In this case, turning on _--slomo_stats_plot_ will generate a plot like the following, which came from a driving video where the car sped up during part of the video:
- 
- ![auto_slomo_stats](media/slomo_stats.png)
- 
- This plot shows the actual timestamps of the interpolated frames (in orange) and the frame intervals for each batch of frames (in blue).
- 
+
+![auto_slomo_stats](media/slomo_stats.png)
+
+This plot shows the actual timestamps of the interpolated frames (in orange) and the frame intervals for each batch of frames (in blue).
+
 ### Photoreceptor lowpass filtering
-_v2e_ includes an intensity-dependent 1st-order lowpass filtering of light intensity; see the paper for details. 
-If you set a nonzero --cutoff_hz, then it is important that the sample rate be high enough to allow the IIR lowpass filters to update properly, i.e.
-the time constant tau of the lowpass filters must be at least 3.3 times the frame interval (the check uses a frame interval of at most 0.3τ).
-With the default cutoff of 200 Hz, tau is about 0.80 ms, so the source rate must be at least 4189 Hz. See [Synthetic input](#synthetic-input) and [Pipe frames from a 3d engine](#pipe-frames-from-a-3d-engine).
-Check the console output for warnings about undersampling for lowpass filtering.
 
+_v2e_ includes an intensity-dependent 1st-order lowpass filtering of light intensity; see the paper for details. If you set a nonzero --cutoff_hz, then it is important that the sample rate be high enough to allow the IIR lowpass filters to update properly, i.e. the time constant tau of the lowpass filters must be at least 3.3 times the frame interval (the check uses a frame interval of at most 0.3τ). With the default cutoff of 200 Hz, tau is about 0.80 ms, so the source rate must be at least 4189 Hz. See [Synthetic input](#synthetic-input) and [Pipe frames from a 3d engine](#pipe-frames-from-a-3d-engine). Check the console output for warnings about undersampling for lowpass filtering.
 
- 
- ### Frame rate and DVS timestamp resolution in v2e
+### Frame rate and DVS timestamp resolution in v2e
 There are several different 'frame rates' in v2e. On opening the input video, v2e reads the frame rate of the video and assumes the video is shot in real time, except that you can specify a _--input_slowmotion_factor_ slowdown_factor if the video is already a slow-motion video. The desired DVS timestamp resolution is combined with the source frame rate to compute the slow-motion upsampling factor. The output DVS AVI video is then generated using a _--dvs-exposure_ method.
 
  * _--avi_frame_rate_: Just sets the frame rate for playback of output AVI files
  * _--dvs-exposure_: See next section
  * _--input_slowmotion_factor_: Specifies by what factor the input video is slowed down.
- 
+
 ### Effect of multiple events per (sub) frame
+
 Anytime a source (or upsampled source) video generates more than 1 event per frame, these events need to be distributed over the time between frames. v2e arbitrarily stacks them as shown in the example below, resulting in pyramids of events and periodic overall bursts of events at each frame.  I.e. v2e first computes the maximum number of events by any pixel, then it subdivides the interframe interval by this number, then it puts all pixels with 1 event at the frame, then pixels with 2 events have thier events placed at the first sub-interval and so on. The reduce this effect, use a smaller timestamp resolution.
 
- ![v2e_pyramid](media/v2e-pyr.gif)
+![v2e_pyramid](media/v2e-pyr.gif)
 
 ## DVS frame exposure modes
 
-The DVS allows arbritrary frame rates. _v2e_ provides 3 methods to 'expose' DVS video frames, which are selected by the
---dvs_exposure argument:
+The DVS allows arbritrary frame rates. _v2e_ provides 3 methods to 'expose' DVS video frames, which are selected by the --dvs_exposure argument:
  1. **Constant-Duration**: _--dvs_exposure _duration_ _T__:  - Each frame has constant duration _T_.
  2. **Constant-Count**: _--dvs_exposure_count_ _N_:  - each frame has the same number _N_ of DVS events, as first described in Delbruck, Tobi. 2008. “Frame-Free Dynamic Digital Vision.” In Proceedings of Intl. Symp. on Secure-Life Electronics, Advanced Electronics for Quality Life and Society, 1:21–26. Tokyo, Japan: Tokyo. https://drive.google.com/open?id=0BzvXOhBHjRheTS1rSVlZN0l2MDg..
  3. **Area-Event**: _--dvs_exposure_ _area_event_ _N_ _M_:  - frames are accumulated until any block of *M*x*M* pixels fills up with _N_ events, as first described in Liu, Min, and T. Delbruck. 2018. “Adaptive Time-Slice Block-Matching Optical Flow Algorithm for Dynamic Vision Sensors.” In Proceedings of British Machine Vision Conference (BMVC 2018). Newcastle upon Tyne, UK: Proceedings of BMVC 2018. https://doi.org/10.5167/uzh-168589.
  4. **Source**: _--dvs_exposure source_: DVS timestamps are based on source video timestamps. Extra events per frame are spaced between frames accoruding to the maximum number of events for that frame.
 
- - _Constant-Duration_ is like normal video, i.e. sampled at regular, ideally Nyquist rate. 
+ - _Constant-Duration_ is like normal video, i.e. sampled at regular, ideally Nyquist rate.
  - _Constant-Count_ frames have the same number of pixel brightness change events per frame. But if the scene is very textured (i.e. busy) then frame can get very brief, while parts of the input with only a small object moving can have very long frames.
  - _Area-Event_ compensates for this effect to some extent by concluding exposure when any block of pixels fills with a constant count.
 
 ## DAVIS camera conversion Dataset
 
-v2e can convert recordings from
- [DDD20](https://sites.google.com/view/davis-driving-dataset-2020/home) and the original [DDD17](https://docs.google.com/document/d/1HM0CSmjO8nOpUeTvmPjopcBcVCk7KXvLUuiZFS6TWSg/pub) 
-which are the first public end-to-end training datasets 
-of automotive driving using a DAVIS event + frame camera. It lets you compare the real DVS data with the conversion. 
-This dataset is maintained by the Sensors Research Group of Institute of Neuroinformatics. 
+v2e can convert recordings from [DDD20](https://sites.google.com/view/davis-driving-dataset-2020/home) and the original [DDD17](https://docs.google.com/document/d/1HM0CSmjO8nOpUeTvmPjopcBcVCk7KXvLUuiZFS6TWSg/pub) which are the first public end-to-end training datasets of automotive driving using a DAVIS event + frame camera. It lets you compare the real DVS data with the conversion. This dataset is maintained by the Sensors Research Group of Institute of Neuroinformatics.
 
-For your convenience, we offer via google drive one recording from _DDD20_ (our newer DDD dataset) of 800s of
-Los Angeles street driving. 
-The file is _aug04/rec1501902136.hdf5_ [[link]](https://drive.google.com/open?id=1KIaHsn72ZpVBZR6SGeFcd2lILyZoD2-5)
-  in Google Drive for you to try it with v2e (***Warning:*** 2GB 7z compressed, 5.4 GB uncompressed).
+For your convenience, we offer via google drive one recording from _DDD20_ (our newer DDD dataset) of 800s of Los Angeles street driving. The file is _aug04/rec1501902136.hdf5_ [[link]](https://drive.google.com/open?id=1KIaHsn72ZpVBZR6SGeFcd2lILyZoD2-5) in Google Drive for you to try it with v2e (***Warning:*** 2GB 7z compressed, 5.4 GB uncompressed).
 
 ```bash
 mkdir -p input
